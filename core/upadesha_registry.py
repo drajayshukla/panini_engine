@@ -25,28 +25,38 @@ class UpadeshaType(Enum):
     def validate_input(text, upadesha_type):
         """
         चेक करता है कि इनपुट टेक्स्ट संबंधित JSON डेटाबेस में मौजूद है या नहीं।
+        अतिरिक्त स्पेस को हटाकर (strip) मिलान किया जाता है।
         """
+        # डेटा नॉर्मलाइजेशन: इनपुट के आसपास के स्पेस हटाना
+        cleaned_text = text.strip() if text else ""
+
         if upadesha_type == UpadeshaType.DHATU:
-            return text in get_all_dhatus()
+            return cleaned_text in get_all_dhatus()
 
         elif upadesha_type == UpadeshaType.PRATYAYA:
-            return text in get_all_vibhakti()
+            return cleaned_text in get_all_vibhakti()
 
-        # अन्य श्रेणियों के लिए फिलहाल True
+        # अन्य श्रेणियों के लिए फिलहाल True (जब तक डेटाबेस न जुड़ें)
         return True
 
     @staticmethod
     def auto_detect(text):
         """
         बिना यूजर से पूछे, डेटाबेस के आधार पर उपदेश के प्रकार का पता लगाना।
+        यह अतिरिक्त स्पेस को स्वतः हटाकर (strip) सर्च करता है।
         """
+        if not text:
+            return None
+
+        cleaned_text = text.strip()
+
         # 1. पहले धातुओं (Dhatu) में खोजें
-        if text in get_all_dhatus():
+        if cleaned_text in get_all_dhatus():
             return UpadeshaType.DHATU
 
         # 2. फिर प्रत्ययों/विभक्तियों (Pratyaya) में खोजें
-        if text in get_all_vibhakti():
+        if cleaned_text in get_all_vibhakti():
             return UpadeshaType.PRATYAYA
 
-        # 3. अगर कहीं न मिले, तो None (यानी कस्टम इनपुट)
+        # 3. अगर कहीं न मिले, तो None (अर्थात् कस्टम इनपुट)
         return None
