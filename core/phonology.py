@@ -52,33 +52,35 @@ def sanskrit_varna_vichhed(text):
                 i += 1
             continue  # अगले अक्षर पर जाएँ
 
-        # 2. व्यंजन प्रबंधन (Fix for लो, ली, लू, टी, मे, कि)
         elif '\u0915' <= char <= '\u0939' or char == 'ळ':
-            res.append(char + '्')
-            i += 1  # व्यंजन को प्रोसेस किया, अब अगला कैरेक्टर देखें
 
-            found_vowel = False
+            res.append(char + '्')
+            i += 1
+
+            vowel_added = False
+
             if i < len(text):
-                if text[i] == '्':  # हलन्त है
-                    i += 1
-                    found_vowel = True
-                elif text[i] in vowels_map:  # मात्रा है (ो, ी, ू आदि)
+
+                # 1️⃣ यदि मात्रा है → वही स्वर
+                if text[i] in vowels_map:
                     res.append(vowels_map[text[i]])
                     i += 1
-                    found_vowel = True
-                elif text[i] in 'ंःँ':  # सीधे अयोगवाह है (जैसे लँ)
-                    res.append('अ')
-                    found_vowel = True
-                    # यहाँ i नहीं बढ़ाएंगे, नीचे वाला while इसे हैंडल करेगा
+                    vowel_added = True
 
-            # यदि कोई मात्रा नहीं मिली, तो 'अ' अनिवार्य है
-            if not found_vowel:
+                # 2️⃣ यदि हलन्त है → कोई स्वर नहीं
+                elif text[i] == '्':
+                    i += 1
+                    vowel_added = True  # यहाँ TRUE का अर्थ: "अ मत जोड़ो"
+
+            # 3️⃣ न मात्रा, न हलन्त → अ अनिवार्य
+            if not vowel_added:
                 res.append('अ')
 
-            # व्यंजन/स्वर के बाद अनुस्वार/विसर्ग/अनुनासिक
+            # 4️⃣ अयोगवाह
             while i < len(text) and text[i] in 'ंःँ':
                 res.append(text[i])
                 i += 1
+
             continue
 
         # 3. अयोगवाह चिह्न (ᳲ, ᳳ)
