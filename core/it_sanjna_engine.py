@@ -1,4 +1,3 @@
-# core/it_sanjna_engine.py
 from core.upadesha_registry import UpadeshaType
 from logic.sanjna_rules import (
     apply_upadeshe_ajanunasika_1_3_2,
@@ -9,39 +8,61 @@ from utils.data_loader import get_all_vibhakti
 
 
 class ItSanjnaEngine:
+    """
+    पाणिनीय इत्-संज्ञा मास्टर इंजन (Integrated Version)
+    नियम: १.३.२ से १.३.८ तक का सामूहिक संचालन।
+    """
+
     @staticmethod
-    def run_it_sanjna_prakaran(varna_list, original_word, source_type):
-        """
-        इत्-संज्ञा प्रकरण के सूत्रों का सामूहिक संचालन।
-        विभक्ति ऑटो-डिटेक्शन और मूल-अवस्था सुरक्षा के साथ।
-        """
+    def run_it_sanjna_prakaran(varna_list, original_input, source_type):
         if not isinstance(source_type, UpadeshaType):
             return varna_list, []
 
-        all_its = []
+        it_tags = []
 
-        # १. ऑटो-चेक: क्या यह मूल शब्द विभक्ति लिस्ट में है? (1.3.4 के लिए)
+        # --- १. तैयारी और डेटा डिटेक्शन ---
         vibhakti_list = get_all_vibhakti()
-        is_vibhakti = original_word in vibhakti_list
+        is_vibhakti = original_input in vibhakti_list
 
-        # २. महत्वपूर्ण: मूल अवस्था की पहचान (1.3.3 के गलत ट्रिगर को रोकने के लिए)
-        # हम यह देख रहे हैं कि क्या मूल उपदेश के अंत में व्यंजन था
+        # हलन्त्यम् की सुरक्षा के लिए मूल स्थिति की जांच
         original_last_varna = varna_list[-1] if varna_list else ""
         is_originally_halant = original_last_varna.endswith('्')
 
-        # ३. आदिर्ञिटुडवः (1.3.5) - केवल धातु के लिए
+        # --- २. आदि-इत् संज्ञा सूत्र (Initial Rules) ---
+
+        # सूत्र १.३.५: आदिर्ञिटुडवः (केवल धातु के लिए)
         if source_type == UpadeshaType.DHATU:
             varna_list, adi_its = apply_adir_nitudavah_1_3_5(varna_list)
-            all_its.extend(adi_its)
+            if adi_its: it_tags.extend([f"१.३.५ (आदिर्ञिटुडवः) - {i} इत्" for i in adi_its])
 
-        # ४. उपदेशेऽजनुनासिक इत् (1.3.2) - सभी के लिए
+        # सूत्र १.३.६: षः प्रत्ययस्य (केवल प्रत्यय के लिए)
+        varna_list, tag_6 = ItSanjnaEngine.apply_shah_pratyayasya(varna_list, source_type)
+        if tag_6: it_tags.append(tag_6)
+
+        # --- ३. मध्य/स्वर इत् संज्ञा सूत्र ---
+
+        # सूत्र १.३.२: उपदेशेऽजनुनासिक इत् (सभी के लिए)
         varna_list, anunasika_its = apply_upadeshe_ajanunasika_1_3_2(varna_list)
-        all_its.extend(anunasika_its)
+        if anunasika_its: it_tags.extend([f"१.३.२ (उपदेशेऽजनुनासिक इत्) - {i} इत्" for i in anunasika_its])
 
-        # ५. हलन्त्यम् (1.3.3) और न विभक्तौ तुस्माः (1.3.4)
-        # तर्क: हलन्त्यम् केवल तभी लगेगा जब मूल अंत हल् था और वह तुस्मा-विभक्ति नहीं है।
+        # --- ४. अन्त्य-इत् संज्ञा सूत्र (Final Rules) ---
+
+        # सूत्र १.३.३: हलन्त्यम् (सुरक्षा: १.३.४ न विभक्तौ तुस्माः के साथ)
         if is_originally_halant:
-            varna_list, hal_its = apply_halantyam_1_3_3(varna_list, original_word, is_vibhakti)
-            all_its.extend(hal_its)
+            varna_list, hal_its = apply_halantyam_1_3_3(varna_list, original_input, is_vibhakti)
+            if hal_its: it_tags.extend([f"१.३.३ (हलन्त्यम्) - {i} इत्" for i in hal_its])
 
-        return varna_list, all_its
+        # भविष्य के लिए: १.३.७ (चुट्टू) और १.३.८ (लशक्वतद्धिते) यहाँ जोड़े जाएंगे
+
+        return varna_list, it_tags
+
+    @staticmethod
+    def apply_shah_pratyayasya(varna_list, source_type):
+        """
+        नियम १.३.६: प्रत्यय के आदि 'ष्' का लोप।
+        """
+        if source_type == UpadeshaType.PRATYAYA:
+            if varna_list and varna_list[0] == 'ष्':
+                varna_list.pop(0)
+                return varna_list, "१.३.६ (षः प्रत्ययस्य) - ष् इत्"
+        return varna_list, None
