@@ -1,10 +1,9 @@
 import streamlit as st
-from core.it_sanjna_engine import ItSanjnaEngine
+from core.it_sanjna_engine import ItSanjnaEngine  # क्लास इम्पोर्ट करें
 from core.upadesha_registry import UpadeshaType
 from core.phonology import sanskrit_varna_vichhed
 from core.analyzer import analyze_sanjna
 from core.morph_rules import apply_ata_upadhayah_7_2_116
-
 
 # पेज सेटअप
 st.set_page_config(page_title="अष्टाध्यायी-यंत्र", layout="wide", initial_sidebar_state="expanded")
@@ -15,6 +14,14 @@ st.caption("एक ओपन-सोर्स पाणिनीय व्या�
 # साइडबार
 with st.sidebar:
     st.header("🎯 विजन और मिशन")
+    # यहाँ यूजर से उपदेश का प्रकार पूछें ताकि इंजन सही काम करे
+    source_type_input = st.selectbox(
+        "उपदेश का प्रकार चुनें (Upadesha Type):",
+        options=[e.value for e in UpadeshaType],
+        index=0
+    )
+    source_type = UpadeshaType(source_type_input)
+
     st.info("यह इंजन वर्तमान में 'इत्-संज्ञा', 'संज्ञा प्रकरण' और 'वृद्धि विधि' पर कार्य कर रहा है।")
     st.write("### 📜 वर्तमान सूत्र")
     st.write("1.1.1, 1.1.2, 1.3.2, 1.3.3, 1.3.5, 7.2.116")
@@ -31,9 +38,13 @@ if input_text:
         st.subheader("१. वर्ण-विच्छेद (Phonology)")
         st.code(" + ".join(varna_list), language=None)
 
-    # 2. इत्-संज्ञा प्रक्रिया (मास्टर फंक्शन कॉल)
-    # इसमें 1.3.2, 1.3.3 और 1.3.5 तीनों शामिल हैं
-    remaining_varnas, it_tags = run_it_sanjna_prakaran(varna_list.copy(), input_text)
+    # 2. इत्-संज्ञा प्रक्रिया (मास्टर फंक्शन कॉल सुधार)
+    # ClassName.method_name के साथ कॉल करें और source_type पास करें
+    remaining_varnas, it_tags = ItSanjnaEngine.run_it_sanjna_prakaran(
+        varna_list.copy(),
+        input_text,
+        source_type
+    )
 
     with col2:
         st.subheader("२. इत्-संज्ञा (It-Sanjna)")
@@ -44,7 +55,7 @@ if input_text:
         else:
             st.warning("कोई इत् वर्ण नहीं मिला।")
 
-    st.markdown("---")
+    # ... (बाकी का कोड समान रहेगा)
 
     # 3. संज्ञा विश्लेषण
     st.subheader("🔍 ३. संज्ञा विश्लेषण (Sanjna Analysis)")
