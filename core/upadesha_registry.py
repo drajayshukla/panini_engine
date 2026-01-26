@@ -1,7 +1,7 @@
 # Path: core/upadesha_registry.py
 
 from enum import Enum
-
+from utils.data_loader import get_all_dhatus
 class UpadeshaType(Enum):
     """
     पाणिनीय व्याकरण के ९ प्रकार के उपदेश (आद्योच्चारणम्)।
