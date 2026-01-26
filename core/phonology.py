@@ -3,25 +3,28 @@ import re
 
 def sanskrit_varna_vichhed(text):
     """
-    पाणिनीय 16 नियमों पर आधारित पूर्ण शुद्ध कोड।
+    पाणिनीय अष्टाध्यायी के 16 नियमों पर आधारित पूर्ण शुद्ध कोड।
     'लो, ली, लू' जैसी समस्याओं का स्थायी समाधान।
     """
     if not text:
         return []
 
+    # नियम 16: ॐ का विशिष्ट विच्छेद
     if text == "ॐ":
         return ["अ", "उ", "म्"]
 
-    # विशिष्ट संयुक्ताक्षर और अवग्रह
+    # नियम 3, 12, 13: विशिष्ट संयुक्ताक्षर और अवग्रह
     text = text.replace('क्ष', 'क्‌ष').replace('त्र', 'त्‌र').replace('ज्ञ', 'ज्‌ञ').replace('श्र', 'श्‌र').replace('ऽ',
                                                                                                                     'अ')
 
-    # पञ्चम वर्ण नियम
+    # नियम 6, 7: पञ्चम वर्ण और अनुस्वार नियम
     text = re.sub(r'ं(?=[कखगघ])', 'ङ्', text)
     text = re.sub(r'ं(?=[चछजझ])', 'ञ्', text)
     text = re.sub(r'ं(?=[टठडढ])', 'ण्', text)
     text = re.sub(r'ं(?=[तथदध])', 'न्', text)
     text = re.sub(r'ं(?=[पफबभ])', 'म्', text)
+
+    # अंत में आने वाला अनुस्वार 'म्' (Standard नियम)
     if text.endswith('ं'):
         text = text[:-1] + 'म्'
 
@@ -37,55 +40,52 @@ def sanskrit_varna_vichhed(text):
     while i < len(text):
         char = text[i]
 
-        # 1. स्वतंत्र स्वर
+        # 1. स्वतंत्र स्वर प्रबंधन (नियम 9, 10, 14, 15)
         if char in independent_vowels:
             res.append(char)
-            if i + 1 < len(text) and text[i + 1] == '३':
+            i += 1
+            if i < len(text) and text[i] == '३':  # प्लुत
                 res[-1] += '३'
                 i += 1
-            while i + 1 < len(text) and text[i + 1] in 'ंःँ':
-                res.append(text[i + 1])
+            while i < len(text) and text[i] in 'ंःँ':
+                res.append(text[i])
                 i += 1
-            i += 1  # अगले अक्षर पर जाएँ
-            continue
+            continue  # अगले अक्षर पर जाएँ
 
-        # 2. व्यंजन (क-ह और ळ)
+        # 2. व्यंजन प्रबंधन (Fix for लो, ली, लू, टी, मे, कि)
         elif '\u0915' <= char <= '\u0939' or char == 'ळ':
             res.append(char + '्')
+            i += 1  # व्यंजन को प्रोसेस किया, अब अगला कैरेक्टर देखें
 
-            # मात्रा या हलन्त की जाँच
-            if i + 1 < len(text):
-                next_char = text[i + 1]
-
-                if next_char == '्':  # हलन्त
-                    i += 2  # व्यंजन और हलन्त दोनों को पार करें
-                elif next_char in vowels_map:  # मात्रा (जैसे 'ो' in 'लो')
-                    res.append(vowels_map[next_char])
-                    i += 2  # व्यंजन और मात्रा दोनों को पार करें
-                elif next_char in 'ंःँ':  # जैसे 'लँ'
-                    res.append('अ')
-                    i += 1  # केवल व्यंजन पार करें, अनुनासिक अगली बार आएगा
-                else:  # कोई मात्रा नहीं है (जैसे 'ल' in 'कल')
-                    res.append('अ')
+            found_vowel = False
+            if i < len(text):
+                if text[i] == '्':  # हलन्त है
                     i += 1
-            else:  # शब्द का अंतिम अक्षर
-                res.append('अ')
-                i += 1
+                    found_vowel = True
+                elif text[i] in vowels_map:  # मात्रा है (ो, ी, ू आदि)
+                    res.append(vowels_map[text[i]])
+                    i += 1
+                    found_vowel = True
+                elif text[i] in 'ंःँ':  # सीधे अयोगवाह है (जैसे लँ)
+                    res.append('अ')
+                    found_vowel = True
+                    # यहाँ i नहीं बढ़ाएंगे, नीचे वाला while इसे हैंडल करेगा
 
-            # स्वर/व्यंजन के बाद अयोगवाह (ंःँ) को प्रोसेस करें
+            # यदि कोई मात्रा नहीं मिली, तो 'अ' अनिवार्य है
+            if not found_vowel:
+                res.append('अ')
+
+            # व्यंजन/स्वर के बाद अनुस्वार/विसर्ग/अनुनासिक
             while i < len(text) and text[i] in 'ंःँ':
                 res.append(text[i])
                 i += 1
             continue
 
-        # 3. अयोगवाह चिह्न
+        # 3. अयोगवाह चिह्न (ᳲ, ᳳ)
         elif char in 'ᳲᳳ':
             res.append(char)
+            i += 1
+        else:
+            i += 1
 
-        i += 1
     return res
-
-# --- टेस्ट आउटपुट ---
-# 'लो' -> ['ल्', 'ओ']
-# 'ली' -> ['ल्', 'ई']
-# 'टी' -> ['ट्', 'ई']
