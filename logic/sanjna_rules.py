@@ -7,10 +7,9 @@ def get_sutra_link(sutra_num):
     return f"https://ashtadhyayi.com/sutraani/{formatted_num}"
 
 
-# --- १.१.१ वृद्धि और १.१.२ गुण संज्ञा (General Sanjna) ---
+# --- १.१.१ वृद्धि और १.१.२ गुण संज्ञा (No deletion needed) ---
 
 def check_vriddhi_1_1_1(varna):
-    """सूत्र: वृद्धिरादैच् (1.1.1) - आ, ऐ, औ की पहचान"""
     vriddhi_letters = ['आ', 'ऐ', 'औ']
     if varna in vriddhi_letters:
         link = get_sutra_link("1.1.1")
@@ -19,7 +18,6 @@ def check_vriddhi_1_1_1(varna):
 
 
 def check_guna_1_1_2(varna):
-    """सूत्र: अदेङ्गुणः (1.1.2) - अ, ए, ओ की पहचान"""
     guna_letters = ['अ', 'ए', 'ओ']
     if varna in guna_letters:
         link = get_sutra_link("1.1.2")
@@ -27,80 +25,88 @@ def check_guna_1_1_2(varna):
     return None
 
 
-# --- १.३.२ से १.३.८ इत्-संज्ञा प्रकरण (It-Sanjna Rules) ---
+# --- १.३.२ से १.३.८ इत्-संज्ञा प्रकरण (अब केवल Tagging करेंगे) ---
 
 def apply_upadeshe_ajanunasika_1_3_2(varna_list):
-    """१.३.२ उपदेशेऽजनुनासिक इत्"""
-    anunasik_varnas = ['अँ', 'आँ', 'इँ', 'ईँ', 'उँ', 'ऊँ', 'ऋँ', 'ॠँ', 'ऌँ', 'ॡँ', 'एँ', 'ओँ', 'ऐँ', 'औँ']
+    """
+    १.३.२: अनुनासिक स्वर की इत्-संज्ञा।
+    अब यह वर्ण हटाता नहीं है, केवल प्रभावित indices और tags लौटता है।
+    """
+    ach_list = set('अआइईउऊऋॠऌॡएऐओऔ')
+    it_indices = []
     it_tags = []
-    final_list = []
     link = get_sutra_link("1.3.2")
+    tag = f"[१.३.२ उपदेशेऽजनुनासिक इत्]({link})"
 
-    for v in varna_list:
-        if v in anunasik_varnas or v == 'ँ':
-            it_tags.append(f"[१.३.२ उपदेशेऽजनुनासिक इत्]({link})")
-        else:
-            final_list.append(v)
-    return final_list, list(set(it_tags))
+    for i, v in enumerate(varna_list):
+        # यदि अनुनासिक चिन्ह मिले
+        if 'ँ' in v or v == 'ँ':
+            it_indices.append(i)
+            it_tags.append(tag)
+            # पाणिनीय बॉन्डिंग: यदि पिछला वर्ण स्वर (Ach) है, तो वह भी इत् है
+            if i > 0 and varna_list[i - 1] in ach_list:
+                it_indices.append(i - 1)
+
+    return list(set(it_indices)), list(set(it_tags))
 
 
 def apply_halantyam_1_3_3(varna_list, original_word, is_vibhakti=False):
-    """१.३.३ हलन्त्यम् + १.३.४ न विभक्तौ तुस्माः"""
-    if not varna_list: return varna_list, []
+    """१.३.३: अन्त्य हल् की इत्-संज्ञा।"""
+    if not varna_list: return [], []
 
-    last_varna = varna_list[-1]
+    last_idx = len(varna_list) - 1
+    last_varna = varna_list[last_idx]
+
     if last_varna.endswith('्'):
+        # १.३.४ न विभक्तौ तुस्माः (प्रतिषेध)
         tusma = ['त्', 'थ्', 'द्', 'ध्', 'न्', 'स्', 'म्']
         if is_vibhakti and last_varna in tusma:
             link = get_sutra_link("1.3.4")
-            return varna_list, [f"[१.३.४ न विभक्तौ तुस्माः (प्रतिषेध)]({link})"]
+            return [], [f"[१.३.४ न विभक्तौ तुस्माः (प्रतिषेध)]({link})"]
 
-        varna_list.pop()
         link = get_sutra_link("1.3.3")
-        return varna_list, [f"[१.३.३ हलन्त्यम्]({link})"]
-    return varna_list, []
+        return [last_idx], [f"[१.३.३ हलन्त्यम्]({link})"]
+    return [], []
 
 
 def apply_adir_nitudavah_1_3_5(varna_list):
-    """१.३.५ आदिर्ञिटुडवः (केवल धातु)"""
-    if len(varna_list) < 2: return varna_list, []
+    """१.३.५: आदि ञि, टु, डु की इत्-संज्ञा।"""
+    if len(varna_list) < 2: return [], []
 
+    link = get_sutra_link("1.3.5")
+    # 'ञ्' + 'इ' = 'ञि'
     starting_pattern = varna_list[0] + varna_list[1]
     mapping = {'ञ्इ': 'ञि', 'ट्उ': 'टु', 'ड्उ': 'डु'}
 
     if starting_pattern in mapping:
-        link = get_sutra_link("1.3.5")
-        return varna_list[2:], [f"[१.३.५ आदिर्ञिटुडवः ({mapping[starting_pattern]})]({link})"]
-    return varna_list, []
+        return [0, 1], [f"[१.३.५ आदिर्ञिटुडवः ({mapping[starting_pattern]})]({link})"]
+    return [], []
 
 
 def apply_shah_pratyayasya_1_3_6(varna_list):
-    """१.३.६ षः प्रत्ययस्य (केवल प्रत्यय)"""
+    """१.३.६: प्रत्यय के आदि 'ष्' की इत्-संज्ञा।"""
     if varna_list and varna_list[0] == 'ष्':
-        varna_list.pop(0)
         link = get_sutra_link("1.3.6")
-        return varna_list, [f"[१.३.६ षः प्रत्ययस्य]({link})"]
-    return varna_list, []
+        return [0], [f"[१.३.६ षः प्रत्ययस्य]({link})"]
+    return [], []
 
 
 def apply_chuttu_1_3_7(varna_list):
-    """१.३.७ चुट्टू (केवल प्रत्यय)"""
-    if not varna_list: return varna_list, []
+    """१.३.७: प्रत्यय के आदि च-वर्ग/ट-वर्ग की इत्-संज्ञा।"""
+    if not varna_list: return [], []
     chutuvarga = ['च्', 'छ्', 'ज्', 'झ्', 'ञ्', 'ट्', 'ठ्', 'ड्', 'ढ्', 'ण्']
     if varna_list[0] in chutuvarga:
-        varna_list.pop(0)
         link = get_sutra_link("1.3.7")
-        return varna_list, [f"[१.३.७ चुट्टू]({link})"]
-    return varna_list, []
+        return [0], [f"[१.३.७ चुट्टू]({link})"]
+    return [], []
 
 
 def apply_lashakvataddhite_1_3_8(varna_list, is_taddhita=False):
-    """१.३.८ लशक्वतद्धिते (केवल प्रत्यय, तद्धित वर्जित)"""
-    if not varna_list or is_taddhita: return varna_list, []
+    """१.३.८: प्रत्यय के आदि ल, श, कु की इत्-संज्ञा।"""
+    if not varna_list or is_taddhita: return [], []
     kavarga = ['क्', 'ख्', 'ग्', 'घ्', 'ङ्']
     target = ['ल्', 'श्'] + kavarga
     if varna_list[0] in target:
-        varna_list.pop(0)
         link = get_sutra_link("1.3.8")
-        return varna_list, [f"[१.३.८ लशक्वतद्धिते]({link})"]
-    return varna_list, []
+        return [0], [f"[१.३.८ लशक्वतद्धिते]({link})"]
+    return [], []
