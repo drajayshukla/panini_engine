@@ -1,9 +1,8 @@
 import streamlit as st
 from core.phonology import sanskrit_varna_vichhed
-from core.it_sanjna_engine import apply_halantyam
 from core.analyzer import analyze_sanjna
-# एरर सुधार: morph_rules को इम्पोर्ट करना आवश्यक है
 from core.morph_rules import apply_ata_upadhayah_7_2_116
+from core.it_sanjna_engine import run_it_sanjna_prakaran
 
 # पेज सेटअप
 st.set_page_config(page_title="अष्टाध्यायी-यंत्र", layout="wide", initial_sidebar_state="expanded")
@@ -16,7 +15,7 @@ with st.sidebar:
     st.header("🎯 विजन और मिशन")
     st.info("यह इंजन वर्तमान में 'इत्-संज्ञा', 'संज्ञा प्रकरण' और 'वृद्धि विधि' पर कार्य कर रहा है।")
     st.write("### 📜 वर्तमान सूत्र")
-    st.write("1.1.1, 1.1.2, 1.3.3, 7.2.116")
+    st.write("1.1.1, 1.1.2, 1.3.2, 1.3.3, 1.3.5, 7.2.116")
 
 # मुख्य इनपुट
 input_text = st.text_input("संस्कृत उपदेश (धातु/प्रत्यय) लिखें:", value="पठ्")
@@ -30,12 +29,16 @@ if input_text:
         st.subheader("१. वर्ण-विच्छेद (Phonology)")
         st.code(" + ".join(varna_list), language=None)
 
-    # 2. इत्-संज्ञा प्रक्रिया
-    remaining, its = apply_halantyam(varna_list.copy())
+    # 2. इत्-संज्ञा प्रक्रिया (मास्टर फंक्शन कॉल)
+    # इसमें 1.3.2, 1.3.3 और 1.3.5 तीनों शामिल हैं
+    remaining_varnas, it_tags = run_it_sanjna_prakaran(varna_list.copy(), input_text)
+
     with col2:
         st.subheader("२. इत्-संज्ञा (It-Sanjna)")
-        if its:
-            st.error(f"लोप: {' , '.join(its)} (Sutra 1.3.3)")
+        if it_tags:
+            for tag in it_tags:
+                st.error(f"इत् संज्ञा/लोप: {tag}")
+            st.success(f"**अन्तिम अङ्ग:** {' + '.join(remaining_varnas)}")
         else:
             st.warning("कोई इत् वर्ण नहीं मिला।")
 
@@ -47,25 +50,27 @@ if input_text:
     cols = st.columns(len(varna_list) if len(varna_list) > 0 else 1)
     for idx, item in enumerate(analysis):
         with cols[idx]:
-            if item['tags']:
-                st.success(f"**{item['varna']}**\n\n`{', '.join(item['tags'])}`")
+            v = item['varna']
+            tags = item['tags']
+            if tags:
+                st.success(f"**{v}**\n\n`{', '.join(tags)}`")
             else:
-                st.info(f"**{item['varna']}**\n\n-")
+                st.info(f"**{v}**\n\n-")
 
     # 4. विधि-सूत्र (7.2.116 - अत उपधायाः)
-    # इसे 'पठ्' के लिए विशिष्ट बनाया गया है जैसा आपने चाहा था
-    if "अ" in varna_list:
+    # इत्-संज्ञा के बाद बचे हुए वर्णों (remaining_varnas) पर विधि लागू होगी
+    result_varnas = remaining_varnas.copy()
+    is_applied = False
+
+    if "अ" in remaining_varnas:
         st.markdown("---")
         st.subheader("🛠️ ४. विधि-सूत्र कार्यान्वयनम् (Vidhi Sutra)")
 
-        # विधि सूत्र लागू करना
-        result_varnas, is_applied = apply_ata_upadhayah_7_2_116(varna_list.copy())
+        result_varnas, is_applied = apply_ata_upadhayah_7_2_116(remaining_varnas.copy())
 
         if is_applied:
             st.success(f"**परिवर्तित रूप (वृद्धि):** {' + '.join(result_varnas)}")
             st.info("**प्रयुक्त सूत्रम्:** ७.२.११६ अत उपधायाः")
-
-            # विजुअल ट्रांसफॉर्मेशन
             st.latex(r"पठ् \xrightarrow{7.2.116} पाठ्")
 
     st.markdown("---")
@@ -73,7 +78,8 @@ if input_text:
     steps = [
         {"क्रम": 1, "प्रक्रिया": "मूल रूप", "स्थिति": input_text, "सूत्र": "-"},
         {"क्रम": 2, "प्रक्रिया": "वर्ण-विच्छेद", "स्थिति": " + ".join(varna_list), "सूत्र": "Phonology Rules"},
-        {"क्रम": 3, "प्रक्रिया": "उपधा वृद्धि",
-         "स्थिति": " + ".join(result_varnas) if 'result_varnas' in locals() else "-", "सूत्र": "७.२.११६"}
+        {"क्रम": 3, "प्रक्रिया": "इत्-लोप", "स्थिति": " + ".join(remaining_varnas), "सूत्र": "1.3.2, 1.3.3, 1.3.5"},
+        {"क्रम": 4, "प्रक्रिया": "विधि (वृद्धि)",
+         "स्थिति": " + ".join(result_varnas) if is_applied else "कोई परिवर्तन नहीं", "सूत्र": "७.२.११६"}
     ]
     st.table(steps)

@@ -64,17 +64,46 @@ def apply_halantyam_with_tags(varna_list, original_word):
     return varna_list, it_tags
 
 
+def apply_adir_nitudavah_1_3_5(varna_list):
+    """
+    सूत्र: आदिर्ञिटुडवः (1.3.5)
+    तर्क: धातु के आदि में 'ञि', 'टु', 'डु' की इत् संज्ञा।
+    """
+    if len(varna_list) < 2:
+        return varna_list, []
+
+    it_tags = []
+    # आदि के दो वर्णों को जोड़कर पैटर्न चेक करें
+    # उदाहरण: ['ञ्', 'इ', 'वि', 'द्', 'ि'] -> 'ञि'
+    starting_pattern = varna_list[0] + varna_list[1]
+
+    mapping = {
+        'ञ्इ': '{ञीत्}',
+        'ट्उ': '{ट्वित्}',
+        'ड्उ': '{ड्वित्}'
+    }
+
+    if starting_pattern in mapping:
+        it_tags.append(mapping[starting_pattern])
+        # १.३.९ तस्य लोपः (शुरुआत के दो वर्ण हटाएँ)
+        varna_list = varna_list[2:]
+
+    return varna_list, it_tags
 def run_it_sanjna_prakaran(varna_list, original_word):
     """
     इत्-संज्ञा प्रकरण के सूत्रों का सामूहिक और क्रमवार संचालन।
     """
     all_its = []
 
-    # क्रम १: १.३.२ उपदेशेऽजनुनासिक इत्
+    # १. आदिर्ञिटुडवः (1.3.5) - धातु के आदि के वर्ण
+    varna_list, adi_its = apply_adir_nitudavah_1_3_5(varna_list)
+    all_its.extend(adi_its)
+
+    # २. उपदेशेऽजनुनासिक इत् (1.3.2) - अनुनासिक स्वर
     varna_list, anunasika_its = apply_upadeshe_ajanunasika_1_3_2(varna_list)
     all_its.extend(anunasika_its)
 
-    # क्रम २: १.३.३ हलन्त्यम् (विभक्ति अपवाद के साथ)
+    # ३. हलन्त्यम् (1.3.3) - अंतिम व्यंजन (विभक्ति अपवाद के साथ)
     varna_list, hal_its = apply_halantyam_with_tags(varna_list, original_word)
     all_its.extend(hal_its)
 
