@@ -1,4 +1,7 @@
 import streamlit as st
+import os
+from core.upadesha_registry import UpadeshaType
+from utils.data_loader import get_all_dhatus
 from core.it_sanjna_engine import ItSanjnaEngine  # क्लास इम्पोर्ट करें
 from core.upadesha_registry import UpadeshaType
 from core.phonology import sanskrit_varna_vichhed

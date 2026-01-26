@@ -1,24 +1,17 @@
-# Path: core/upadesha_registry.py
-
+# core/upadesha_registry.py
 from enum import Enum
-from utils.data_loader import get_all_dhatus
-class UpadeshaType(Enum):
-    """
-    पाणिनीय व्याकरण के ९ प्रकार के उपदेश (आद्योच्चारणम्)।
-    यह Enum सुनिश्चित करता है कि इत्-संज्ञा केवल इन्हीं पर लागू हो।
-    """
-    DHATU = "Dhatu"          # उदा: √डुप्-पचँष् (Dhatupatha)
-    SUTRA = "Sutra"          # उदा: अइउण् (Maheshwar Sutras / Ashtadhyayi)
-    GANA = "Gana"            # उदा: सर्वादि (Ganapatha)
-    UNADI = "Unadi"          # उदा: कृवापाजिमिस्वदिसाध्यशूभ्य उण् (Unadi Sutras)
-    VAKYA = "Vartika"        # उदा: कात्यायन वार्तिक
-    LINGA = "Linganusasana"  # लिंगानुशासनम्
-    AGAMA = "Agama"          # उदा: नुँम्, इट् (Augments)
-    PRATYAYA = "Pratyaya"    # उदा: सुँप्, तिँङ्, लँट् (Suffixes)
-    ADESH = "Adesha"         # उदा: स्थानिवदादेशोऽनल्विधौ (Substitutes)
 
-    @staticmethod
-    def is_valid_dhatu(name):
-        """चेक करें कि क्या इनपुट की गई धातु पाणिनीय धातुपाठ में है"""
-        dhatus = get_all_dhatus()
-        return name in dhatus
+class UpadeshaType(Enum):
+    DHATU = "Dhatu"
+    SUTRA = "Sutra"
+    GANA = "Gana"
+    UNADI = "Unadi"
+    VAKYA = "Vartika"
+    LINGA = "Linganusasana"
+    AGAMA = "Agama"
+    PRATYAYA = "Pratyaya"
+    ADESH = "Adesha"
+
+    @classmethod
+    def is_upadesha(cls, value):
+        return any(value == item.value for item in cls)
