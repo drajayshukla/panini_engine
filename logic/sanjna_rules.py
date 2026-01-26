@@ -5,7 +5,7 @@ def get_sutra_link(sutra_num):
     """Ashtadhyayi.com के लिए सटीक लिंक जेनरेट करता है।"""
     # सही फॉर्मेट: https://ashtadhyayi.com/sutra/1/3/2
     formatted_num = sutra_num.replace('.', '/')
-    return f"https://ashtadhyayi.com/sutra/{formatted_num}"
+    return f"https://ashtadhyayi.com/sutraani/{formatted_num}"
 
 
 def check_vriddhi_1_1_1(varna):
