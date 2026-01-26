@@ -1,89 +1,85 @@
 import re
 
+
 def sanskrit_varna_vichhed(text):
-    """
-    पाणिनीय अष्टाध्यायी नियमों के आधार पर संस्कृत वर्ण-विच्छेद।
-    रिटर्न: वर्णों की सूची (List of characters)
-    """
     if not text:
         return []
 
-    # नियम 16: ॐ का विशिष्ट विच्छेद (अपवाद)
+    # नियम 16: ॐ का विशिष्ट विच्छेद
     if text == "ॐ":
         return ["अ", "उ", "म्"]
 
-    # नियम 3 और 12: विशिष्ट संयुक्ताक्षर और अवग्रह
-    text = text.replace('क्ष', 'क्‌ष').replace('त्र', 'त्‌र').replace('ज्ञ', 'ज्‌ञ').replace('श्र', 'श्‌र').replace('ऽ', 'अ')
+    # नियम 3 और 12: संयुक्ताक्षर (क्ष, त्र, ज्ञ, श्र) और अवग्रह (ऽ)
+    # यहाँ ZWNJ हटाकर शुद्ध विच्छेद सुनिश्चित किया गया है
+    text = text.replace('क्ष', 'क्‌ष').replace('त्र', 'त्‌र').replace('ज्ञ', 'ज्‌ञ').replace('श्र', 'श्‌र').replace('ऽ',
+                                                                                                                    'अ')
 
-    # नियम 6: पञ्चम वर्ण नियम
+    # नियम 6 और 7: पञ्चम वर्ण और अनुस्वार अपवाद (स्पर्श व्यंजन vs य-र-ल-व)
+    # 'नश्चापदान्तस्य झलि' के अनुसार स्पर्श व्यंजनों से पहले परिवर्तन
     text = re.sub(r'ं(?=[कखगघ])', 'ङ्', text)
     text = re.sub(r'ं(?=[चछजझ])', 'ञ्', text)
     text = re.sub(r'ं(?=[टठडढ])', 'ण्', text)
     text = re.sub(r'ं(?=[तथदध])', 'न्', text)
     text = re.sub(r'ं(?=[पफबभ])', 'म्', text)
+    # नियम 16 (Standard): अंत में आने वाला अनुस्वार 'म्' बनता है
+    if text.endswith('ं'):
+        text = text[:-1] + 'म्'
 
     vowels_map = {
         'ा': 'आ', 'ि': 'इ', 'ी': 'ई', 'ु': 'उ', 'ू': 'ऊ',
         'ृ': 'ऋ', 'ॄ': 'ॠ', 'ॢ': 'लृ', 'ॣ': 'लॢ',
         'े': 'ए', 'ै': 'ऐ', 'ो': 'ओ', 'ौ': 'औ'
     }
-
     independent_vowels = 'अआइईउऊऋॠलृलॢएऐओऔ'
+
     res = []
     i = 0
     while i < len(text):
         char = text[i]
 
-        # 1. स्वतंत्र स्वर और प्लुत प्रबंधन (नियम 9, 10, 14, 15)
+        # --- स्वर और प्लुत (नियम 9, 10, 14, 15) ---
         if char in independent_vowels:
-            current_unit = char
+            res.append(char)
+            # प्लुत (ओ३)
             if i + 1 < len(text) and text[i + 1] == '३':
-                current_unit += '३'
+                res[-1] += '३'
                 i += 1
-            res.append(current_unit)
-
+            # अनुनासिक/विसर्ग स्वर के आश्रित (अँ, अः)
             while i + 1 < len(text) and text[i + 1] in 'ंःँ':
-                if text[i + 1] == 'ं' and (i + 2 == len(text) or text[i + 2] == ' '):
-                    res.append('म्')
-                else:
-                    res.append(text[i + 1])
+                res.append(text[i + 1])
                 i += 1
 
-        # 2. व्यंजन प्रबंधन (नियम 1, 2, 4, 5, 11, 13)
-                # 2. व्यंजन प्रबंधन
-                # 2. व्यंजन प्रबंधन (नियम 1, 2, 4, 5, 11, 13)
+        # --- व्यंजन (नियम 1, 2, 4, 5, 11, 13) ---
         elif '\u0915' <= char <= '\u0939' or char == 'ळ':
-                res.append(char + '्')  # हमेशा हलन्त के साथ जोड़ें
+            res.append(char + '्')  # हलन्त व्यंजन
 
-                found_vowel = False
-                if i + 1 < len(text):
-                    next_char = text[i + 1]
+            has_vowel = False
+            if i + 1 < len(text):
+                next_char = text[i + 1]
 
-                    if next_char == '्':  # हलन्त है
-                        i += 1
-                        found_vowel = True  # स्वर की आवश्यकता नहीं
-                    elif next_char in vowels_map:  # मात्रा है (ो, ी, ू आदि)
-                        res.append(vowels_map[next_char])
-                        i += 1
-                        found_vowel = True
-
-                # यदि कोई मात्रा या हलन्त नहीं मिला, तो 'अ' जोड़ें (जैसे 'ल' या 'लँ' में)
-                if not found_vowel:
-                    res.append('अ')
-
-                # अनुस्वार/विसर्ग/अनुनासिक चेक करें (यह स्वर के बाद ही आएंगे)
-                while i + 1 < len(text) and text[i + 1] in 'ंःँ':
-                    if text[i + 1] == 'ं' and (i + 2 == len(text) or text[i + 2] == ' '):
-                        res.append('म्')
-                    else:
-                        res.append(text[i + 1])
+                if next_char == '्':  # हलन्त (जैसे 'जगत्')
                     i += 1
-                else:
-                    # शब्द का आखिरी अक्षर व्यंजन है तो 'अ' जोड़ें
-                    res.append('अ')
+                    has_vowel = True
+                elif next_char in vowels_map:  # मात्रा (जैसे 'का', 'को')
+                    res.append(vowels_map[next_char])
+                    i += 1
+                    has_vowel = True
+                elif next_char in 'ंःँ':  # व्यंजन के बाद सीधे अयोगवाह (जैसे 'कँ')
+                    res.append('अ')  # स्वर देना अनिवार्य है
+                    has_vowel = True
 
+                    # नियम 1 & 11: यदि स्वर/हलन्त नहीं है, तो 'अ' जोड़ें (सिवाय शब्द के अंत के हलन्त के)
+            if not has_vowel:
+                res.append('अ')
+
+            # व्यंजन/स्वर के बाद अनुस्वार/विसर्ग/अनुनासिक (नियम 14, 15)
+            while i + 1 < len(text) and text[i + 1] in 'ंःँ':
+                res.append(text[i + 1])
+                i += 1
+
+        # नियम 8: अयोगवाह (जिह्वामूलीय/उपध्मानीय)
         elif char in 'ᳲᳳ':
             res.append(char)
-        i += 1
 
+        i += 1
     return res
