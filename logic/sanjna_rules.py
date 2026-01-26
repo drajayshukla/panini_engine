@@ -22,8 +22,9 @@ def check_guna_1_1_2(varna):
 def apply_upadeshe_ajanunasika_1_3_2(varna_list):
     """
     सूत्र: उपदेशेऽजनुनासिक इत् (1.3.2)
-    तर्क: उपदेश की अवस्था में अनुनासिक स्वर की इत् संज्ञा और लोप।
+    इन सभी पर लागू होगा: 'घटँ', 'जभिँ', 'वन्चुँ', 'उँध्रसँ' आदि।
     """
+    # १. संयुक्त अनुनासिक स्वर मैप (Case: ['अँ', 'इँ', 'उँ'])
     anunasik_map = {
         'अँ': 'अ', 'आँ': 'आ', 'इँ': 'इ', 'ईँ': 'ई', 'उँ': 'उ',
         'ऊँ': 'ऊ', 'ऋँ': 'ऋ', 'ॠँ': 'ॠ', 'ऌँ': 'ऌ', 'ॡँ': 'ॡ',
@@ -33,16 +34,29 @@ def apply_upadeshe_ajanunasika_1_3_2(varna_list):
     it_tags = []
     final_list = []
 
-    for varna in varna_list:
-        if varna in anunasik_map:
-            base_vowel = anunasik_map[varna]
-            # पाणिनीय टैगिंग: 'उँ' -> {उदित्}
+    i = 0
+    while i < len(varna_list):
+        current_varna = varna_list[i]
+
+        # स्थिति A: अनुनासिक चिन्ह 'ँ' अलग मिले (Case: ['अ', 'ँ'] या ['इ', 'ँ'])
+        if current_varna == 'ँ' and i > 0:
+            if final_list:
+                # पिछले वर्ण को निकालें (जैसे 'पठँ' में 'अ' या 'जभिँ' में 'इ')
+                last_vowel = final_list.pop()
+                it_tags.append(f"{{{last_vowel}दित्}}")
+
+        # स्थिति B: स्वर और चिन्ह जुड़े हुए हों (Case: 'अँ', 'इँ', 'उँ')
+        elif current_varna in anunasik_map:
+            base_vowel = anunasik_map[current_varna]
             it_tags.append(f"{{{base_vowel}दित्}}")
+            # १.३.९ तस्य लोपः - इसे final_list में नहीं जोड़ेंगे
+
         else:
-            final_list.append(varna)
+            final_list.append(current_varna)
+
+        i += 1
 
     return final_list, it_tags
-
 
 def apply_halantyam_1_3_3(varna_list, original_word):
     """
