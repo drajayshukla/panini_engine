@@ -27,12 +27,26 @@ class UpadeshaType(Enum):
         चेक करता है कि इनपुट टेक्स्ट संबंधित JSON डेटाबेस में मौजूद है या नहीं।
         """
         if upadesha_type == UpadeshaType.DHATU:
-            all_dhatus = get_all_dhatus()
-            return text in all_dhatus
+            return text in get_all_dhatus()
 
         elif upadesha_type == UpadeshaType.PRATYAYA:
-            all_vibhakti = get_all_vibhakti()
-            return text in all_vibhakti
+            return text in get_all_vibhakti()
 
-        # अन्य श्रेणियों के लिए अभी True मान रहे हैं जब तक उनके JSON न बन जाएं
+        # अन्य श्रेणियों के लिए फिलहाल True
         return True
+
+    @staticmethod
+    def auto_detect(text):
+        """
+        बिना यूजर से पूछे, डेटाबेस के आधार पर उपदेश के प्रकार का पता लगाना।
+        """
+        # 1. पहले धातुओं (Dhatu) में खोजें
+        if text in get_all_dhatus():
+            return UpadeshaType.DHATU
+
+        # 2. फिर प्रत्ययों/विभक्तियों (Pratyaya) में खोजें
+        if text in get_all_vibhakti():
+            return UpadeshaType.PRATYAYA
+
+        # 3. अगर कहीं न मिले, तो None (यानी कस्टम इनपुट)
+        return None
