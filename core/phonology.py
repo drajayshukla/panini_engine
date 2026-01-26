@@ -51,26 +51,33 @@ def sanskrit_varna_vichhed(text):
 
         # 2. व्यंजन प्रबंधन (नियम 1, 2, 4, 5, 11, 13)
                 # 2. व्यंजन प्रबंधन
+                # 2. व्यंजन प्रबंधन (नियम 1, 2, 4, 5, 11, 13)
         elif '\u0915' <= char <= '\u0939' or char == 'ळ':
-                res.append(char + '्')
+                res.append(char + '्')  # हमेशा हलन्त के साथ जोड़ें
+
+                found_vowel = False
                 if i + 1 < len(text):
                     next_char = text[i + 1]
-                    if next_char == '्':  # हलन्त है तो कुछ नहीं जोड़ना
+
+                    if next_char == '्':  # हलन्त है
                         i += 1
-                    elif next_char in vowels_map:  # स्वर मात्रा है
+                        found_vowel = True  # स्वर की आवश्यकता नहीं
+                    elif next_char in vowels_map:  # मात्रा है (ो, ी, ू आदि)
                         res.append(vowels_map[next_char])
                         i += 1
-                    else:
-                        # यदि अगली चीज़ मात्रा नहीं है, तो 'अ' अनिवार्य है (जैसे कुलँ में ल् + अ)
-                        res.append('अ')
+                        found_vowel = True
 
-                    # अब चेक करें कि क्या इसके बाद अनुस्वार/विसर्ग/अनुनासिक है
-                    while i + 1 < len(text) and text[i + 1] in 'ंःँ':
-                        if text[i + 1] == 'ं' and (i + 2 == len(text) or text[i + 2] == ' '):
-                            res.append('म्')
-                        else:
-                            res.append(text[i + 1])
-                        i += 1
+                # यदि कोई मात्रा या हलन्त नहीं मिला, तो 'अ' जोड़ें (जैसे 'ल' या 'लँ' में)
+                if not found_vowel:
+                    res.append('अ')
+
+                # अनुस्वार/विसर्ग/अनुनासिक चेक करें (यह स्वर के बाद ही आएंगे)
+                while i + 1 < len(text) and text[i + 1] in 'ंःँ':
+                    if text[i + 1] == 'ं' and (i + 2 == len(text) or text[i + 2] == ' '):
+                        res.append('म्')
+                    else:
+                        res.append(text[i + 1])
+                    i += 1
                 else:
                     # शब्द का आखिरी अक्षर व्यंजन है तो 'अ' जोड़ें
                     res.append('अ')
