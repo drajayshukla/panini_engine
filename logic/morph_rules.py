@@ -1,18 +1,20 @@
-def apply_ata_upadhayah_7_2_116(varna_list, tags):
+def apply_ata_upadhayah_7_2_116(varna_list):
     """
     सूत्र: अत उपधायाः (7.2.116)
-    तर्क: यदि उपधा (अन्तिम-वर्णात् पूर्वः) 'अ' अस्ति, तर्हि तस्य 'वृद्धि' (आ) भविष्यति।
+    विवरण: यदि अंग की उपधा (second last letter) 'अ' है,
+    तो ञित् या णित् प्रत्यय परे होने पर उसे 'वृद्धि' (आ) आदेश होता है।
     """
     if len(varna_list) < 2:
-        return varna_list
+        return varna_list, False
 
-    # उपधा वर्णस्य अन्वेषणम् (Second last character)
-    upadha_index = -2 if varna_list[-1].endswith('्') else -2
+    # 1. उपधा (Upadha) की पहचान: अंतिम वर्ण से पूर्व वाला
+    # ['प्', 'अ', 'ठ्'] -> उपधा है 'अ' (index -2)
+    upadha_index = -2
 
-    # यदि उपधा 'अ' अस्ति
     if varna_list[upadha_index] == 'अ':
-        # १.१.१ सूत्रानुसारं 'अ' इत्यस्य स्थाने 'आ' (वृद्धि)
+        # 2. वृद्धि आदेश (Sutra 1.1.1 के आधार पर)
+        # 'अ' का स्थान-सादृश्य (Stana) 'आ' के साथ है
         varna_list[upadha_index] = 'आ'
-        return varna_list, "७.२.११६ अत उपधायाः (वृद्धिः)"
+        return varna_list, True
 
-    return varna_list, None
+    return varna_list, False
