@@ -4,11 +4,8 @@ from enum import Enum
 
 
 class UpadeshaType(Enum):
-    """
-    पाणिनीय व्याकरण के उपदेशों की श्रेणियाँ और उनके डेटाबेस से संबंध।
-    """
-    DHATU = "Dhatu"  # संबंधित: dhatu_master_structured.json
-    PRATYAYA = "Pratyaya"  # संबंधित: vibhakti_master, krut, taddhita
+    DHATU = "Dhatu"
+    PRATYAYA = "Pratyaya"
     AGAMA = "Agama"
     ADESH = "Adesha"
     SUTRA = "Sutra"
@@ -17,75 +14,57 @@ class UpadeshaType(Enum):
     VAKYA = "Vartika"
     LINGA = "Linganusasana"
 
-    @staticmethod
-    def _load_data(filename):
-        """डेटा लोड करने के लिए इंटरनल हेल्पर फंक्शन"""
+    # क्लास लेवल पर डेटा कैश (Memory Cache)
+    _cache = {}
+
+    @classmethod
+    def _load_data(cls, filename):
+        """डेटा लोड करने के लिए इंटरनल हेल्पर फंक्शन (With Caching)"""
+        if filename in cls._cache:
+            return cls._cache[filename]
+
         path = os.path.join("data", filename)
         if os.path.exists(path):
             try:
                 with open(path, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    cls._cache[filename] = json.load(f)
+                    return cls._cache[filename]
             except Exception:
                 return []
         return []
 
-    @staticmethod
-    def auto_detect(text):
-        """
-        बिना यूजर इनपुट के, डेटाबेस के आधार पर उपदेश के प्रकार (Type) का पता लगाना।
-        यह 'उपदेश रूप' और 'मूल रूप' दोनों की जाँच करता है।
-        """
-        if not text:
-            return None
-
+    @classmethod
+    def auto_detect(cls, text):
+        """स्वचालित पहचान (Cached and Fast)"""
+        if not text: return None
         cleaned_text = text.strip()
 
-        # 1. धातुओं में खोजें (dhatu_master_structured.json)
-        dhatus = UpadeshaType._load_data('dhatu_master_structured.json')
+        # 1. धातु जाँच
+        dhatus = cls._load_data('dhatu_master_structured.json')
         for d in dhatus:
-            # उपदेश (एधँ) या मूल धातु (एध्) में से कोई भी मिले
             if cleaned_text == d.get('upadesha') or cleaned_text == d.get('mula_dhatu'):
-                return UpadeshaType.DHATU
+                return cls.DHATU
 
-        # 2. प्रत्ययों में खोजें (Multiple JSON Sources)
-
-        # A. विभक्ति मास्टर (सुप् और तिङ्)
-        v_master = UpadeshaType._load_data('vibhakti_master.json')
+        # 2. प्रत्यय जाँच (Combined Search)
+        # A. विभक्ति
+        v_master = cls._load_data('vibhakti_master.json')
         if v_master:
-            # सुप् प्रत्यय जाँच
-            for s in v_master.get('sup_pratyayas', []):
-                if cleaned_text == s.get('name'):
-                    return UpadeshaType.PRATYAYA
-            # तिङ् प्रत्यय जाँच
-            for t in v_master.get('tin_pratyayas', []):
-                if cleaned_text == t.get('name'):
-                    return UpadeshaType.PRATYAYA
-            # एक्स्ट्रा तद्धित/अव्यय/उपसर्ग जाँच
-            for ex in v_master.get('extra_taddhita_avyaya', []):
-                if cleaned_text == ex.get('name'):
-                    return UpadeshaType.PRATYAYA
+            all_v = v_master.get('sup_pratyayas', []) + \
+                    v_master.get('tin_pratyayas', []) + \
+                    v_master.get('extra_taddhita_avyaya', [])
+            if any(cleaned_text == v.get('name') for v in all_v):
+                return cls.PRATYAYA
 
-        # B. कृत् प्रत्यय (krut_pratyayas.json)
-        krut = UpadeshaType._load_data('krut_pratyayas.json')
-        krut_list = krut.get('data', krut) if isinstance(krut, dict) else krut
-        for k in krut_list:
-            if cleaned_text == k.get('pratyay'):
-                return UpadeshaType.PRATYAYA
+        # B. कृत् और तद्धित
+        for f in ['krut_pratyayas.json', 'taddhita_pratyayas.json']:
+            data = cls._load_data(f)
+            p_list = data.get('data', data) if isinstance(data, dict) else data
+            if any(cleaned_text == p.get('pratyay') for p in p_list):
+                return cls.PRATYAYA
 
-        # C. तद्धित प्रत्यय (taddhita_pratyayas.json)
-        taddhita = UpadeshaType._load_data('taddhita_pratyayas.json')
-        t_list = taddhita.get('data', taddhita) if isinstance(taddhita, dict) else taddhita
-        for t in t_list:
-            if cleaned_text == t.get('pratyay'):
-                return UpadeshaType.PRATYAYA
-
-        # 3. अगर कहीं न मिले, तो None
         return None
 
-    @staticmethod
-    def validate_input(text, upadesha_type):
-        """
-        चेक करता है कि क्या इनपुट टेक्स्ट चुने गए टाइप के डेटाबेस में मौजूद है।
-        """
-        detected = UpadeshaType.auto_detect(text)
+    @classmethod
+    def validate_input(cls, text, upadesha_type):
+        detected = cls.auto_detect(text)
         return detected == upadesha_type
