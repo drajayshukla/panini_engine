@@ -17,6 +17,8 @@ class UpadeshaType(Enum):
     PRATYAYA = "Pratyaya"    # उदा: सुँप्, तिँङ्, लँट् (Suffixes)
     ADESH = "Adesha"         # उदा: स्थानिवदादेशोऽनल्विधौ (Substitutes)
 
-    @classmethod
-    def is_upadesha(cls, value):
-        return value in cls
+    @staticmethod
+    def is_valid_dhatu(name):
+        """चेक करें कि क्या इनपुट की गई धातु पाणिनीय धातुपाठ में है"""
+        dhatus = get_all_dhatus()
+        return name in dhatus
