@@ -1,70 +1,51 @@
 {
-  "shit_pratyaya_database": [
-    {
-      "id": "SH_01",
-      "pratyaya": "ष्वुन्",
-      "upadesha": "ष्वुन्",
-      "it_varnas": [
-        {"varna": "ष्", "sutra": "१.३.६ (षः प्रत्ययस्य)"},
-        {"varna": "न्", "sutra": "१.३.३ (हलन्त्यम्)"}
-      ],
-      "shesha": "वु",
-      "adeshah": "अक",
-      "adeshah_sutra": "७.१.१ (युवोरनाकौ)",
-      "tag": "{षित्}",
-      "effect": "स्त्रीलिंग में 'ङीष्' (ई) प्रत्यय का विधान (४.१.४१)",
-      "example": "नर्तक (नृत् + ष्वुन्), स्त्रीलिंग: नर्तकी"
-    },
-    {
-      "id": "SH_02",
-      "pratyaya": "षाकन्",
-      "upadesha": "षाकन्",
-      "it_varnas": [
-        {"varna": "ष्", "sutra": "१.३.६ (षः प्रत्ययस्य)"},
-        {"varna": "न्", "sutra": "१.३.३ (हलन्त्यम्)"}
-      ],
-      "shesha": "आक",
-      "tag": "{षित्}",
-      "effect": "षित् होने के कारण विशेष स्त्रीलिंग प्रक्रिया",
-      "example": "जल्पक (जल्प + षाकन्), स्त्रीलिंग: जल्पकी"
-    },
-    {
-      "id": "SH_03",
-      "pratyaya": "ष्यञ्",
-      "upadesha": "ष्यञ्",
-      "it_varnas": [
-        {"varna": "ष्", "sutra": "१.३.६ (षः प्रत्ययस्य)"},
-        {"varna": "ञ्", "sutra": "१.३.३ (हलन्त्यम्)"}
-      ],
-      "shesha": "य",
-      "tag": "{षित्}, {ञित्}",
-      "effect": "आदि-वृद्धि (७.२.११७) और षित् कार्य",
-      "example": "सौभाग्य (सुभग + ष्यञ्)"
-    },
-    {
-      "id": "SH_04",
-      "pratyaya": "ष्न",
-      "upadesha": "ष्न",
-      "it_varnas": [
-        {"varna": "ष्", "sutra": "१.३.६ (षः प्रत्ययस्य)"}
-      ],
-      "shesha": "न",
-      "tag": "{षित्}",
-      "effect": "षित्-कार्य",
-      "example": "प्रस्थ (प्र + स्था + ष्न)"
-    },
-    {
-      "id": "SH_05",
-      "pratyaya": "ष्नञ्",
-      "upadesha": "ष्नञ्",
-      "it_varnas": [
-        {"varna": "ष्", "sutra": "१.३.६ (षः प्रत्ययस्य)"},
-        {"varna": "ञ्", "sutra": "१.३.३ (हलन्त्यम्)"}
-      ],
-      "shesha": "न",
-      "tag": "{षित्}, {ञित्}",
-      "effect": "आदि-वृद्धि और षित् कार्य",
-      "example": "स्त्रैण (स्त्री + ष्नञ्)"
-    }
-  ]
+  "shit_pratyaya_database": {
+    "krut_pratyayas": [
+      {
+        "id": "SH_K_01",
+        "pratyaya": "षाकन्",
+        "it_varnas": [{"varna": "ष्", "sutra": "१.३.६"}, {"varna": "न्", "sutra": "१.३.३"}],
+        "shesha": "आक",
+        "tag": "{षित्}",
+        "effect": "स्त्रीलिंग में ङीष् (४.१.४१)",
+        "example": "जल्पक -> जल्पकी"
+      },
+      {
+        "id": "SH_K_02",
+        "pratyaya": "ष्ट्रन्",
+        "it_varnas": [{"varna": "ष्", "sutra": "१.३.६"}, {"varna": "न्", "sutra": "१.३.३"}],
+        "shesha": "ट्र",
+        "tag": "{षित्}",
+        "effect": "करण अर्थ में",
+        "example": "दात्र"
+      },
+      {
+        "id": "SH_K_03",
+        "pratyaya": "ष्वुन्",
+        "it_varnas": [{"varna": "ष्", "sutra": "१.३.६"}, {"varna": "न्", "sutra": "१.३.३"}],
+        "shesha": "वु",
+        "adeshah": "अक",
+        "adeshah_sutra": "७.१.१ (युवोरनाकौ)",
+        "tag": "{षित्}",
+        "effect": "नर्तक -> नर्तकी",
+        "example": "नर्तकी"
+      }
+    ],
+    "taddhita_pratyayas": [
+      {"id": "SH_T_01", "pratyaya": "ष", "it_varnas": [{"varna": "ष्", "sutra": "१.३.६"}], "shesha": "अ", "tag": "{षित्}"},
+      {"id": "SH_T_02", "pratyaya": "षच्", "it_varnas": [{"varna": "ष्", "sutra": "१.३.६"}, {"varna": "च्", "sutra": "१.३.३"}], "shesha": "अ", "tag": "{षित्}"},
+      {"id": "SH_T_03", "pratyaya": "षङ्गवच्", "it_varnas": [{"varna": "ष्", "sutra": "१.३.६"}, {"varna": "च्", "sutra": "१.३.३"}], "shesha": "अङ्गव", "tag": "{षित्}"},
+      {"id": "SH_T_04", "pratyaya": "षिकन्", "it_varnas": [{"varna": "ष्", "sutra": "१.३.६"}, {"varna": "न्", "sutra": "१.३.३"}], "shesha": "इक", "tag": "{षित्}"},
+      {"id": "SH_T_05", "pratyaya": "षेण्यण्", "it_varnas": [{"varna": "ष्", "sutra": "१.३.६"}, {"varna": "ण्", "sutra": "१.३.३"}], "shesha": "एण्य", "tag": "{षित्}"},
+      {"id": "SH_T_06", "pratyaya": "ष्कन्", "it_varnas": [{"varna": "ष्", "sutra": "१.३.६"}, {"varna": "न्", "sutra": "१.३.३"}], "shesha": "क", "tag": "{षित्}"},
+      {"id": "SH_T_07", "pratyaya": "ष्टरच्", "it_varnas": [{"varna": "ष्", "sutra": "१.३.६"}, {"varna": "च्", "sutra": "१.३.३"}], "shesha": "तर", "tag": "{षित्}"},
+      {"id": "SH_T_08", "pratyaya": "ष्ठच्", "it_varnas": [{"varna": "ष्", "sutra": "१.३.६"}, {"varna": "च्", "sutra": "१.३.३"}], "shesha": "ठ", "adeshah": "इक", "adeshah_sutra": "७.३.५०", "tag": "{षित्}"},
+      {"id": "SH_T_09", "pratyaya": "ष्ठन्", "it_varnas": [{"varna": "ष्", "sutra": "१.३.६"}, {"varna": "न्", "sutra": "१.३.३"}], "shesha": "ठ", "adeshah": "इक", "adeshah_sutra": "७.३.५०", "tag": "{षित्}"},
+      {"id": "SH_T_10", "pratyaya": "ष्ठल्", "it_varnas": [{"varna": "ष्", "sutra": "१.३.६"}, {"varna": "ल्", "sutra": "१.३.३"}], "shesha": "ठल", "tag": "{षित्}"},
+      {"id": "SH_T_11", "pratyaya": "ष्फक्", "it_varnas": [{"varna": "ष्", "sutra": "१.३.६"}, {"varna": "क्", "sutra": "१.३.३"}], "shesha": "फ", "adeshah": "आयन", "adeshah_sutra": "७.१.२", "tag": "{षित्}"},
+      {"id": "SH_T_12", "pratyaya": "ष्यङ्", "it_varnas": [{"varna": "ष्", "sutra": "१.३.६"}, {"varna": "ङ्", "sutra": "१.३.३"}], "shesha": "य", "tag": "{षित्}"},
+      {"id": "SH_T_13", "pratyaya": "ष्यञ्", "it_varnas": [{"varna": "ष्", "sutra": "१.३.६"}, {"varna": "ञ्", "sutra": "१.३.३"}], "shesha": "य", "tag": "{षित्}, {ञित्}", "effect": "आदि-वृद्धि (७.२.११७)"},
+      {"id": "SH_T_14", "pratyaya": "ष्फ", "it_varnas": [{"varna": "ष्", "sutra": "१.३.६"}], "shesha": "फ", "adeshah": "आयन", "adeshah_sutra": "७.१.२", "tag": "{षित्}"}
+    ]
+  }
 }
