@@ -2,8 +2,14 @@ import json
 import os
 from enum import Enum
 
+# 'Surgical' Cache: इसे क्लास के बाहर रखने से Enum की जटिलताओं से बचाव होता है
+_UPADESHA_CACHE = {}
+
 
 class UpadeshaType(Enum):
+    """
+    पाणिनीय व्याकरण के उपदेशों की श्रेणियाँ।
+    """
     DHATU = "Dhatu"
     PRATYAYA = "Pratyaya"
     AGAMA = "Agama"
@@ -14,48 +20,53 @@ class UpadeshaType(Enum):
     VAKYA = "Vartika"
     LINGA = "Linganusasana"
 
-    # क्लास लेवल पर डेटा कैश (Memory Cache)
-    _cache = {}
+    @staticmethod
+    def _load_data(filename):
+        """डेटा लोड करने के लिए इंटरनल हेल्पर फंक्शन (With Global Caching)"""
+        if filename in _UPADESHA_CACHE:
+            return _UPADESHA_CACHE[filename]
 
-    @classmethod
-    def _load_data(cls, filename):
-        """डेटा लोड करने के लिए इंटरनल हेल्पर फंक्शन (With Caching)"""
-        if filename in cls._cache:
-            return cls._cache[filename]
-
+        # पाथ का निर्माण
         path = os.path.join("data", filename)
         if os.path.exists(path):
             try:
                 with open(path, 'r', encoding='utf-8') as f:
-                    cls._cache[filename] = json.load(f)
-                    return cls._cache[filename]
+                    data = json.load(f)
+                    _UPADESHA_CACHE[filename] = data
+                    return data
             except Exception:
                 return []
         return []
 
     @classmethod
     def auto_detect(cls, text):
-        """स्वचालित पहचान (Cached and Fast)"""
-        if not text: return None
+        """
+        बिना यूजर इनपुट के उपदेश के प्रकार का पता लगाना।
+        """
+        if not text:
+            return None
+
         cleaned_text = text.strip()
 
-        # 1. धातु जाँच
+        # 1. धातुओं में खोजें
         dhatus = cls._load_data('dhatu_master_structured.json')
         for d in dhatus:
             if cleaned_text == d.get('upadesha') or cleaned_text == d.get('mula_dhatu'):
                 return cls.DHATU
 
-        # 2. प्रत्यय जाँच (Combined Search)
-        # A. विभक्ति
+        # 2. प्रत्ययों में खोजें (Multiple Sources)
+        # A. विभक्ति मास्टर
         v_master = cls._load_data('vibhakti_master.json')
         if v_master:
-            all_v = v_master.get('sup_pratyayas', []) + \
-                    v_master.get('tin_pratyayas', []) + \
-                    v_master.get('extra_taddhita_avyaya', [])
-            if any(cleaned_text == v.get('name') for v in all_v):
+            # सुप्, तिङ् और एक्स्ट्रा तद्धित को एक साथ चेक करें
+            all_names = [s.get('name') for s in v_master.get('sup_pratyayas', [])] + \
+                        [t.get('name') for t in v_master.get('tin_pratyayas', [])] + \
+                        [ex.get('name') for ex in v_master.get('extra_taddhita_avyaya', [])]
+
+            if cleaned_text in all_names:
                 return cls.PRATYAYA
 
-        # B. कृत् और तद्धित
+        # B. कृत् और तद्धित प्रत्यय
         for f in ['krut_pratyayas.json', 'taddhita_pratyayas.json']:
             data = cls._load_data(f)
             p_list = data.get('data', data) if isinstance(data, dict) else data
