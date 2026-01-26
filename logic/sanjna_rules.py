@@ -49,7 +49,7 @@ def apply_upadeshe_ajanunasika_1_3_2(varna_list):
 def apply_halantyam_1_3_3(varna_list, original_word, source_type):
     """
     सूत्र: १.३.३ हलन्त्यम् + १.३.४ न विभक्तौ तुस्माः
-    लॉजिक: पहले संज्ञा की पहचान (Tagging), लोप बाद में (Tasya Lopah)।
+    नियम: यदि उपदेश 'विभक्ति' है और अंत में 'त-वर्ग, स्, म' है, तो लोप नहीं होगा।
     """
     from core.upadesha_registry import UpadeshaType
     if not varna_list: return [], []
@@ -57,21 +57,19 @@ def apply_halantyam_1_3_3(varna_list, original_word, source_type):
     last_idx = len(varna_list) - 1
     last_varna = varna_list[last_idx]
 
-    # १. चेक करें कि क्या यह विभक्ति है (Data-loader या Manual Selection से)
+    # Check if it is a Vibhakti
     is_vibhakti = (source_type == UpadeshaType.VIBHAKTI)
 
-    # २. केवल तभी आगे बढ़ें यदि अंतिम वर्ण 'हल्' (व्यंजन) हो
     if last_varna.endswith('्'):
-
-        # ३. सूत्र १.३.४ (न विभक्तौ तुस्माः) - विभक्ति के अंत में त-वर्ग, स्, म का निषेध
+        # १.३.४ न विभक्तौ तुस्माः (तु = त-वर्ग, स्, म्)
         tusma = ['त्', 'थ्', 'द्', 'ध्', 'न्', 'स्', 'म्']
 
         if is_vibhakti and last_varna in tusma:
-            # यहाँ निषेध (Prohibition) लग गया, इसलिए इंडेक्स खाली [] भेजेंगे
             link = get_sutra_link("1.3.4")
-            return [], [f"[१.३.४ न विभक्तौ तुस्माः (निषेध)]({link})"]
+            # यहाँ कोई इत्-इंडेक्स नहीं लौटेगी (Protection Active)
+            return [], [f"[१.३.४ न विभक्तौ तुस्माः (प्रतिषेध)]({link})"]
 
-        # ४. यदि १.३.४ लागू नहीं हुआ, तो १.३.३ से इत्-संज्ञा करें
+        # यदि विभक्ति नहीं है, तो सामान्य हलन्त्यम् लगेगा
         link = get_sutra_link("1.3.3")
         return [last_idx], [f"[१.३.३ हलन्त्यम्]({link})"]
 
