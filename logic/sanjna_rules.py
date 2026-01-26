@@ -91,15 +91,31 @@ def apply_shah_pratyayasya_1_3_6(varna_list):
     return [], []
 
 
-def apply_chuttu_1_3_7(varna_list):
-    """१.३.७: प्रत्यय के आदि च-वर्ग/ट-वर्ग की इत्-संज्ञा।"""
-    if not varna_list: return [], []
-    chutuvarga = ['च्', 'छ्', 'ज्', 'झ्', 'ञ्', 'ट्', 'ठ्', 'ड्', 'ढ्', 'ण्']
-    if varna_list[0] in chutuvarga:
-        link = get_sutra_link("1.3.7")
-        return [0], [f"[१.३.७ चुट्टू]({link})"]
-    return [], []
+def apply_chuttu_1_3_7(varna_list, source_type):
+    """
+    सूत्र: १.३.७ चुट्टू
+    नियम: प्रत्यय के आदि (initial) में स्थित च-वर्ग या ट-वर्ग की इत्-संज्ञा होती है।
+    """
+    # १. सुरक्षा जाँच: यदि लिस्ट खाली है या उपदेश 'प्रत्यय' नहीं है, तो नियम लागू न करें
+    # धातु के आदि में 'चु' या 'टु' होने पर इत्-संज्ञा नहीं होती (जैसे 'च्यु' धातु)
+    from core.upadesha_registry import UpadeshaType
+    if not varna_list or source_type != UpadeshaType.PRATYAYA:
+        return [], []
 
+    # २. च-वर्ग (चु) और ट-वर्ग (टू) की सूची
+    chuvarga = ['च्', 'छ्', 'ज्', 'झ्', 'ञ्']
+    tuvarga = ['ट्', 'ठ्', 'ड्', 'ढ्', 'ण्']
+    target_varnas = chuvarga + tuvarga
+
+    # ३. 'आदि' (Index 0) वर्ण की जाँच
+    first_varna = varna_list[0]
+
+    if first_varna in target_varnas:
+        link = get_sutra_link("1.3.7")
+        # index 0 को इत् मार्क करें और टैग लौटाएं
+        return [0], [f"[१.३.७ चुट्टू]({link})"]
+
+    return [], []
 
 def apply_lashakvataddhite_1_3_8(varna_list, is_taddhita=False):
     """१.३.८: प्रत्यय के आदि ल, श, कु की इत्-संज्ञा।"""
