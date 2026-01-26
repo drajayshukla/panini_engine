@@ -12,6 +12,7 @@ class UpadeshaType(Enum):
     """
     DHATU = "Dhatu"
     PRATYAYA = "Pratyaya"
+    VIBHAKTI = "Vibhakti"
     AGAMA = "Agama"
     ADESH = "Adesha"
     SUTRA = "Sutra"
