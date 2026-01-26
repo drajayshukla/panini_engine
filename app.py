@@ -2,7 +2,8 @@ import streamlit as st
 from core.phonology import sanskrit_varna_vichhed
 from core.analyzer import analyze_sanjna
 from core.morph_rules import apply_ata_upadhayah_7_2_116
-from core.it_sanjna_engine import run_it_sanjna_prakaran
+from core.it_sanjna_engine import ItSanjnaEngine
+from core.upadesha_registry import UpadeshaType
 
 # पेज सेटअप
 st.set_page_config(page_title="अष्टाध्यायी-यंत्र", layout="wide", initial_sidebar_state="expanded")
