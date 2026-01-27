@@ -31,18 +31,14 @@ def load_shiva_sutras():
 
 shiva_sutras = load_shiva_sutras()
 
-if not shiva_sutras:
-    st.error("माहेश्वर सूत्र डेटा (shiva_sutras.json) नहीं मिला!")
-    st.stop()
-
 # ४. आदि और अन्त्य वर्णों का संग्रह
 all_adis = []
 all_its = []
-for sutra in shiva_sutras:
-    all_adis.extend(sutra['varnas'])
-    all_its.append(sutra['it_varna'])
+for s in shiva_sutras:
+    all_adis.extend(s['varnas'])
+    all_its.append(s['it_varna'])
 
-# --- ५. यूआई लेआउट (Selection Panel) ---
+# --- ५. यूआई लेआउट ---
 col1, col2 = st.columns([1, 2])
 
 with col1:
@@ -51,67 +47,51 @@ with col1:
 
     if mode == "Standard (पाणिनीय)":
         selected_p = st.selectbox("अष्टाध्यायी में प्रयुक्त प्रत्याहार चुनें:", options=sorted(PANINI_PRATYAHARAS))
+
+        # 'Surgical' विच्छेद लॉजिक: आदि और अन्त्य इत् को सही से अलग करना
         if selected_p == "र":
             adi_val, it_val = "र", "ल"
         else:
-            adi_val = selected_p[:-1]
-            it_val = selected_p[-1] + "्" if not selected_p[-1].endswith('्') else selected_p[-1]
+            # आदि वर्ण हमेशा पहला अक्षर होता है
+            adi_val = selected_p[0]
+            # अन्त्य इत् के लिए माहेश्वर सूत्रों में मिलान करना
+            potential_it = selected_p[1:] + "्"
+            # यदि 'अश्' चुना है तो 'श्' खोजें
+            it_val = next((it for it in all_its if it.startswith(selected_p[1:])), all_its[0])
     else:
         adi_val = st.selectbox("आदि वर्ण (Start):", options=all_adis)
         it_val = st.selectbox("अन्त्य इत् (End):", options=all_its)
 
-# ६. प्रत्याहार जनरेशन
-pratyahara_name = f"{adi_val}{it_val}"
-clean_name = pratyahara_name.replace("्", "")
+# ६. प्रत्याहार जनरेशन (Calling core logic)
 result_varnas = PratyaharaGenerator.generate(adi_val, it_val, shiva_sutras)
+clean_name = f"{adi_val}{it_val}".replace("्", "")
 
-# --- ७. मुख्य डिस्प्ले (Result Panel) ---
+# --- ७. मुख्य डिस्प्ले ---
 with col2:
     st.header(f"💠 विश्लेषण: {clean_name}")
 
-    # पाणिनीय वैधता चेक
+    # पाणिनीय वैधता चेक (Clinical Validation)
     is_panini = clean_name in PANINI_PRATYAHARAS or (clean_name == "र" and adi_val == "र")
-    if is_panini:
-        st.success("✅ यह एक **प्रामाणिक पाणिनीय प्रत्याहार** है।")
-    else:
-        st.warning("⚠️ यह एक **कृत्रिम (Artificial) प्रत्याहार** है।")
 
-    if not result_varnas or (adi_val not in result_varnas):
-        st.error("त्रुटि: आदि वर्ण अन्त्य इत् के बाद आता है। कृपया सही क्रम चुनें।")
+    if is_panini:
+        st.success(f"✅ यह एक **प्रामाणिक पाणिनीय प्रत्याहार** है।")
     else:
-        st.subheader("📚 वर्णों का समूह:")
+        st.warning(f"⚠️ यह एक **कृत्रिम (Artificial) प्रत्याहार** है।")
+
+    # परिणाम की जाँच और प्रदर्शन
+    if not result_varnas:
+        st.error(f"त्रुटि: आदि वर्ण '{adi_val}' और अन्त्य इत् '{it_val}' के बीच कोई वर्ण नहीं मिला। कृपया क्रम जाँचें।")
+    else:
+        st.subheader("📚 शामिल वर्ण (Varnas):")
         varna_html = "".join([
                                  f"<div style='display:inline-block; background-color:#e1f5fe; border-radius:8px; padding:10px 20px; margin:5px; font-size:1.5rem; border:1px solid #01579b; font-weight:bold; color:#01579b;'>{v}</div>"
                                  for v in result_varnas])
         st.markdown(varna_html, unsafe_allow_html=True)
-        st.info(f"कुल वर्ण: {len(result_varnas)}")
+        st.info(f"कुल वर्णों की संख्या: **{len(result_varnas)}**")
 
-# --- ८. माहेश्वर सूत्र संदर्भ तालिका (Interactive Table) ---
+# --- ८. संदर्भ तालिका ---
 st.divider()
 
-with st.expander("🕉️ माहेश्वर सूत्र संदर्भ तालिका (Highlighting Active Sutras)"):
-    highlighted_data = []
-    for s in shiva_sutras:
-        # Check if this sutra is part of the current pratyahara
-        is_active = any(v in result_varnas for v in s['varnas']) or s['it_varna'] == it_val
-
-        highlighted_data.append({
-            "क्रम": s['id'],
-            "सूत्र": s['sutra'],
-            "शामिल वर्ण": ", ".join(s['varnas']),
-            "इत् वर्ण": s['it_varna'],
-            "स्थिति": "सक्रिय (Active)" if is_active else "-"
-        })
-    st.table(highlighted_data)
-
-# --- ९. क्लिनिकल अंतर्दृष्टि (Sidebar) ---
-st.sidebar.markdown("### 🔬 क्लिनिकल अंतर्दृष्टि")
-st.sidebar.info(f"""
-**आदिरन्त्येन सहेता (1.1.71)**:
-- **आदि वर्ण ({adi_val}):** अपना भी बोध कराता है।
-- **अन्त्य इत् ({it_val}):** केवल सीमा (Boundary) है।
-- **मध्य वर्ण:** इनके बीच के सभी वर्ण समूह का हिस्सा हैं।
-""")
-
-if is_panini:
-    st.sidebar.success(f"पाणिनी ने '{clean_name}' का प्रयोग अष्टाध्यायी के सूत्रों में किया है।")
+with st.expander("🕉️ माहेश्वर सूत्र संदर्भ तालिका"):
+    st.table([{"क्रम": s['id'], "सूत्र": s['sutra'], "वर्ण": ", ".join(s['varnas']), "इत्": s['it_varna']} for s in
+              shiva_sutras])
