@@ -119,14 +119,23 @@ def apply_lashakvataddhite_1_3_8(varna_list, source_type, is_taddhita=False):
     १.३.८: प्रत्यय के आदि ल, श, कु की इत्-संज्ञा (तद्धित वर्जित)।
     """
     from core.upadesha_registry import UpadeshaType
-    # Clinical Fix: सूत्र कहता है 'अतद्धिते' - यदि तद्धित है तो यह नियम काम नहीं करेगा
-    if not varna_list or source_type != UpadeshaType.PRATYAYA or is_taddhita:
+
+    # Clinical Fix 1: यह नियम प्रत्यय (PRATYAYA) और विभक्ति (VIBHAKTI) दोनों पर लागू होता है
+    allowed_types = [UpadeshaType.PRATYAYA, UpadeshaType.VIBHAKTI]
+
+    if not varna_list or source_type not in allowed_types or is_taddhita:
         return [], []
 
+    # क-वर्ग की पूर्ण सूची (क्, ख्, ग्, घ्, ङ्)
     kavarga = ['क्', 'ख्', 'ग्', 'घ्', 'ङ्']
     target = ['ल्', 'श्'] + kavarga
 
-    if varna_list[0] in target:
-        link = get_sutra_link("1.3.8")
-        return [0], [f"[१.३.८ लशक्वतद्धिते]({link})"]
+    # Clinical Fix 2: प्रत्यय के 'आदि' (शुरुआत) में वर्ण की जाँच
+    first_varna = varna_list[0]
+
+    if first_varna in target:
+        # १.३.८ सूत्र का लिंक और इंडेक्स 0 को टैग करना
+        link = "https://ashtadhyayi.com/sutraani/1/3/8"
+        return [0], [f"१.३.८ लशक्वतद्धिते (आदि {first_varna} की इत्-संज्ञा)"]
+
     return [], []
