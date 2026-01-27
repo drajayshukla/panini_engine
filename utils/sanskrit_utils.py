@@ -3,30 +3,24 @@ import re
 
 def sanskrit_varna_vichhed(text):
     """
-    पाणिनीय अष्टाध्यायी के 16 नियमों पर आधारित पूर्ण शुद्ध कोड।
-    'लो, ली, लू, लाँ' और 'एधँ' जैसी समस्याओं का स्थायी समाधान।
+    पाणिनि इंजन के लिए पूर्ण शुद्ध विच्छेद।
+    नियम: अयोगवाह (ंःँ) को हमेशा पिछले स्वर के साथ जोड़ा जाता है।
     """
-    if not text:
-        return []
+    if not text: return []
+    if text == "ॐ": return ["अँ", "उ", "म्"]
 
-    # नियम 16: ॐ का विशिष्ट विच्छेद
-    if text == "ॐ":
-        return ["अ", "उ", "म्"]
-
-    # नियम 3, 12, 13: विशिष्ट संयुक्ताक्षर और अवग्रह
+    # संयुक्ताक्षर प्रतिस्थापन
     text = text.replace('क्ष', 'क्‌ष').replace('त्र', 'त्‌र').replace('ज्ञ', 'ज्‌ञ').replace('श्र', 'श्‌र').replace('ऽ',
                                                                                                                     'अ')
 
-    # नियम 6, 7: पञ्चम वर्ण और अनुस्वार नियम
+    # पञ्चम वर्ण प्रतिस्थापन
     text = re.sub(r'ं(?=[कखगघ])', 'ङ्', text)
     text = re.sub(r'ं(?=[चछजझ])', 'ञ्', text)
     text = re.sub(r'ं(?=[टठडढ])', 'ण्', text)
     text = re.sub(r'ं(?=[तथदध])', 'न्', text)
     text = re.sub(r'ं(?=[पफबभ])', 'म्', text)
 
-    # नियम 16 (Standard): अंत में आने वाला अनुस्वार 'म्' में बदलना
-    if text.endswith('ं'):
-        text = text[:-1] + 'म्'
+    if text.endswith('ं'): text = text[:-1] + 'म्'
 
     vowels_map = {
         'ा': 'आ', 'ि': 'इ', 'ी': 'ई', 'ु': 'उ', 'ू': 'ऊ',
@@ -40,71 +34,71 @@ def sanskrit_varna_vichhed(text):
     while i < len(text):
         char = text[i]
 
-        # 1. स्वतंत्र स्वर प्रबंधन (Independent Vowels)
+        # १. स्वतंत्र स्वर प्रबंधन
         if char in independent_vowels:
-            res.append(char)
+            vowel = char
             i += 1
-            if i < len(text) and text[i] == '३':  # प्लुत स्वर
-                res[-1] += '३'
+            if i < len(text) and text[i] == '३':
+                vowel += '३';
                 i += 1
+            # अयोगवाह को स्वर के साथ ही जोड़ें (e.g. अँ)
             while i < len(text) and text[i] in 'ंःँ':
-                res.append(text[i])
+                vowel += text[i];
                 i += 1
+            res.append(vowel)
             continue
 
-            # 2. व्यंजन प्रबंधन (Fix for एधँ, स्पर्धँ, लाँ)
+        # २. व्यंजन प्रबंधन
         elif '\u0915' <= char <= '\u0939' or char == 'ळ':
             res.append(char + '्')
             i += 1
 
-            found_vowel = False
+            found_vowel_marker = False
+            vowel_to_add = ""
+
             if i < len(text):
-                if text[i] == '्':  # हलन्त स्थिति
+                if text[i] == '्':
                     i += 1
-                    found_vowel = True
-                elif text[i] in vowels_map:  # मात्रा स्थिति
-                    res.append(vowels_map[text[i]])
+                    found_vowel_marker = True  # हलन्त है तो 'अ' नहीं जोड़ेंगे
+                elif text[i] in vowels_map:
+                    vowel_to_add = vowels_map[text[i]]
                     i += 1
-                    found_vowel = True
-                elif text[i] in 'ंःँ':  # सीधे अयोगवाह (जैसे लँ, धँ)
-                    res.append('अ')  # 'अ' का अनिवार्य इंजेक्शन
-                    found_vowel = True
+                    found_vowel_marker = True
+                elif text[i] in 'ंःँ':
+                    vowel_to_add = 'अ'  # अनुनासिक के लिए 'अ' का इंजेक्शन
+                    found_vowel_marker = True
 
-            # यदि कोई मात्रा/हलन्त नहीं मिला, तो 'अ' अनिवार्य है
-            if not found_vowel:
-                res.append('अ')
+            if not found_vowel_marker:
+                vowel_to_add = 'अ'
 
-            # व्यंजन/स्वर के बाद अनुस्वार/विसर्ग/अनुनासिक
-            while i < len(text) and text[i] in 'ंःँ':
-                res.append(text[i])
-                i += 1
+            # अयोगवाह को इस 'vowel_to_add' के साथ जोड़ें
+            if vowel_to_add:
+                while i < len(text) and text[i] in 'ंःँ':
+                    vowel_to_add += text[i]
+                    i += 1
+                res.append(vowel_to_add)
             continue
-
-        elif char in 'ᳲᳳ':
-            res.append(char)
-            i += 1
         else:
             i += 1
-
     return res
 
 
 def sanskrit_varna_samyoga(varna_list):
-    """
-    वर्णों को जोड़कर शुद्ध रूप बनाना (Surgical Reconstruction)
-    """
+    """Reconstruction logic with merged vowel support."""
     combined = ""
     vowels_map = {
         'आ': 'ा', 'इ': 'ि', 'ई': 'ी', 'उ': 'ु', 'ऊ': 'ू',
         'ऋ': 'ृ', 'ॠ': 'ॄ', 'ऌ': 'ॢ', 'ॡ': 'ॣ',
         'ए': 'े', 'ऐ': 'ै', 'ओ': 'ो', 'औ': 'ौ'
     }
-
     for varna in varna_list:
-        if varna in vowels_map and combined.endswith('्'):
-            combined = combined[:-1] + vowels_map[varna]
-        elif varna == 'अ' and combined.endswith('्'):
-            combined = combined[:-1]
+        base_vowel = varna[0]  # 'अँ' में से 'अ' लें
+        marker = varna[1:]  # 'अँ' में से 'ँ' लें
+
+        if base_vowel in vowels_map and combined.endswith('्'):
+            combined = combined[:-1] + vowels_map[base_vowel] + marker
+        elif base_vowel == 'अ' and combined.endswith('्'):
+            combined = combined[:-1] + marker
         else:
             combined += varna
     return combined
