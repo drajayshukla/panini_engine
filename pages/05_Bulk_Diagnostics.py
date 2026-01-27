@@ -37,24 +37,42 @@ all_datasets = load_all_datasets()
 def run_bulk_test(data_list, source_type):
     report = []
 
-    # की-मैपिंग (Key Mapping)
-    # डेटाबेस में 'upadesha' या 'pratyay' अलग-अलग नाम से हो सकते हैं
-    search_key = ""
-    if data_list:
-        sample = data_list[0]
-        search_key = 'upadesha' if 'upadesha' in sample else \
-            ('pratyay' if 'pratyay' in sample else 'name')
+    # १. एम्पटी चेक (Clinical Safety Check)
+    if not data_list:
+        st.warning("चुना गया डेटासेट खाली है।")
+        return pd.DataFrame()
 
-    for entry in data_list:
+    # २. अभ्यास माला (Nested Structure) का विशेष हैंडलिंग
+    actual_list = []
+    if isinstance(data_list, dict) and 'categories' in data_list:
+        # सभी कैटेगरीज के उदाहरणों को एक समतल सूची (Flat List) में लाना
+        for cat in data_list['categories']:
+            actual_list.extend(cat['examples'])
+    elif isinstance(data_list, list):
+        actual_list = data_list
+    else:
+        st.error("डेटा स्ट्रक्चर अज्ञात है।")
+        return pd.DataFrame()
+
+    # ३. की-मैपिंग (Key Mapping)
+    if not actual_list:
+        return pd.DataFrame()
+
+    sample = actual_list[0]
+    search_key = 'input' if 'input' in sample else \
+        ('upadesha' if 'upadesha' in sample else \
+             ('pratyay' if 'pratyay' in sample else 'name'))
+
+    # ४. प्रोसेसिंग लूप
+    for entry in actual_list:
         original = str(entry.get(search_key, ""))
         if not original: continue
 
-        # १. विच्छेद
         v_list = sanskrit_varna_vichhed(original)
 
-        # २. इत्-संज्ञा (कौमुदी क्रम)
-        # तद्धित के लिए विशेष चेक
-        is_taddhita = "तद्धित" in str(entry.get('note', '')) or "तद्धित" in str(entry.get('meaning', ''))
+        # तद्धित ऑटो-डिटेक्शन (Critical for 1.3.8)
+        is_taddhita = "तद्धित" in str(entry.get('note', '')) or \
+                      "तद्धित" in str(entry.get('meaning', ''))
 
         remaining, tags = ItSanjnaEngine.run_it_sanjna_prakaran(
             varna_list=v_list.copy(),
@@ -63,7 +81,6 @@ def run_bulk_test(data_list, source_type):
             is_taddhita=is_taddhita
         )
 
-        # ३. अङ्ग निर्माण
         final_anga = sanskrit_varna_samyoga(remaining)
 
         report.append({
