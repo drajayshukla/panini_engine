@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 import os
+import re
 import pandas as pd
 from core.phonology import sanskrit_varna_vichhed, sanskrit_varna_samyoga
 from core.it_sanjna_engine import ItSanjnaEngine
@@ -12,7 +13,7 @@ st.title("🧪 पाणिनीय महा-सिमुलेशन लै�
 st.caption("अष्टाध्यायी-यंत्र: इत्-संज्ञा प्रकरण का पूर्ण 'Step-by-Step' विश्लेषण")
 
 
-# --- २. वृहद् डेटा लोडर (Multi-Source Integration) ---
+# --- २. वृहद् डेटा लोडर ---
 @st.cache_data
 def load_panini_ecosystem():
     files = {
@@ -38,26 +39,32 @@ all_data = load_panini_ecosystem()
 # --- ३. साइडबार: क्लिनिकल कंट्रोल्स ---
 with st.sidebar:
     st.header("⚙️ लैब कंट्रोल्स")
-
-    # डेटाबेस चयन
     db_choice = st.selectbox("डेटाबेस चुनें:", options=list(all_data.keys()))
     selected_db = all_data[db_choice]
 
     example_input = ""
     note_hint = ""
 
-    # डेटा स्ट्रक्चर के अनुसार डायनामिक पार्सिंग
     if db_choice == "🎯 मास्टर अभ्यास माला":
-        sub_cats = [c['name'] for c in selected_db['categories']]
+        # 'ऑल इट सूत्र' को उप-श्रेणी में जोड़ना
+        sub_cats = ["ऑल इट सूत्र (1.3.2 - 1.3.8)"] + [c['name'] for c in selected_db['categories']]
         sub_choice = st.selectbox("उप-श्रेणी (Category):", sub_cats)
-        examples = next(c for c in selected_db['categories'] if c['name'] == sub_choice)['examples']
+
+        if sub_choice == "ऑल इट सूत्र (1.3.2 - 1.3.8)":
+            all_examples = []
+            for cat in selected_db['categories']:
+                all_examples.extend(cat['examples'])
+            # यूनिक उदाहरण सुनिश्चित करना
+            examples = sorted({ex['input']: ex for ex in all_examples}.values(), key=lambda x: x['input'])
+        else:
+            examples = next(c for c in selected_db['categories'] if c['name'] == sub_choice)['examples']
+
         obj = st.selectbox("उदाहरण चुनें:", options=examples,
                            format_func=lambda x: f"{x['input']} ({x.get('type', '')})")
         example_input = obj['input']
         note_hint = obj['note']
 
     elif isinstance(selected_db, list):
-        # धातु/प्रत्यय लिस्ट्स के लिए स्मार्ट की-डिटेक्शन
         search_key = 'upadesha' if 'upadesha' in selected_db[0] else \
             ('pratyay' if 'pratyay' in selected_db[0] else 'name')
         obj = st.selectbox("उदाहरण चुनें:", options=selected_db, format_func=lambda x: str(x.get(search_key, "")))
@@ -65,32 +72,27 @@ with st.sidebar:
         note_hint = obj.get('artha_sanskrit', obj.get('meaning', obj.get('note', "")))
 
     st.markdown("---")
-
-    # ऑटो-डिटेक्ट एवं मैन्युअल ओवरराइड
     detected_type, is_taddhita_auto = UpadeshaType.auto_detect(example_input)
     source_type_val = st.selectbox("उपदेश प्रकार (Sutra 1.3.4-8 हेतु):",
                                    options=[e.value for e in UpadeshaType],
                                    index=[e.value for e in UpadeshaType].index(
                                        detected_type.value) if detected_type else 0)
     source_type = UpadeshaType(source_type_val)
-
-    # तद्धित फ्लैग निषेध (1.3.8)
     is_taddhita = st.checkbox("तद्धित प्रत्यय निषेध (Sutra 1.3.8)", value=is_taddhita_auto)
 
 # --- ४. मुख्य विश्लेषण पैनल ---
+
 st.subheader(f"🔍 डायग्नोस्टिक विश्लेषण: {example_input}")
 
 if example_input:
-    # क्लिनिकल नोट्स
-    if note_hint:
-        st.info(f"📚 **व्याकरणिक संदर्भ (Context):** {note_hint}")
+    if note_hint: st.info(f"📚 **व्याकरणिक संदर्भ:** {note_hint}")
 
-    # १. विच्छेद (Phonology Gold Standard)
+    # १. विच्छेद
     v_list = sanskrit_varna_vichhed(example_input)
-    st.markdown("### 🧬 १. वर्ण-विच्छेद (Varna Vichhed)")
+    st.markdown("### 🧬 १. वर्ण-विच्छेद")
     st.code(" + ".join(v_list), language=None)
 
-    # २. इत्-संज्ञा इंजन निष्पादन (Execution)
+    # २. इत्-संज्ञा इंजन
     remaining, tags = ItSanjnaEngine.run_it_sanjna_prakaran(
         varna_list=v_list.copy(),
         original_input=example_input,
@@ -98,10 +100,9 @@ if example_input:
         is_taddhita=is_taddhita
     )
 
+    # ३. सुव्यवस्थित 'Sutra-Matrix'
     st.markdown("---")
-
-    # ३. विज़ुअल 'Sutra-Matrix' (Horizontal Board)
-    st.subheader("🚩 २. सक्रिय इत्-संज्ञा सूत्र (Sutra Matrix)")
+    st.subheader("🚩 २. सक्रिय इत्-संज्ञा सूत्र")
     sutra_map = {
         "१.३.२": "उपदेशेऽजनुनासिक इत्", "१.३.३": "हलन्त्यम्",
         "१.३.४": "न विभक्तौ तुस्माः", "१.३.५": "आदिर्ञिटुडवः",
@@ -123,7 +124,7 @@ if example_input:
 
     st.markdown("---")
 
-    # ४. विज़ुअल ट्रेस (Mark then Delete)
+    # ४. विज़ुअल ट्रेस
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("🔬 ३. इत्-संज्ञा चिह्नीकरण")
@@ -131,14 +132,12 @@ if example_input:
         temp_rem = remaining.copy()
         for v in v_list:
             if v in temp_rem:
-                marked_display.append(v)
-                temp_rem.remove(v)
+                marked_display.append(v); temp_rem.remove(v)
             else:
                 marked_display.append(f"<span style='color: #ff4b4b; text-decoration: line-through;'>{v}</span>")
 
         st.markdown(f"<div style='font-size: 2rem; letter-spacing: 5px;'>{' + '.join(marked_display)}</div>",
                     unsafe_allow_html=True)
-
         if tags:
             for tag in tags: st.warning(f"🚩 {tag}")
         else:
@@ -151,19 +150,19 @@ if example_input:
                     unsafe_allow_html=True)
         st.success(f"अन्तिम अङ्ग (सूत्र १.३.९ द्वारा): {final_anga}")
 
-    # ५. विशेष 'Surgical' अलर्ट्स (Warnings & Blockades)
+    # ५. विशेष अलर्ट्स
     st.markdown("---")
     if source_type == UpadeshaType.VIBHAKTI:
-        st.warning("🛡️ **विभक्ति सुरक्षा कवच (१.३.४):** अन्त्य 'त-वर्ग', 'स्' और 'म्' को लोप से बचाया गया।")
+        st.warning("🛡️ **विभक्ति सुरक्षा कवच (१.३.४):** अन्त्य 'त-वर्ग', 'स्' और 'म्' सुरक्षित रहे।")
     if is_taddhita:
-        st.error("🚫 **तद्धित निषेध (१.३.८):** चूँकि यह तद्धित प्रत्यय है, आदि 'ल-श-कु' की इत्-संज्ञा बाधित की गई।")
+        st.error("🚫 **तद्धित निषेध (१.३.८):** तद्धित प्रत्यय होने के कारण आदि 'ल-श-कु' की इत्-संज्ञा बाधित।")
 
-    # ६. प्रक्रिया सारांश टेबल (Workflow)
-    st.subheader("📊 ५. प्रक्रिया सारांश (Summary Table)")
+    # ६. सारांश टेबल
+    st.subheader("📊 ५. प्रक्रिया सारांश")
     workflow_data = [
-        {"क्रम": 1, "प्रक्रिया": "विच्छेद (Vichhed)", "परिणाम": " + ".join(v_list), "सूत्र": "Phonology Module"},
-        {"क्रम": 2, "प्रक्रिया": "इत्-संज्ञा (Tagging)",
+        {"क्रम": 1, "प्रक्रिया": "विच्छेद", "परिणाम": " + ".join(v_list), "सूत्र": "Phonology"},
+        {"क्रम": 2, "प्रक्रिया": "इत्-संज्ञा",
          "परिणाम": " + ".join([re.sub('<[^<]+?>', '', m) for m in marked_display]), "सूत्र": "१.३.२ - १.३.८"},
-        {"क्रम": 3, "प्रक्रिया": "तस्य लोपः (Lopa)", "परिणाम": final_anga, "सूत्र": "१.३.९"}
+        {"क्रम": 3, "प्रक्रिया": "तस्य लोपः", "परिणाम": final_anga, "सूत्र": "१.३.९"}
     ]
     st.table(workflow_data)
