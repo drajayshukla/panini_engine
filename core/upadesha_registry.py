@@ -2,10 +2,12 @@ import json
 import os
 from enum import Enum
 
-# 'Surgical' Cache
+# 'Surgical' Cache: डेटा को बार-बार लोड होने से बचाने के लिए
 _UPADESHA_CACHE = {}
 
+
 class UpadeshaType(Enum):
+    """पाणिनीय व्याकरण के उपदेशों की श्रेणियाँ।"""
     DHATU = "Dhatu"
     PRATYAYA = "Pratyaya"
     VIBHAKTI = "Vibhakti"
@@ -19,8 +21,10 @@ class UpadeshaType(Enum):
 
     @staticmethod
     def _load_data(filename):
+        """डेटा लोड करने के लिए इंटरनल हेल्पर।"""
         if filename in _UPADESHA_CACHE:
             return _UPADESHA_CACHE[filename]
+
         path = os.path.join("data", filename)
         if os.path.exists(path):
             try:
@@ -43,32 +47,44 @@ class UpadeshaType(Enum):
 
         cleaned_text = text.strip()
 
-        # १. विभक्तियों में खोजें (vibhaktipatha.json) - Priority for 1.3.4
+        # १. विभक्तियों में खोजें (vibhaktipatha.json) - Priority 1
         v_patha = cls._load_data('vibhaktipatha.json')
-        if v_patha:
+        if v_patha and isinstance(v_patha, dict):
             all_vibs = v_patha.get('sup_pratyayas', []) + \
                        v_patha.get('tin_pratyayas', []) + \
                        v_patha.get('extra_taddhita_avyaya', [])
-            if any(cleaned_text == v.get('name') for v in all_vibs):
+
+            # Clinical Check: सुनिश्चित करें कि v एक डिक्शनरी है
+            if any(cleaned_text == v.get('name') for v in all_vibs if isinstance(v, dict)):
                 return cls.VIBHAKTI, False
 
-        # २. तद्धित मास्टर डेटा चेक (Specific for Sutra 1.3.8)
-        t_data = cls._load_data('taddhita_master_data.json')
-        # यदि डेटाबेस में मिले, तो इसे Pratyaya मानकर taddhita flag को True करें
-        if t_data and any(cleaned_text == p.get('name') or cleaned_text == p.get('pratyaya') for p in t_data):
-            return cls.PRATYAYA, True
+        # २. तद्धित मास्टर डेटा चेक (Surgical Focus for 1.3.8)
+        t_raw = cls._load_data('taddhita_master_data.json')
 
-        # ३. धातुओं में खोजें
+        # Structure Fix: डेटा लिस्ट है या डिक्शनरी में रैप्ड लिस्ट?
+        if isinstance(t_raw, dict):
+            t_data = t_raw.get('data', t_raw.get('taddhita_pratyayas', []))
+        else:
+            t_data = t_raw
+
+        if isinstance(t_data, list):
+            if any(cleaned_text == p.get('name') or cleaned_text == p.get('pratyaya')
+                   for p in t_data if isinstance(p, dict)):
+                return cls.PRATYAYA, True
+
+        # ३. धातुओं में खोजें (dhatu_master_structured.json)
         dhatus = cls._load_data('dhatu_master_structured.json')
         if isinstance(dhatus, list):
-            if any(cleaned_text == d.get('upadesha') or cleaned_text == d.get('mula_dhatu') for d in dhatus):
+            if any(cleaned_text == d.get('upadesha') or cleaned_text == d.get('mula_dhatu')
+                   for d in dhatus if isinstance(d, dict)):
                 return cls.DHATU, False
 
         # ४. अन्य षित् और सामान्य प्रत्यय
         for f in ['shit_pratyayas.json', 'krut_pratyayas.json']:
             data = cls._load_data(f)
+
             # षित् प्रत्यय के लिए नेस्टेड स्ट्रक्चर चेक
-            if f == 'shit_pratyayas.json':
+            if f == 'shit_pratyayas.json' and isinstance(data, dict):
                 db = data.get('shit_pratyaya_database', {})
                 p_list = db.get('krut_pratyayas', []) + db.get('taddhita_pratyayas', [])
                 target_key = 'pratyaya'
@@ -76,9 +92,16 @@ class UpadeshaType(Enum):
                 p_list = data.get('data', data) if isinstance(data, dict) else data
                 target_key = 'pratyay'
 
-            if isinstance(p_list, list) and any(cleaned_text == p.get(target_key) for p in p_list):
-                # यहाँ चेक करें कि क्या षित् डेटाबेस में इसे तद्धित मार्क किया गया है
-                is_t = any(cleaned_text == p.get(target_key) and p.get('type') == 'Taddhita' for p in p_list)
-                return cls.PRATYAYA, is_t
+            if isinstance(p_list, list):
+                if any(cleaned_text == p.get(target_key) for p in p_list if isinstance(p, dict)):
+                    # तद्धित फ्लैग चेक करें
+                    is_t = any(cleaned_text == p.get(target_key) and p.get('type') == 'Taddhita'
+                               for p in p_list if isinstance(p, dict))
+                    return cls.PRATYAYA, is_t
 
         return None, False
+
+    @classmethod
+    def validate_input(cls, text, upadesha_type):
+        detected_type, _ = cls.auto_detect(text)
+        return detected_type == upadesha_type
