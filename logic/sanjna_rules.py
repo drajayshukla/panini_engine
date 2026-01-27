@@ -46,36 +46,52 @@ def apply_upadeshe_ajanunasika_1_3_2(varna_list):
     return list(set(it_indices)), list(set(it_tags))
 
 
-def apply_halantyam_1_3_3(varna_list, original_word, source_type):
+def apply_halantyam_1_3_3(varna_list, blocked_indices):
     """
-    सूत्र: १.३.३ हलन्त्यम् + १.३.४ न विभक्तौ तुस्माः
-    नियम: यदि उपदेश 'विभक्ति' है और अंत में 'त-वर्ग, स्, म' है, तो लोप नहीं होगा।
+    सूत्र: १.३.३ हलन्त्यम्
+    नियम: उपदेश के अन्त में स्थित व्यंजन की इत्-संज्ञा होती है।
+    निषेध: यदि इंडेक्स 'blocked_indices' (१.३.४ द्वारा) में है, तो संज्ञा नहीं होगी।
     """
-    from core.upadesha_registry import UpadeshaType
-    if not varna_list: return [], []
+    if not varna_list:
+        return [], []
 
     last_idx = len(varna_list) - 1
     last_varna = varna_list[last_idx]
 
-    # Check if it is a Vibhakti
-    is_vibhakti = (source_type == UpadeshaType.VIBHAKTI)
-
+    # जाँच: क्या वर्ण हलन्त (व्यंजन) है?
     if last_varna.endswith('्'):
-        # १.३.४ न विभक्तौ तुस्माः (तु = त-वर्ग, स्, म्)
-        tusma = ['त्', 'थ्', 'द्', 'ध्', 'न्', 'स्', 'म्']
 
-        if is_vibhakti and last_varna in tusma:
-            link = get_sutra_link("1.3.4")
-            # यहाँ कोई इत्-इंडेक्स नहीं लौटेगी (Protection Active)
-            return [], [f"[१.३.४ न विभक्तौ तुस्माः (प्रतिषेध)]({link})"]
+        # १.३.४ प्रतिषेध जाँच (Shield Check)
+        if last_idx in blocked_indices:
+            # वर्ण हलन्त है, पर १.३.४ ने उसे सुरक्षित कर लिया है
+            return [], ["१.३.४ न विभक्तौ तुस्माः (हलन्त्यम् निषेध सक्रिय)"]
 
-        # यदि विभक्ति नहीं है, तो सामान्य हलन्त्यम् लगेगा
-        link = get_sutra_link("1.3.3")
-        return [last_idx], [f"[१.३.३ हलन्त्यम्]({link})"]
+        # यदि सुरक्षित नहीं है, तो सामान्य हलन्त्यम् लगेगा
+        return [last_idx], ["१.३.३ हलन्त्यम्"]
 
     return [], []
 
+def apply_na_vibhaktau_1_3_4(varna_list):
+    """
+    १.३.४: न विभक्तौ तुस्माः।
+    विभक्ति के अंत में स्थित 'तु' (त-वर्ग), 'स्' और 'म्' की इत्-संज्ञा नहीं होती।
+    """
+    if not varna_list:
+        return []
 
+    # १. अंतिम वर्ण की पहचान (Last Varna Index)
+    last_idx = len(varna_list) - 1
+    last_varna = varna_list[last_idx]
+
+    # २. 'तु' (त-वर्ग), 'स्', 'म्' की सूची
+    tu_s_m = ['त्', 'थ्', 'द्', 'ध्', 'न्', 'स्', 'म्']
+
+    # ३. यदि अंतिम वर्ण इनमें से एक है, तो उसे 'Blocked' घोषित करें
+    if last_varna in tu_s_m:
+        # हम यहाँ इंडेक्स लौटा रहे हैं जिसे 1.3.3 टच नहीं करेगा
+        return [last_idx]
+
+    return []
 def apply_adir_nitudavah_1_3_5(varna_list):
     """१.३.५: आदि ञि, टु, डु की इत्-संज्ञा (केवल धातु)।"""
     if len(varna_list) < 2: return [], []
