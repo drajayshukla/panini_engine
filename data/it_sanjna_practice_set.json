@@ -19,7 +19,7 @@
     {
       "name": "Halantyam & Vibhakti Shield (1.3.3-4)",
       "examples": [
-        {"input": "तुमुन्", "type": "Pratyaya", "note": "अन्त्यः नकारः इत्"},
+        {"input": "तुमुँन्", "type": "Pratyaya", "note": "अन्त्यः नकारः इत्"},
         {"input": "जस्", "type": "Vibhakti", "note": "विभक्तिः - सकारः सुरक्षितः (1.3.4)"},
         {"input": "शस्", "type": "Vibhakti", "note": "विभक्तिः - सकारः सुरक्षितः"},
         {"input": "श्नम्", "type": "Agama", "note": "मित् आगमः - मकारः इत्"},
