@@ -1,55 +1,40 @@
 import json
-import re
+import os
 
 
-def parse_panini_text(file_path):
-    sutras = []
+def clean_sanskrit_database(input_filename, output_filename):
+    # १. फाइल लोड करना
+    if not os.path.exists(input_filename):
+        print(f"❌ त्रुटि: {input_filename} नहीं मिली।")
+        return
 
-    # फाइल को ओपन करें (utf-8 एन्कोडिंग के साथ)
-    with open(file_path, 'r', encoding='utf-8') as file:
-        lines = file.readlines()
+    with open(input_filename, 'r', encoding='utf-8') as f:
+        data = json.load(f)
 
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
+    print(f"🔄 कुल {len(data)} प्रविष्टियों का विश्लेषण शुरू...")
 
-        # Regex to capture: सूत्र संख्या (1.1.1), कौमुदी संख्या (16), और सूत्र का नाम (वृद्धिरादैच्)
-        # पैटर्न: संख्या.संख्या.संख्या [स्पेस] कौमुदी-संख्या [स्पेस] सूत्र_नाम
-        match = re.match(r'(\d+\.\d+\.\d+)\s+कौमुदी-(\d+)(.*)', line)
+    # २. रिडंडेंट फील्ड्स को हटाना (Diagnostic Cleaning)
+    cleaned_count = 0
+    for entry in data:
+        # इन हेडिंग्स को हटाना जो हम कोड में खुद जनरेट कर सकते हैं
+        keys_to_remove = ["separated_forms", "suffix_only"]
 
-        if match:
-            sutra_num = match.group(1)
-            kaumudi_num = match.group(2)
-            sutra_name = match.group(3).strip()
+        for key in keys_to_remove:
+            if key in entry:
+                del entry[key]
+                cleaned_count += 1
 
-            sutra_obj = {
-                "sutra_num": sutra_num,
-                "kaumudi_num": kaumudi_num,
-                "name": sutra_name,
-                "adhyaya": int(sutra_num.split('.')[0]),
-                "pada": int(sutra_num.split('.')[1]),
-                "order": int(sutra_num.split('.')[2]),
-                "type": "Sanjna" if "संज्ञा" in sutra_name or sutra_num.startswith("1.1") else "Vidhi"
-                # प्राथमिक वर्गीकरण
-            }
-            sutras.append(sutra_obj)
-        elif line.startswith('•'):
-            # यह वार्त्तिक या विशेष टिप्पणी है, इसे पिछले सूत्र के साथ जोड़ें
-            if sutras:
-                if "vartikas" not in sutras[-1]:
-                    sutras[-1]["vartikas"] = []
-                sutras[-1]["vartikas"].append(line.replace('•', '').strip())
+    # ३. 'Lean' JSON फाइल को सेव करना
+    with open(output_filename, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
 
-    return sutras
-#__init__.py
+    print(f"✅ सफलता! क्लीन फाइल '{output_filename}' तैयार है।")
+    print(f"🗑️ कुल {cleaned_count} रिडंडेंट फील्ड्स हटाए गए।")
 
-# फाइल को प्रोसेस करें
-file_input = '08_Kala_Lab.txt'
-sutra_data = parse_panini_text(file_input)
 
-# JSON में सेव करें
-with open('panini_sutras.json', 'w', encoding='utf-8') as f:
-    json.dump(sutra_data, f, ensure_ascii=False, indent=4)
+if __name__ == "__main__":
+    # आपकी फाइल का नाम यहाँ लिखें
+    input_file = "filtered_data.json"
+    output_file = "shbadroop.json"
 
-print(f"Success! {len(sutra_data)} sutras have been structured into panini_sutras.json")
+    clean_sanskrit_database(input_file, output_file)
