@@ -16,11 +16,25 @@
     { "id": "s21", "name": "सुप्", "vibhakti": "सप्तमी", "vachana": "बहुवचन", "it_varnas": ["प्"] }
   ],
   "tin_pratyayas": [
-    { "id": "t1", "name": "तिप्", "pada": "परस्मैपद", "purusha": "प्रथम", "vachana": "एकवचन", "it_varnas": ["प्"] },
-    { "id": "t9", "name": "मस्", "pada": "परस्मैपद", "purusha": "उत्तम", "vachana": "बहुवचन", "it_varnas": [] },
-    { "id": "t10", "name": "त", "pada": "आत्मनेपद", "purusha": "प्रथम", "vachana": "एकवचन", "it_varnas": [] },
-    { "id": "t18", "name": "महिङ्", "pada": "आत्मनेपद", "purusha": "उत्तम", "vachana": "बहुवचन", "it_varnas": ["ङ्"] }
-  ],
+  { "id": "t1", "name": "तिप्", "pada": "परस्मैपद", "purusha": "प्रथम", "vachana": "एकवचन", "it_varnas": ["प्"] },
+  { "id": "t2", "name": "तस्", "pada": "परस्मैपद", "purusha": "प्रथम", "vachana": "द्विवचन", "it_varnas": [] },
+  { "id": "t3", "name": "झि", "pada": "परस्मैपद", "purusha": "प्रथम", "vachana": "बहुवचन", "it_varnas": [] },
+  { "id": "t4", "name": "सिप्", "pada": "परस्मैपद", "purusha": "मध्यम", "vachana": "एकवचन", "it_varnas": ["प्"] },
+  { "id": "t5", "name": "थस्", "pada": "परस्मैपद", "purusha": "मध्यम", "vachana": "द्विवचन", "it_varnas": [] },
+  { "id": "t6", "name": "थ", "pada": "परस्मैपद", "purusha": "मध्यम", "vachana": "बहुवचन", "it_varnas": [] },
+  { "id": "t7", "name": "मिप्", "pada": "परस्मैपद", "purusha": "उत्तम", "vachana": "एकवचन", "it_varnas": ["प्"] },
+  { "id": "t8", "name": "वस्", "pada": "परस्मैपद", "purusha": "उत्तम", "vachana": "द्विवचन", "it_varnas": [] },
+  { "id": "t9", "name": "मस्", "pada": "परस्मैपद", "purusha": "उत्तम", "vachana": "बहुवचन", "it_varnas": [] },
+  { "id": "t10", "name": "त", "pada": "आत्मनेपद", "purusha": "प्रथम", "vachana": "एकवचन", "it_varnas": [] },
+  { "id": "t11", "name": "आताम्", "pada": "आत्मनेपद", "purusha": "प्रथम", "vachana": "द्विवचन", "it_varnas": [] },
+  { "id": "t12", "name": "झ", "pada": "आत्मनेपद", "purusha": "प्रथम", "vachana": "बहुवचन", "it_varnas": [] },
+  { "id": "t13", "name": "थास्", "pada": "आत्मनेपद", "purusha": "मध्यम", "vachana": "एकवचन", "it_varnas": [] },
+  { "id": "t14", "name": "आथाम्", "pada": "आत्मनेपद", "purusha": "मध्यम", "vachana": "द्विवचन", "it_varnas": [] },
+  { "id": "t15", "name": "ध्वम्", "pada": "आत्मनेपद", "purusha": "मध्यम", "vachana": "बहुवचन", "it_varnas": [] },
+  { "id": "t16", "name": "इट्", "pada": "आत्मनेपद", "purusha": "उत्तम", "vachana": "एकवचन", "it_varnas": ["ट्"] },
+  { "id": "t17", "name": "वहि", "pada": "आत्मनेपद", "purusha": "उत्तम", "vachana": "द्विवचन", "it_varnas": [] },
+  { "id": "t18", "name": "महिङ्", "pada": "आत्मनेपद", "purusha": "उत्तम", "vachana": "बहुवचन", "it_varnas": ["ङ्"] }
+],
   "extra_taddhita_avyaya": [
     { "id": "ex1", "name": "दानीम्", "type": "तद्धित/अव्यय", "sutra": "5.3.18", "meaning": "Time (काल)" },
     { "id": "ex2", "name": "एद्युस्", "type": "तद्धित/अव्यय", "sutra": "5.3.22", "meaning": "Day (दिन)" },
