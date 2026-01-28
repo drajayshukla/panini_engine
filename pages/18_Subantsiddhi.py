@@ -121,7 +121,7 @@ if word_input:
                 prev_str = add_history(s7 if s7 else "८.२.७ (N-Removal)", current_varnas, prev_str)
 
             # CASE C: DHATR / KARTR (Agent Nouns)
-            elif any(x in word_input for x in ["धातृ", "कर्तृ", "हर्तृ"]):
+            elif any(x in word_input for x in ["धातृ", "कर्तृ", "हर्तृ", "स्वसृ", "नप्तृ", "नेष्टृ"]):
                 current_varnas, s94 = apply_anang_7_1_94(current_varnas)
                 prev_str = add_history(s94, current_varnas, prev_str)
                 current_varnas = [v for v in current_varnas if v.char != 'ङ्']
