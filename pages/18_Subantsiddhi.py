@@ -121,16 +121,28 @@ if word_input:
                 prev_str = add_history(s7 if s7 else "८.२.७ (N-Removal)", current_varnas, prev_str)
 
             # CASE C: DHATR / KARTR (Agent Nouns)
-            elif any(x in word_input for x in ["धातृ", "कर्तृ", "हर्तृ", "स्वसृ", "नप्तृ", "नेष्टृ"]):
+                # --- BRANCH E: AGENT & SVASṚ SPECIAL (६.४.११) ---
+            elif any(x in word_input for x in ["स्वसृ", "धातृ", "कर्तृ", "नप्तृ", "नेष्टृ"]):
+                # 1. 7.1.94 (अनङ्-आदेशः: ऋ -> अन्ङ्)
                 current_varnas, s94 = apply_anang_7_1_94(current_varnas)
                 prev_str = add_history(s94, current_varnas, prev_str)
+
+                # 2. 1.3.3 (ङ्-लोपः)
                 current_varnas = [v for v in current_varnas if v.char != 'ङ्']
-                prev_str = add_history("१.३.३ (हलन्त्यम् - ङ् लोपः)", current_varnas, prev_str)
+                prev_str = add_history("१.३.३ (इत्-लोपः)", current_varnas, prev_str)
+
+                # 3. 6.4.11 (उपधा दीर्घ: specifically citing the Aptṛn-tṛc list)
                 current_varnas, s11 = apply_upadha_dirgha_6_4_11(current_varnas)
                 prev_str = add_history(s11, current_varnas, prev_str)
-                current_varnas, s68 = apply_hal_nyab_6_1_68(current_varnas)
+
+                # 4. 6.1.68 (S-Lopa)
+                res_v5, s68 = apply_hal_nyab_6_1_68(current_varnas)
+                current_varnas = res_v5
                 prev_str = add_history(s68 if s68 else "६.१.६८ (S-Removal)", current_varnas, prev_str)
-                current_varnas, s7 = apply_nalopa_8_2_7(current_varnas)
+
+                # 5. 8.2.7 (N-Lopa)
+                res_v6, s7 = apply_nalopa_8_2_7(current_varnas)
+                current_varnas = res_v6
                 prev_str = add_history(s7 if s7 else "८.२.७ (N-Removal)", current_varnas, prev_str)
                 # --- BRANCH H: FEMININE Ā-ANTA (रमा, सीता, लता) ---
             elif word_input.endswith("आ"):
