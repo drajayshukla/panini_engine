@@ -121,7 +121,7 @@ def main():
 
     for entry in data:
         raw_forms = entry.get("forms", "").split(";")
-        if len(raw_forms) < 21: continue
+        if len(raw_forms) < 100: continue
 
         mapping = {
             "प्रथमा एकवचन": raw_forms[0], "प्रथमा द्विवचन": raw_forms[1], "प्रथमा बहुवचन": raw_forms[2],
