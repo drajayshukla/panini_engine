@@ -119,14 +119,14 @@ if word_input:
                                 "Form": get_diff_highlight(prev_str, new_str)})
                 prev_str = new_str
 
-                # 5e. Apṛkta Lopa (6.1.68)
+                # 5e. Apṛkta Lopa (6.1.68) - FIXED: Capture the returned list
                 current_varnas, s68 = apply_hal_nyab_6_1_68(current_varnas)
                 new_str = sanskrit_varna_samyoga(current_varnas)
                 history.append({"Sutra": s68, "Vichhed": [v.char for v in current_varnas],
                                 "Form": get_diff_highlight(prev_str, new_str)})
                 prev_str = new_str
 
-                # 5f. N-Lopa (8.2.7)
+                # 5f. N-Lopa (8.2.7) - FIXED: Capture the returned list
                 current_varnas, s7 = apply_nalopa_8_2_7(current_varnas)
                 new_str = sanskrit_varna_samyoga(current_varnas)
                 history.append({"Sutra": s7, "Vichhed": [v.char for v in current_varnas],
