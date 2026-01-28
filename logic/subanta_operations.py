@@ -50,3 +50,56 @@ def apply_hal_nyab_6_1_68(varna_list):
                 return varna_list, "६.१.६८ (हल्ङ्याब्भ्यो दीर्घात् सुतिस्यपृक्तं हल्)"
 
     return varna_list, None
+
+from core.phonology import Varna
+
+def apply_trijvadbhava_7_1_95(varna_list):
+    """
+    Sutra: तृज्वत्क्रोष्टुः (७.१.९५)
+    Description: Converts 'u' to 'ṛ' in the word 'kroṣṭu' before certain suffixes.
+    """
+    # Kroṣṭu -> Kroṣṭṛ
+    word = "".join([v.char for v in varna_list])
+    if "क्रोष्टु" in word:
+        # Replacing the final 'u' (उ) with 'ṛ' (ऋ)
+        if varna_list[-2].char == 'उ': # Assuming word+s structure
+            varna_list[-2] = Varna('ऋ')
+            return varna_list, "७.१.९५ (तृज्वत्क्रोष्टुः)"
+    return varna_list, None
+
+def apply_anang_7_1_94(varna_list):
+    """
+    Sutra: ऋदुशनस्पुरुदंसोऽनेहसां च (७.१.९४)
+    Description: Applies 'anaṅ' (अनङ्) substitution to the end of ṛ-ending words.
+    """
+    # kroṣṭṛ + s -> kroṣṭ-anang + s
+    if varna_list and varna_list[-2].char == 'ऋ':
+        varna_list.pop(-2) # Remove 'ṛ'
+        # Insert 'anang' components
+        varna_list.insert(-1, Varna('अ'))
+        varna_list.insert(-1, Varna('न्'))
+        varna_list.insert(-1, Varna('ङ्'))
+        return varna_list, "७.१.९४ (ऋदुशनस्पुरुदंसोऽनेहसां च)"
+    return varna_list, None
+
+def apply_upadha_dirgha_6_4_11(varna_list):
+    """
+    Sutra: अप्तृन्तृच्स्वसृ... (६.४.११)
+    Description: Lengthens the penultimate vowel (Upadha) of 'n' ending bases.
+    """
+    # kroṣṭan + s -> kroṣṭān + s
+    for i in range(len(varna_list)-1, -1, -1):
+        if varna_list[i].char == 'अ':
+            varna_list[i] = Varna('आ')
+            return varna_list, "६.४.११ (अप्तृन्तृच्... दीर्घः)"
+    return varna_list, None
+
+def apply_nalopa_8_2_7(varna_list):
+    """
+    Sutra: नलोपः प्रातिपदिकान्तस्य (८.२.७)
+    Description: Deletes the final 'n' of a Pada that is also a Pratipadika.
+    """
+    if varna_list and varna_list[-1].char == 'न्':
+        varna_list.pop()
+        return varna_list, "८.२.७ (नलोपः प्रातिपदिकान्तस्य)"
+    return varna_list, None
