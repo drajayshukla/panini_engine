@@ -4,67 +4,84 @@ from core.it_sanjna_engine import ItSanjnaEngine
 from core.upadesha_registry import UpadeshaType
 from logic.pratipadika_engine import PratipadikaEngine
 from logic.subanta_operations import apply_rutva_8_2_66, apply_visarga_8_3_15
-from utils.data_loader import get_all_vibhakti
 
 st.set_page_config(page_title="Subant Siddhi Lab", layout="wide")
 
-st.title("🔬 Subant Siddhi Lab: रामः Process")
+st.title("🔬 Subant Siddhi Lab: Sanskrit Word Generator")
+st.markdown("---")
 
-# १. Input & Base Identification
-word_input = st.text_input("Enter Base (e.g., राम)", value="राम")
+# १. Input Section
+col1, col2 = st.columns([1, 1])
+
+with col1:
+    word_input = st.text_input("Enter Base Name (प्रातिपदिक)", value="राम")
+
+with col2:
+    # Pulling the 21 suffixes from the matrix in our engine
+    sup_map = PratipadikaEngine.get_sup_vibhakti_map()
+    vib_choice = st.selectbox("Select Vibhakti", list(sup_map.keys()))
+    vac_choice = st.selectbox("Select Vachana", ["एकवचन", "द्विवचन", "बहुवचन"])
+    selected_suffix = sup_map[vib_choice][vac_choice]
 
 if word_input:
-    # Step 1: Base Identification (1.2.45 / 1.2.46)
+    # --- STEP 1: AUTOMATIC VERIFICATION ---
     base_info = PratipadikaEngine.identify_base(word_input)
 
     if base_info['is_pratipadika']:
-        st.info(
-            f"**Step 1: Pratipadika Sanjna** - {base_info['sutra_applied']} applied. '{word_input}' is now a valid base.")
-        with st.expander("Sutra Description"):
-            st.write(base_info['description'])
+        st.success(f"**Step 1: Identity Verified** - {base_info['sutra_applied']}")
 
-        # २. Suffix Selection (4.1.2)
-        st.subheader("Step 2: Vibhakti Injection (४.१.२)")
-        # In a full app, you can use get_all_vibhakti() to populate a selectbox
-        selected_suffix = "सुँ"  # Hardcoded for the 'रामः' case study
-        st.success(f"Selected Suffix: **{selected_suffix}** (Prathama Ekavachana)")
+        # Display metadata if found in shabdroop.json
+        if 'metadata' in base_info:
+            meta = base_info['metadata']
+            st.caption(f"✨ **Database Match Found:** Meaning: {meta.get('artha_hin')} | Gender: {meta.get('linga')}")
 
-        # ३. It-Sanjna & Lopa (1.3.2)
-        st.subheader("Step 3: It-Sanjna & Cleaning")
+        st.markdown("---")
+
+        # --- STEP 2: SUFFIX INJECTION ---
+        st.subheader(f"Step 2: Injection (Pratyaya: {selected_suffix})")
         combined_raw = word_input + selected_suffix
         varna_list = sanskrit_varna_vichhed(combined_raw)
+        st.write(f"Initial Sequence: `{combined_raw}`")
 
-        # Applying It-Sanjna Engine (Results in 'रामस्')
+        # --- STEP 3: IT-SANJNA ENGINE ---
+        st.subheader("Step 3: It-Sanjna & Lopa (Cleaning)")
         clean_varnas, it_tags = ItSanjnaEngine.run_it_sanjna_prakaran(
             varna_list, combined_raw, source_type=UpadeshaType.VIBHAKTI
         )
-
-        st.write(f"After It-Lopa: `{sanskrit_varna_samyoga(clean_varnas)}`")
+        intermediate_word = sanskrit_varna_samyoga(clean_varnas)
+        st.write(f"Post-Cleaning Form: `{intermediate_word}`")
         for tag in it_tags:
-            st.caption(f"Applied: {tag}")
+            st.caption(tag)
 
-        # ४. Rutva (8.2.66)
-        st.subheader("Step 4: Rutva (८.२.६६)")
-        # Converts 'रामस्' to 'रामरुँ'
-        rutva_varnas, rutva_sutra = apply_rutva_8_2_66(clean_varnas)
+        # --- STEP 4 & 5: SUBANTA OPERATIONS (Logic for Prathama Ekavachana) ---
+        # Note: These operations currently handle 's' -> 'r' -> 'h'
+        final_processed_varnas = clean_varnas
 
-        # Step 5: Second It-Lopa (Cleaning the 'रुँ' into 'र्')
-        # Panini's process requires cleaning newly added Upadesha markers
-        final_r_varnas, r_tags = ItSanjnaEngine.run_it_sanjna_prakaran(
-            rutva_varnas, "रुँ", source_type=UpadeshaType.VIBHAKTI
-        )
+        if intermediate_word.endswith('स्'):
+            st.subheader("Step 4: Rutva & Visarga (Final Operations)")
 
-        st.write(f"After Rutva ({rutva_sutra}): `{sanskrit_varna_samyoga(final_r_varnas)}`")
+            # Rutva 8.2.66
+            rutva_varnas, s66 = apply_rutva_8_2_66(clean_varnas)
+            st.write(f"Applying Rutva ({s66})...")
 
-        # ६. Visarga (8.3.15)
-        st.subheader("Step 5: Visarga (८.३.१५)")
-        # Converts 'रामर्' to 'रामः' in Avasana
-        final_varnas, visarga_sutra = apply_visarga_8_3_15(final_r_varnas)
-        final_word = sanskrit_varna_samyoga(final_varnas)
+            # Clean newly added 'रुँ'
+            final_r_varnas, _ = ItSanjnaEngine.run_it_sanjna_prakaran(
+                rutva_varnas, "रुँ", source_type=UpadeshaType.VIBHAKTI
+            )
 
-        st.header(f"✅ Final Siddhi: {final_word}")
-        st.balloons()
+            # Visarga 8.3.15
+            final_processed_varnas, s15 = apply_visarga_8_3_15(final_r_varnas)
+            st.write(f"Applying Visarga ({s15})...")
+
+        # --- FINAL OUTPUT ---
+        final_output = sanskrit_varna_samyoga(final_processed_varnas)
+        st.markdown("---")
+        st.header(f"✅ Final Siddhi Form: {final_output}")
+
+        # Reference Check (If available in JSON)
+        if 'metadata' in base_info:
+            st.info(f"**Reference Check:** In database, forms for this word are: {base_info['metadata'].get('forms')}")
 
     else:
-        # Error handling if the input is already a Dhatu or Pratyaya
-        st.error(f"Error: {base_info['reason']}")
+        st.error(f"❌ Rejection: {base_info['reason']}")
+        st.warning("According to Panini 1.2.45, a Pratipadika cannot be a Dhatu or a Pratyaya.")
