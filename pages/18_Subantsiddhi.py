@@ -197,26 +197,22 @@ if word_input:
 
             # CASE H: STANDARD (Rama, Gauri, Ramaa)
             else:
-                # 1. Surgical Check: Only apply 6.1.68 if it's actually a Nyāb (long feminine)
-                # or a transformed Hal-anta.
-                # For short 'a' stems like 'Rāma', we skip to Rutva.
+                # 1. PRIORITY: Check for Hal-Nyāb-Lopa (6.1.68)
+                # This applies to Long Feminine (आ, ई, ऊ) and Consonant-ending stems.
+                res_v, s68 = apply_hal_nyab_6_1_68(current_varnas)
 
-                is_long_fem = word_input.endswith(('आ', 'ई', 'ऊ'))
+                if s68:
+                    # If the rule applied, the 'स्' is gone. We record it and STOP.
+                    current_varnas = res_v
+                    prev_str = add_history(s68, current_varnas, prev_str, "हल्ङ्याब्-लोपः (S-Deletion)")
 
-                # We only run Lopa for Long Feminine or specific transformed stems
-                if is_long_fem:
-                    res_v, s68 = apply_hal_nyab_6_1_68(current_varnas)
-                    if s68:
-                        current_varnas = res_v
-                        prev_str = add_history(s68, current_varnas, prev_str, "हल्ङ्याब्-लोपः")
-
-                # 2. If S-Lopa didn't happen (like in Rāma), proceed to Rutva-Visarga
-                if current_varnas[-1].char == 'स्':
+                # 2. FALLBACK: If 'स्' survived (meaning it's a short vowel stem like Rāma)
+                elif current_varnas[-1].char == 'स्':
                     # ८.२.६६ (स -> रुँ)
                     current_varnas, s66 = apply_rutva_8_2_66(current_varnas)
                     prev_str = add_history(s66, current_varnas, prev_str, "ससजुषोः रुः (रुत्वम्)")
 
-                    # १.३.२ (रुँ -> र्) - इत्-लोपः logic
+                    # १.३.२ (रुँ -> र् cleaning)
                     current_varnas, _ = ItSanjnaEngine.run_it_sanjna_prakaran(
                         current_varnas, "रुँ", UpadeshaType.VIBHAKTI
                     )
@@ -224,7 +220,7 @@ if word_input:
 
                     # ८.३.१५ (र् -> ः)
                     current_varnas, s15 = apply_visarga_8_3_15(current_varnas)
-                    prev_str = add_history(s15, current_varnas, prev_str, "खरवसानयोर्विसर्जनीयः")
+                    prev_str = add_history(s15, current_varnas, prev_str, "विसर्गः")
 
             # --- BEAUTIFUL UI RENDERING (Correctly Indented) ---
             st.subheader("🧪 Step-by-Step Surgical Derivation")
