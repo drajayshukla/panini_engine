@@ -206,33 +206,44 @@ if word_input:
 
             # --- BRANCH Q: MASCULINE A-ANTA (राम, बालक, देव) ---
             # Logic: These MUST undergo Rutva-Visarga. Never apply 6.1.68 here.
-            elif word_input.endswith('अ'):
-                # 1. ८.२.६६ (स -> रुँ)
-                current_varnas, s66 = apply_rutva_8_2_66(current_varnas)
-                prev_str = add_history(s66, current_varnas, prev_str, "ससजुषोः रुः (रुत्वम्)")
-
-                # 2. १.३.२ (Cleaning रुँ)
-                current_varnas, _ = ItSanjnaEngine.run_it_sanjna_prakaran(
-                    current_varnas, "रुँ", UpadeshaType.VIBHAKTI
-                )
-                prev_str = add_history("१.३.२", current_varnas, prev_str, "इत्-लोपः (रुँ -> र्)")
-
-                # 3. ८.३.१५ (र् -> विसर्ग)
-                current_varnas, s15 = apply_visarga_8_3_15(current_varnas)
-                prev_str = add_history(s15, current_varnas, prev_str, "खरवसानयोर्विसर्जनीयः")
-
-            # --- BRANCH R: REMAINING CASES (Consonant endings etc.) ---
-            else:
-                # Default safety logic
+                    # --- BRANCH P: FEMININE NYĀB-ANTA (रमा, गौरी, वधू) ---
+                    # Trigger: Ends in long feminine vowels AND is not an exception like Lakshmi.
+            elif word_input.endswith(('आ', 'ई', 'ऊ')) and word_input not in ["लक्ष्मी", "तन्त्री", "तरी",
+                                                                                     "गोपा"]:
                 res_v, s68 = apply_hal_nyab_6_1_68(current_varnas)
                 if s68:
-                    current_varnas = res_v
-                    prev_str = add_history(s68, current_varnas, prev_str, "हल्ङ्याब्-लोपः")
-                elif current_varnas[-1].char == 'स्':
+                        current_varnas = res_v
+                        prev_str = add_history(s68, current_varnas, prev_str, "हल्ङ्याब्-लोपः (S-Deletion)")
+
+                # --- BRANCH Q: MASCULINE/NEUTER A-ANTA (राम, बालक, ज्ञान) ---
+                # Trigger: Ends in short 'a'. Logic: MUST go to Visarga protocol.
+            elif word_input.endswith('अ'):
+                    # 1. ८.२.६६ (स -> रुँ)
                     current_varnas, s66 = apply_rutva_8_2_66(current_varnas)
-                    prev_str = add_history(s66, current_varnas, prev_str, "रुत्वम्")
+                    prev_str = add_history(s66, current_varnas, prev_str, "ससजुषोः रुः (रुत्वम्)")
+
+                    # 2. १.३.२ (रुँ -> र्)
+                    current_varnas, _ = ItSanjnaEngine.run_it_sanjna_prakaran(
+                        current_varnas, "रुँ", UpadeshaType.VIBHAKTI
+                    )
+                    prev_str = add_history("१.३.२", current_varnas, prev_str, "इत्-लोपः (रुँ -> र्)")
+
+                    # 3. ८.३.१५ (र् -> ः)
                     current_varnas, s15 = apply_visarga_8_3_15(current_varnas)
-                    prev_str = add_history(s15, current_varnas, prev_str, "विसर्गः")
+                    prev_str = add_history(s15, current_varnas, prev_str, "खरवसानयोर्विसर्जनीयः")
+
+                # --- BRANCH R: REMAINING (Consonant-ending / Others) ---
+            else:
+                    # Default safety for genuine Hal-anta stems
+                    res_v, s68 = apply_hal_nyab_6_1_68(current_varnas)
+                    if s68:
+                        current_varnas = res_v
+                        prev_str = add_history(s68, current_varnas, prev_str, "हल्ङ्याब्-लोपः")
+                    elif current_varnas[-1].char == 'स्':
+                        current_varnas, s66 = apply_rutva_8_2_66(current_varnas)
+                        prev_str = add_history(s66, current_varnas, prev_str, "रुत्वम्")
+                        current_varnas, s15 = apply_visarga_8_3_15(current_varnas)
+                        prev_str = add_history(s15, current_varnas, prev_str, "विसर्गः")
 
             # --- BEAUTIFUL UI RENDERING (Correctly Indented) ---
             st.subheader("🧪 Step-by-Step Surgical Derivation")
