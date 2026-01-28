@@ -12,11 +12,11 @@ from logic.subanta_operations import (
     apply_upadha_dirgha_6_4_11,
     apply_upadha_dirgha_6_4_8,
     apply_nalopa_8_2_7,
-apply_goto_nit_7_1_90,
-apply_vṛddhi_7_2_115,
-apply_rayo_hali_7_2_85,
-apply_ato_am_7_1_24,
-apply_ami_purvah_6_1_107
+    apply_goto_nit_7_1_90,
+    apply_vṛddhi_7_2_115,
+    apply_rayo_hali_7_2_85,
+    apply_ato_am_7_1_24,
+    apply_ami_purvah_6_1_107
 )
 from logic.sanjna_rules import check_pada_sanjna_1_4_14
 
@@ -68,22 +68,12 @@ if word_input:
             prev_str = intermediate_word
 
 
-            #def add_history(sutra, varnas, p_str):
-               # f_str = sanskrit_varna_samyoga(varnas)
-               # history.append({
-                 #   "Sutra": sutra if sutra else "---",
-                 #   "Vichhed": [v.char for v in varnas],
-                 #   "Form": get_diff_highlight(p_str, f_str)
-               # })
-               # return f_str
-
-
-            def add_history(sutra, varnas, p_str, change_desc=""):
+            def add_history(sutra, varnas, p_str, change_desc="---"):
                 f_str = sanskrit_varna_samyoga(varnas)
                 history.append({
                     "step": len(history),
                     "sutra": sutra if sutra else "Initial",
-                    "vichhed": " + ".join([f"`{v.char}`" for v in varnas]),  # Monospaced badges
+                    "vichhed": " + ".join([f"`{v.char}`" for v in varnas]),
                     "form": f_str,
                     "highlighted": get_diff_highlight(p_str, f_str),
                     "change": change_desc
@@ -91,201 +81,131 @@ if word_input:
                 return f_str
 
 
+            # Initial State
+            prev_str = add_history("Initial", current_varnas, prev_str, "Post-Cleaning")
 
+            # --- BRANCHING LOGIC ---
 
-
-            prev_str = add_history("Initial (Post-Cleaning)", current_varnas, prev_str)
-
-            # --- BRANCHING LOGIC FOR DIFFERENT STEM TYPES ---
-
-            # CASE A: KROSTU
+            # CASE A: KROSTU (7.1.95)
             if "क्रोष्टु" in word_input:
                 current_varnas, s95 = apply_trijvadbhava_7_1_95(current_varnas)
-                prev_str = add_history(s95, current_varnas, prev_str)
+                prev_str = add_history(s95, current_varnas, prev_str, "त्रिज्वद्भावः")
                 current_varnas, s94 = apply_anang_7_1_94(current_varnas)
-                prev_str = add_history(s94, current_varnas, prev_str)
+                prev_str = add_history(s94, current_varnas, prev_str, "अनङ्-आदेशः")
                 current_varnas = [v for v in current_varnas if v.char != 'ङ्']
-                prev_str = add_history("१.३.३ (इत्-लोपः)", current_varnas, prev_str)
+                prev_str = add_history("१.३.३", current_varnas, prev_str, "इत्-लोपः (ङ्)")
                 current_varnas, s11 = apply_upadha_dirgha_6_4_11(current_varnas)
-                prev_str = add_history(s11, current_varnas, prev_str)
+                prev_str = add_history(s11, current_varnas, prev_str, "उपधा-दीर्घः")
                 current_varnas, s68 = apply_hal_nyab_6_1_68(current_varnas)
-                prev_str = add_history(s68 if s68 else "६.१.६८ (Manual)", current_varnas, prev_str)
+                prev_str = add_history(s68, current_varnas, prev_str, "अपृक्त-लोपः")
                 current_varnas, s7 = apply_nalopa_8_2_7(current_varnas)
-                prev_str = add_history(s7 if s7 else "८.२.७ (Manual)", current_varnas, prev_str)
+                prev_str = add_history(s7, current_varnas, prev_str, "न-लोपः")
 
-            # CASE B: JAMATR
-                # --- BRANCH B: KINSHIP TERMS (जामातृ, पितृ, भ्रातृ etc.) ---
-            elif any(x in word_input for x in ["जामातृ", "पितृ", "भ्रातृ", "नृ","मातृ"]):
-                # 1. 7.1.94 (अनङ्-आदेशः: ऋ -> अन्)
+            # CASE B: KINSHIP TERMS (6.4.8)
+            elif any(x in word_input for x in ["जामातृ", "पितृ", "भ्रातृ", "नृ", "मातृ"]):
                 current_varnas, s94 = apply_anang_7_1_94(current_varnas)
-                prev_str = add_history(s94, current_varnas, prev_str)
-
-                # 2. 1.3.3 (इत्-लोपः: ङ् removal)
+                prev_str = add_history(s94, current_varnas, prev_str, "अनङ्-आदेशः")
                 current_varnas = [v for v in current_varnas if v.char != 'ङ्']
-                prev_str = add_history("१.३.३ (हलन्त्यम् - ङ् लोपः)", current_varnas, prev_str)
-
-                # 3. 6.4.8 (उपधा दीर्घ: अ -> आ specifically for kinship/N-anta)
+                prev_str = add_history("१.३.३", current_varnas, prev_str, "इत्-लोपः (ङ्)")
                 current_varnas, s8 = apply_upadha_dirgha_6_4_8(current_varnas)
-                prev_str = add_history(s8, current_varnas, prev_str)
+                prev_str = add_history(s8, current_varnas, prev_str, "उपधा-दीर्घः")
+                current_varnas, s68 = apply_hal_nyab_6_1_68(current_varnas)
+                prev_str = add_history(s68, current_varnas, prev_str, "सु-लोपः")
+                current_varnas, s7 = apply_nalopa_8_2_7(current_varnas)
+                prev_str = add_history(s7, current_varnas, prev_str, "न-लोपः")
 
-                # 4. 6.1.68 (S-LOPA: पितान्स् -> पितान्)
-                res_v5, s68 = apply_hal_nyab_6_1_68(current_varnas)
-                current_varnas = res_v5
-                prev_str = add_history(s68 if s68 else "६.१.६८ (S-Removal)", current_varnas, prev_str)
-
-                # 5. 8.2.7 (N-LOPA: पितान् -> पिता)
-                res_v6, s7 = apply_nalopa_8_2_7(current_varnas)
-                current_varnas = res_v6
-                prev_str = add_history(s7 if s7 else "८.२.७ (N-Removal)", current_varnas, prev_str)
-
-            # CASE C: DHATR / KARTR (Agent Nouns)
-                # --- BRANCH E: AGENT & SVASṚ SPECIAL (६.४.११) ---
+            # CASE C: AGENT NOUNS & SVASR (6.4.11)
             elif any(x in word_input for x in ["स्वसृ", "धातृ", "कर्तृ", "नप्तृ", "नेष्टृ"]):
-                # 1. 7.1.94 (अनङ्-आदेशः: ऋ -> अन्ङ्)
                 current_varnas, s94 = apply_anang_7_1_94(current_varnas)
-                prev_str = add_history(s94, current_varnas, prev_str)
-
-                # 2. 1.3.3 (ङ्-लोपः)
+                prev_str = add_history(s94, current_varnas, prev_str, "अनङ्-आदेशः")
                 current_varnas = [v for v in current_varnas if v.char != 'ङ्']
-                prev_str = add_history("१.३.३ (इत्-लोपः)", current_varnas, prev_str)
-
-                # 3. 6.4.11 (उपधा दीर्घ: specifically citing the Aptṛn-tṛc list)
+                prev_str = add_history("१.३.३", current_varnas, prev_str, "इत्-लोपः (ङ्)")
                 current_varnas, s11 = apply_upadha_dirgha_6_4_11(current_varnas)
-                prev_str = add_history(s11, current_varnas, prev_str)
+                prev_str = add_history(s11, current_varnas, prev_str, "उपधा-दीर्घः")
+                current_varnas, s68 = apply_hal_nyab_6_1_68(current_varnas)
+                prev_str = add_history(s68, current_varnas, prev_str, "सु-लोपः")
+                current_varnas, s7 = apply_nalopa_8_2_7(current_varnas)
+                prev_str = add_history(s7, current_varnas, prev_str, "न-लोपः")
 
-                # 4. 6.1.68 (S-Lopa)
-                res_v5, s68 = apply_hal_nyab_6_1_68(current_varnas)
-                current_varnas = res_v5
-                prev_str = add_history(s68 if s68 else "६.१.६८ (S-Removal)", current_varnas, prev_str)
-
-                # 5. 8.2.7 (N-Lopa)
-                res_v6, s7 = apply_nalopa_8_2_7(current_varnas)
-                current_varnas = res_v6
-                prev_str = add_history(s7 if s7 else "८.२.७ (N-Removal)", current_varnas, prev_str)
-                # --- BRANCH H: FEMININE Ā-ANTA (रमा, सीता, लता) ---
-            elif word_input.endswith("आ"):
-                # 1. 6.1.68 (Direct S-Lopa)
-                res_v, s68 = apply_hal_nyab_6_1_68(current_varnas)
-                if s68:
-                    current_varnas = res_v
-                prev_str = add_history(s68 if s68 else "६.१.६८ (Skipped)", current_varnas, prev_str)
-                # --- BRANCH M: NEUTER A-ANTA (ज्ञान, फल, वन) ---
-                # Note: We assume the PratipadikaEngine identifies gender
+            # CASE D: NEUTER (Ato'm)
             elif word_input in ["ज्ञान", "फल", "वन", "पुष्प"]:
-                # 1. 7.1.24 (सुँ -> अम्)
                 current_varnas, s24 = apply_ato_am_7_1_24(current_varnas)
-                prev_str = add_history(s24, current_varnas, prev_str)
-
-                # 2. 6.1.107 (अ + अ -> अ पूर्वरूपम्)
+                prev_str = add_history(s24, current_varnas, prev_str, "सुँ -> अम् आदेशः")
                 current_varnas, s107 = apply_ami_purvah_6_1_107(current_varnas)
-                prev_str = add_history(s107, current_varnas, prev_str)
-                # --- BRANCH J: FEMININE Ī-ANTA (गौरी) ---
-            elif word_input.endswith("ई"):
-                # 1. 6.1.68 (Direct S-Lopa)
+                prev_str = add_history(s107, current_varnas, prev_str, "पूर्वरूप एकादेशः")
+
+            # CASE E: GO (O-kanta)
+            elif word_input == "गो":
+                current_varnas, s90 = apply_goto_nit_7_1_90(current_varnas)
+                prev_str = add_history(s90, current_varnas, prev_str, "णिद्वद्भावः")
+                current_varnas, s115 = apply_vṛddhi_7_2_115(current_varnas)
+                prev_str = add_history(s115, current_varnas, prev_str, "वृद्धिः (ओ->औ)")
+                current_varnas, s66 = apply_rutva_8_2_66(current_varnas)
+                prev_str = add_history(s66, current_varnas, prev_str, "रुत्वम्")
+                current_varnas, s15 = apply_visarga_8_3_15(current_varnas)
+                prev_str = add_history(s15, current_varnas, prev_str, "विसर्गः")
+
+            # CASE F: RAI (Ai-kanta)
+            elif word_input == "रै":
+                current_varnas, s85 = apply_rayo_hali_7_2_85(current_varnas)
+                prev_str = add_history(s85, current_varnas, prev_str, "आकारादेशः")
+                current_varnas, s66 = apply_rutva_8_2_66(current_varnas)
+                prev_str = add_history(s66, current_varnas, prev_str, "रुत्वम्")
+                current_varnas, s15 = apply_visarga_8_3_15(current_varnas)
+                prev_str = add_history(s15, current_varnas, prev_str, "विसर्गः")
+
+            # CASE G: NON-NYAB ROOT NOUNS (Gopa, Lakshmi, Tantri)
+            elif any(x == word_input for x in ["गोपा", "लक्ष्मी", "तन्त्री", "तरी"]):
+                current_varnas, s66 = apply_rutva_8_2_66(current_varnas)
+                prev_str = add_history(s66, current_varnas, prev_str, "रुत्वम्")
+                current_varnas, s15 = apply_visarga_8_3_15(current_varnas)
+                prev_str = add_history(s15, current_varnas, prev_str, "विसर्गः")
+
+            # CASE H: STANDARD (Rama, Gauri, Ramaa)
+            else:
                 res_v, s68 = apply_hal_nyab_6_1_68(current_varnas)
                 if s68:
                     current_varnas = res_v
-                prev_str = add_history(s68 if s68 else "६.१.६८ (Skipped)", current_varnas, prev_str)
-                # --- BRANCH K: NON-NYAB Ī-ANTA (तन्त्री, तरी) ---
-            elif any(x == word_input for x in ["लक्ष्मी", "तन्त्री", "तरी"]):
-                # Bypass 6.1.68 Hal-nyab-lopa
-
-                # 1. 8.2.66 (स् -> रुँ)
-                current_varnas, s66 = apply_rutva_8_2_66(current_varnas)
-                prev_str = add_history(s66, current_varnas, prev_str)
-
-                # 2. 1.3.2 (रुँ-लोपः)
-                current_varnas, _ = ItSanjnaEngine.run_it_sanjna_prakaran(
-                    current_varnas, "रुँ", UpadeshaType.VIBHAKTI
-                )
-                prev_str = add_history("१.३.२ (रुँ-लोपः)", current_varnas, prev_str)
-
-                # 3. 8.3.15 (र् -> विसर्ग)
-                current_varnas, s15 = apply_visarga_8_3_15(current_varnas)
-                prev_str = add_history(s15, current_varnas, prev_str)
-                # --- BRANCH I: ROOT-NOUNS (गोपा, विश्वपा) ---
-            elif word_input == "गोपा":
-                # Skip 6.1.68 because it's not a Nyāb-anta stem
-
-                # 1. 8.2.66 (स् -> रुँ)
-                current_varnas, s66 = apply_rutva_8_2_66(current_varnas)
-                prev_str = add_history(s66, current_varnas, prev_str)
-
-                # 2. 1.3.2 (रुँ -> र्)
-                current_varnas, _ = ItSanjnaEngine.run_it_sanjna_prakaran(
-                    current_varnas, "रुँ", UpadeshaType.VIBHAKTI
-                )
-                prev_str = add_history("१.३.२ (रुँ-लोपः)", current_varnas, prev_str)
-
-                # 3. 8.3.15 (र् -> विसर्ग)
-                current_varnas, s15 = apply_visarga_8_3_15(current_varnas)
-                prev_str = add_history(s15, current_varnas, prev_str)
-                # --- BRANCH F: GO SPECIAL (ओकारान्त) ---
-            elif word_input == "गो":
-                # 1. 7.1.90 (णिद्वद्भावः)
-                current_varnas, s90 = apply_goto_nit_7_1_90(current_varnas)
-                prev_str = add_history(s90, current_varnas, prev_str)
-
-                # 2. 7.2.115 (ओ -> औ वृद्धिः)
-                current_varnas, s115 = apply_vṛddhi_7_2_115(current_varnas)
-                prev_str = add_history(s115, current_varnas, prev_str)
-
-                # 3. 8.2.66 (स् -> रुँ)
-                current_varnas, s66 = apply_rutva_8_2_66(current_varnas)
-                prev_str = add_history(s66, current_varnas, prev_str)
-
-                # 4. 1.3.2 (रुँ -> र् cleaning)
-                current_varnas, _ = ItSanjnaEngine.run_it_sanjna_prakaran(
-                    current_varnas, "रुँ", UpadeshaType.VIBHAKTI
-                )
-                prev_str = add_history("१.३.२ (रुँ-लोपः)", current_varnas, prev_str)
-
-                # 5. 8.3.15 (र् -> विसर्ग)
-                current_varnas, s15 = apply_visarga_8_3_15(current_varnas)
-                prev_str = add_history(s15, current_varnas, prev_str)
-                # --- BRANCH G: RAI SPECIAL (ऐकारान्त) ---
-            elif word_input == "रै":
-                # 1. 7.2.85 (ऐ -> आ आदेशः)
-                current_varnas, s85 = apply_rayo_hali_7_2_85(current_varnas)
-                prev_str = add_history(s85, current_varnas, prev_str)
-
-                # 2. 8.2.66 (स् -> रुँ)
-                current_varnas, s66 = apply_rutva_8_2_66(current_varnas)
-                prev_str = add_history(s66, current_varnas, prev_str)
-
-                # 3. 1.3.2 (रुँ-लोपः)
-                current_varnas, _ = ItSanjnaEngine.run_it_sanjna_prakaran(
-                    current_varnas, "रुँ", UpadeshaType.VIBHAKTI
-                )
-                prev_str = add_history("१.३.२ (रुँ-लोपः)", current_varnas, prev_str)
-
-                # 4. 8.3.15 (र् -> विसर्ग)
-                current_varnas, s15 = apply_visarga_8_3_15(current_varnas)
-                prev_str = add_history(s15, current_varnas, prev_str)
-
-            # CASE D: STANDARD (RAMA / BAHUSHREYASI)
-            else:
-                res_v, s68 = apply_hal_nyab_6_1_68(list(current_varnas))
-                if s68:
-                    current_varnas = res_v
-                    prev_str = add_history(s68, current_varnas, prev_str)
-                elif intermediate_word.endswith('स्'):
+                    prev_str = add_history(s68, current_varnas, prev_str, "हल्ङ्याब्-लोपः")
+                else:
                     current_varnas, s66 = apply_rutva_8_2_66(current_varnas)
-                    prev_str = add_history(s66, current_varnas, prev_str)
-                    current_varnas, _ = ItSanjnaEngine.run_it_sanjna_prakaran(
-                        current_varnas, "रुँ", UpadeshaType.VIBHAKTI
-                    )
-                    prev_str = add_history("१.३.२ (रुँ-लोपः)", current_varnas, prev_str)
+                    prev_str = add_history(s66, current_varnas, prev_str, "रुत्वम्")
                     current_varnas, s15 = apply_visarga_8_3_15(current_varnas)
-                    prev_str = add_history(s15, current_varnas, prev_str)
+                    prev_str = add_history(s15, current_varnas, prev_str, "विसर्गः")
 
-            # --- FINAL RENDERING ---
-            st.table(history)
+            # --- BEAUTIFUL UI RENDERING (Correctly Indented) ---
+            st.subheader("🧪 Step-by-Step Surgical Derivation")
+
+            # Header Row
+            head_cols = st.columns([0.5, 1.5, 3, 1.5, 2])
+            head_cols[0].caption("Step")
+            head_cols[1].caption("Sutra")
+            head_cols[2].caption("Varna Vichhed (Decomposition)")
+            head_cols[3].caption("Current Form")
+            head_cols[4].caption("Transformation")
+            st.divider()
+
+            # Iterate through history
+            for row in history:
+                with st.container():
+                    cols = st.columns([0.5, 1.5, 3, 1.5, 2])
+                    cols[0].write(f"**{row['step']}**")
+                    cols[1].info(f"**{row['sutra']}**")
+                    cols[2].markdown(row['vichhed'])
+                    cols[3].subheader(row['highlighted'])
+
+                    if row['change'] and row['change'] != "---":
+                        cols[4].success(f"**{row['change']}**")
+                    else:
+                        cols[4].write("---")
+
+            # --- FINAL RESULT AREA ---
             final_output = sanskrit_varna_samyoga(current_varnas)
             st.markdown("---")
-            st.header(f"✅ Final Result: {final_output}")
+            st.success(f"### ✅ Final Result: {final_output}")
             st.balloons()
+
         else:
-            st.warning("Could not establish Pada Sanjna.")
+            st.warning("⚠️ **Pada Sanjna Not Established**: The current combination does not satisfy 1.4.14.")
     else:
-        st.error(f"❌ Rejection: {base_info['reason']}")
+        st.error(f"❌ **Rejection**: {base_info.get('reason', 'Input is not a valid Pratipadika.')}")
