@@ -19,7 +19,8 @@ from logic.subanta_operations import (
     apply_ami_purvah_6_1_107,
 apply_add_7_1_25,
 apply_ti_lopa_6_4_143,
-apply_chartva_8_4_56
+apply_chartva_8_4_56,
+apply_hrasva_napumsaka_1_2_47
 )
 from logic.sanjna_rules import check_pada_sanjna_1_4_14
 
@@ -163,6 +164,19 @@ if word_input:
                 prev_str = add_history(s66, current_varnas, prev_str, "रुत्वम्")
                 current_varnas, s15 = apply_visarga_8_3_15(current_varnas)
                 prev_str = add_history(s15, current_varnas, prev_str, "विसर्गः")
+                # --- BRANCH O: NEUTER LONG-VOWEL STEMS (श्रीपा, प्रधी) ---
+            elif word_input == "श्रीपा":
+                # 1. 1.2.47 (श्रीपा -> श्रीप)
+                current_varnas, s47 = apply_hrasva_napumsaka_1_2_47(current_varnas)
+                prev_str = add_history(s47, current_varnas, prev_str, "ह्रस्वो नपुंसके")
+
+                # 2. 7.1.24 (सुँ -> अम्)
+                current_varnas, s24 = apply_ato_am_7_1_24(current_varnas)
+                prev_str = add_history(s24, current_varnas, prev_str, "अतोऽम् (सुँ -> अम्)")
+
+                # 3. 6.1.107 (अ + अ -> अ)
+                current_varnas, s107 = apply_ami_purvah_6_1_107(current_varnas)
+                prev_str = add_history(s107, current_varnas, prev_str, "अमि पूर्वः (पूर्वरूपम्)")
                 # --- BRANCH N: PRONOUN SPECIAL (अन्य, इतर, कतर) ---
             elif any(x == word_input for x in ["अन्य", "इतर", "कतर", "कतम", "अन्यतर"]):
                 # 1. 7.1.25 (सुँ -> अद्ड्)

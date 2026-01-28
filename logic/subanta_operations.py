@@ -36,6 +36,27 @@ from core.phonology import Varna
 
     return varna_list, None'''
 # logic/subanta_operations.py
+# logic/subanta_operations.py
+
+def apply_hrasva_napumsaka_1_2_47(varna_list):
+    """
+    १.२.४७ ह्रस्वो नपुंसके प्रातिपदिकस्य
+    Logic: Shorten the final vowel of the stem if it's Neuter.
+    Example: आ -> अ, ई -> इ, ऊ -> उ
+    """
+    v_list = list(varna_list)
+    # Target the last varna of the STEM (before the suffix 'स्')
+    # List looks like: ['श्', 'र्', 'ई', 'प्', 'आ', 'स्']
+    if len(v_list) >= 2 and v_list[-1].char == 'स्':
+        target_vowel = v_list[-2].char
+        mapping = {'आ': 'अ', 'ई': 'इ', 'ऊ': 'उ', 'ए': 'इ', 'ओ': 'उ'}
+
+        if target_vowel in mapping:
+            v_list[-2] = Varna(mapping[target_vowel])
+            return v_list, f"१.२.४७ (ह्रस्वादेशः: {target_vowel} -> {mapping[target_vowel]})"
+
+    return varna_list, None
+
 def apply_ami_purvah_6_1_107(varna_list):
     """
     ६.१.१०७ अमि पूर्वः
