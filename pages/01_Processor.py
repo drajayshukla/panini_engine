@@ -1,10 +1,5 @@
 import streamlit as st
-import json
 import pandas as pd
-import os
-import re
-
-# कोर मॉड्यूल्स का इम्पोर्ट (Phonology Integrated)
 from core.phonology import sanskrit_varna_vichhed, sanskrit_varna_samyoga
 from core.upadesha_registry import UpadeshaType
 from core.it_sanjna_engine import ItSanjnaEngine
@@ -24,17 +19,13 @@ with st.sidebar:
         "ष्वुन् (Shit-Krut)": "ष्वुन्",
         "ञ्युट् (Chuttu-Krut)": "ञ्युट्",
         "जस् (Vibhakti)": "जस्",
-        "टाप् (Stri-Pratyaya)": "टाप्",
-        "ष्यञ् (Shit-Taddhita)": "ष्यञ्",
-        "कन् (Taddhita)": "कन्",
-        "एधँ (Dhatu)": "एधँ",
-        "स्पर्धँ (Dhatu)": "स्पर्धँ"
+        "एधँ (Dhatu)": "एधँ"
     }
     selected_example = st.selectbox("प्रमुख उदाहरण चुनें:", options=list(example_list.keys()))
 
     st.markdown("---")
     source_type_input = st.selectbox(
-        "उपदेश का प्रकार (Manual Override):",
+        "Manual Override:",
         options=[e.value for e in UpadeshaType],
         index=0
     )
@@ -48,32 +39,27 @@ raw_input = st.text_input("संस्कृत उपदेश (धातु/�
 if raw_input:
     input_text = raw_input.strip()
 
-    # १. टुपल अनपैकिंग (Phonology and Registry Coordination)
+    # १. ऑटो-डिटेक्शन (Registry Upgrade)
     detected_type, is_taddhita_flag = UpadeshaType.auto_detect(input_text)
-
-    # २. सोर्स टाइप और तद्धित फ्लैग का निर्धारण
     source_type = detected_type if detected_type else manual_source_type
     is_taddhita_final = is_taddhita_flag if detected_type else manual_taddhita
 
-    # ३. 'Gold Standard' विच्छेद (Imported from core.phonology)
-    original_varna_list = sanskrit_varna_vichhed(input_text)
+    # २. वर्ण विच्छेद (Varna Objects)
+    varna_list = sanskrit_varna_vichhed(input_text)
 
-    # ४. इत्-संज्ञा इंजन कॉल
+    # ३. इत्-संज्ञा इंजन (Upgraded logic)
     remaining_varnas, it_tags = ItSanjnaEngine.run_it_sanjna_prakaran(
-        original_varna_list.copy(),
+        varna_list,
         input_text,
         source_type,
         is_taddhita=is_taddhita_final
     )
 
-    # UI फीडबैक
+    # ४. UI फीडबैक
     if detected_type:
         st.sidebar.success(f"✅ ऑटो-डिटेक्ट: {detected_type.value}")
     else:
         st.sidebar.info(f"ℹ️ मोड: {manual_source_type.value}")
-
-    if is_taddhita_final:
-        st.sidebar.warning("🛡️ तद्धित प्रत्यय पाया गया ($1.3.8$ निषेध सक्रिय)")
 
     # --- ४. विज़ुअलाइज़ेशन ---
     st.markdown("---")
@@ -81,64 +67,60 @@ if raw_input:
 
     with col1:
         st.subheader("१. इत्-संज्ञा (Identification)")
+        # Object-safe display: Compare via indices to avoid object identity issues
         marked_display = []
-        temp_remaining = remaining_varnas.copy()
-        for v in original_varna_list:
-            if v in temp_remaining:
-                marked_display.append(v)
-                temp_remaining.remove(v)
+        rem_chars = [v.char for v in remaining_varnas]
+
+        for v in varna_list:
+            if v in remaining_varnas:
+                marked_display.append(v.char)
             else:
-                marked_display.append(f"~~{v}~~")
+                marked_display.append(f"~~{v.char}~~")
 
         st.markdown(f"**मार्क किया गया रूप (तस्य लोपः पूर्वम्):**")
         st.markdown(f"### {' + '.join(marked_display)}")
-        if it_tags:
-            for tag in it_tags: st.markdown(f"🚩 {tag}")
-        else:
-            st.info("कोई इत्-संज्ञा नहीं मिली।")
+        for tag in it_tags: st.markdown(f"🚩 {tag}")
 
     with col2:
         st.subheader("२. तस्य लोपः (Execution)")
         st.markdown(f"**लोप के बाद (१.३.९):**")
-        st.markdown(f"### {' + '.join(remaining_varnas)}")
-        # 'Gold Standard' संयोग (Imported from core.phonology)
+        st.markdown(f"### {' + '.join([v.char for v in remaining_varnas])}")
         shuddha_anga = sanskrit_varna_samyoga(remaining_varnas)
         st.success(f"अन्तिम अङ्ग: **{shuddha_anga}**")
 
-    # --- ५. विश्लेषण और विधि-सूत्र ---
+    # --- ५. विश्लेषण (Analyzer Integration) ---
     st.markdown("---")
-    st.subheader("🔍 ३. संज्ञा विश्लेषण एवं विधि-सूत्र")
-    analysis_col, morph_col = st.columns([2, 1])
+    st.subheader("🔍 ३. संज्ञा विश्लेषण (Phonetic Analysis)")
+    analysis = analyze_sanjna(varna_list)
 
-    with analysis_col:
-        analysis = analyze_sanjna(original_varna_list)
-        cols = st.columns(len(original_varna_list) if original_varna_list else 1)
-        tracking_remaining = remaining_varnas.copy()
-        for idx, item in enumerate(analysis):
-            with cols[idx]:
-                is_it = False
-                if item['varna'] in tracking_remaining:
-                    tracking_remaining.remove(item['varna'])
-                else:
-                    is_it = True
-                box_style = "🔴" if is_it else "🔵"
-                st.info(f"{box_style} **{item['varna']}**\n\n{', '.join(item['tags']) if item['tags'] else '-'}")
+    cols = st.columns(len(varna_list))
+    for idx, item in enumerate(analysis):
+        with cols[idx]:
+            # Determine if it was an 'it' varna
+            is_it = varna_list[idx] not in remaining_varnas
+            box_style = "🔴" if is_it else "🔵"
+            st.info(f"{box_style} **{item['varna']}**\n\n{', '.join(item['tags']) if item['tags'] else '-'}")
+            if 'sthana' in item:
+                st.caption(f"स्थान: {item['sthana']}")
 
-    with morph_col:
-        st.write("**रूपांतरण (Morphology):**")
-        final_varnas, is_applied = apply_ata_upadhayah_7_2_116(remaining_varnas.copy())
-        if is_applied:
-            st.success(f"परिवर्तित रूप: **{sanskrit_varna_samyoga(final_varnas)}**")
-            st.caption("सूत्र: ७.२.११६ अत उपधायाः")
-        else:
-            st.write("कोई विधि-सूत्र लागू नहीं हुआ।")
-
-    # --- ६. प्रक्रिया सारांश ---
+    # --- ६. विधि-सूत्र (Morphology) ---
     st.markdown("---")
-    st.subheader("📊 प्रक्रिया सारांश (Workflow Summary)")
-    steps = [
-        {"क्रम": 1, "प्रक्रिया": "उपदेश (Input)", "status": input_text},
-        {"क्रम": 2, "प्रक्रिया": "विच्छेद (Phonology)", "status": " + ".join(original_varna_list)},
-        {"क्रम": 3, "प्रक्रिया": "तस्य लोपः (Lopa)", "status": shuddha_anga}
-    ]
-    st.table(steps)
+    st.subheader("🧪 ४. विधि-सूत्र एवं अङ्ग-कार्य")
+
+    # ७.२.११६ अत उपधायाः की जाँच (ञित्/णित् प्रत्यय का संदर्भ मानकर)
+    # हम उदाहरण के लिए मान रहे हैं कि 'पठ्' के बाद 'ण्वुल्' जैसी स्थिति है
+    morph_varnas, is_applied = apply_ata_upadhayah_7_2_116(remaining_varnas.copy(), is_nit_prakaran=True)
+
+    if is_applied:
+        st.success(f"**अत उपधायाः (७.२.११६)** लागू हुआ!")
+        st.markdown(f"### {sanskrit_varna_samyoga(remaining_varnas)} ➔ {sanskrit_varna_samyoga(morph_varnas)}")
+    else:
+        st.info("वर्तमान अङ्ग पर कोई विधि-सूत्र (Morphology) सक्रिय नहीं है।")
+
+    # --- ७. प्रक्रिया सारांश ---
+    st.table([
+        {"क्रम": 1, "प्रक्रिया": "उपदेश", "स्थिति": input_text},
+        {"क्रम": 2, "प्रक्रिया": "विच्छेद", "स्थिति": " + ".join([v.char for v in varna_list])},
+        {"क्रम": 3, "प्रक्रिया": "अन्तिम रूप",
+         "स्थिति": sanskrit_varna_samyoga(morph_varnas if is_applied else remaining_varnas)}
+    ])

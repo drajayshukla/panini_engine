@@ -9,149 +9,217 @@ def get_sutra_link(sutra_num):
 
 # --- १.१.१ वृद्धि और १.१.२ गुण संज्ञा (Analysis Only) ---
 
-def check_vriddhi_1_1_1(varna):
+def check_vriddhi_1_1_1(varna_obj):
+    """१.१.१ वृद्धिरादैच्: आ, ऐ, औ की वृद्धि संज्ञा।"""
     vriddhi_letters = ['आ', 'ऐ', 'औ']
-    if varna in vriddhi_letters:
+
+    # varna_obj.char का उपयोग करें
+    if varna_obj.char in vriddhi_letters:
         link = get_sutra_link("1.1.1")
         return f"[वृद्धि (१.१.१)]({link})"
     return None
 
 
-def check_guna_1_1_2(varna):
+def check_guna_1_1_2(varna_obj):
+    """१.१.२ अदेङ् गुणः: अ (ह्रस्व), ए, ओ की गुण संज्ञा।"""
     guna_letters = ['अ', 'ए', 'ओ']
-    if varna in guna_letters:
+
+    # पाणिनीय सूक्ष्मता: केवल ह्रस्व 'अ' ही गुण है।
+    # varna_obj.matra == 1 सुनिश्चित करता है कि 'आ' गुण न कहलाए।
+    if varna_obj.char in guna_letters:
+        if varna_obj.char == 'अ' and varna_obj.matra != 1:
+            return None
+
         link = get_sutra_link("1.1.2")
         return f"[गुण (१.१.२)]({link})"
     return None
-
-
 # --- १.३.२ से १.३.८ इत्-संज्ञा प्रकरण (Tagging Model) ---
 
 def apply_upadeshe_ajanunasika_1_3_2(varna_list):
-    """१.३.२: अनुनासिक स्वर की इत्-संज्ञा।"""
-    ach_list = set('अआइईउऊऋॠऌॡएऐओऔ')
+    """
+    सूत्र: उपदेशेऽजनुनासिक इत् (१.३.२)
+    एकीकृत लॉजिक: Varna ऑब्जेक्ट्स का उपयोग करते हुए अनुनासिक अच् की इत्-संज्ञा।
+    """
     it_indices = []
     it_tags = []
-    link = get_sutra_link("1.3.2")
-    tag = f"[१.३.२ उपदेशेऽजनुनासिक इत्]({link})"
+
+    # सूत्र लिंक और टैग (पुराने फंक्शन से सुरक्षित)
+    # यदि get_sutra_link उपलब्ध नहीं है, तो सामान्य स्ट्रिंग का प्रयोग करें
+    try:
+        from utils.links import get_sutra_link
+        link = get_sutra_link("1.3.2")
+        tag = f"[१.३.२ उपदेशेऽजनुनासिक इत्]({link})"
+    except ImportError:
+        tag = "१.३.२ उपदेशेऽजनुनासिक इत्"
 
     for i, v in enumerate(varna_list):
-        if 'ँ' in v or v == 'ँ':
+        # चूंकि 'v' एक Varna ऑब्जेक्ट है, हम सीधे .is_anunasika चेक करेंगे
+        if v.is_anunasika:
+            # १. वर्तमान अनुनासिक चिह्न की इत्-संज्ञा
             it_indices.append(i)
-            it_tags.append(tag)
-            # पाणिनीय बॉन्डिंग: यदि पिछला वर्ण अच् है
-            if i > 0 and varna_list[i - 1] in ach_list:
+            it_tags.append(f"{v.char} {tag}")
+
+            # २. पाणिनीय बॉन्डिंग (Legacy Logic Preservation):
+            # यदि पिछला वर्ण अच् (vowel) है, तो वह भी इत् संज्ञक होगा
+            if i > 0 and varna_list[i - 1].is_vowel:
                 it_indices.append(i - 1)
 
+    # list(set()) का उपयोग करके duplicate indices हटाना (पुराने कोड की तरह)
     return list(set(it_indices)), list(set(it_tags))
 
 
 def apply_halantyam_1_3_3(varna_list, blocked_indices):
     """
     सूत्र: १.३.३ हलन्त्यम्
-    नियम: उपदेश के अन्त में स्थित व्यंजन की इत्-संज्ञा होती है।
-    निषेध: यदि इंडेक्स 'blocked_indices' (१.३.४ द्वारा) में है, तो संज्ञा नहीं होगी।
+    नियम: उपदेश के अन्त में स्थित व्यंजन (हल्) की इत्-संज्ञा होती है।
+    निषेध: १.३.४ (न विभक्तौ तुस्माः) द्वारा रक्षित इंडेक्स को छोड़कर।
     """
     if not varna_list:
         return [], []
 
     last_idx = len(varna_list) - 1
-    last_varna = varna_list[last_idx]
+    last_varna_obj = varna_list[last_idx]
 
-    # जाँच: क्या वर्ण हलन्त (व्यंजन) है?
-    if last_varna.endswith('्'):
+    # जाँच: क्या अन्तिम वर्ण व्यंजन है?
+    # (v.is_vowel का उपयोग स्ट्रिंग एंड्स-विथ से ज्यादा सटीक है)
+    if not last_varna_obj.is_vowel:
 
         # १.३.४ प्रतिषेध जाँच (Shield Check)
         if last_idx in blocked_indices:
-            # वर्ण हलन्त है, पर १.३.४ ने उसे सुरक्षित कर लिया है
+            # वर्ण हल है, पर १.३.४ ने उसे 'विभक्ति' होने के कारण बचा लिया है
             return [], ["१.३.४ न विभक्तौ तुस्माः (हलन्त्यम् निषेध सक्रिय)"]
 
-        # यदि सुरक्षित नहीं है, तो सामान्य हलन्त्यम् लगेगा
-        return [last_idx], ["१.३.३ हलन्त्यम्"]
+        # यदि सुरक्षित नहीं है, तो इत्-संज्ञा होगी
+        link = get_sutra_link("1.3.3")
+        tag = f"[१.३.३ हलन्त्यम्]({link})"
+        return [last_idx], [tag]
 
     return [], []
-
-def apply_na_vibhaktau_1_3_4(varna_list):
+def apply_na_vibhaktau_1_3_4(varna_list, is_vibhakti=True):
     """
-    १.३.४: न विभक्तौ तुस्माः।
-    विभक्ति के अंत में स्थित 'तु' (त-वर्ग), 'स्' और 'म्' की इत्-संज्ञा नहीं होती।
+    सूत्र: १.३.४ न विभक्तौ तुस्माः
+    नियम: यदि उपदेश एक 'विभक्ति' है, तो उसके अंत में स्थित 'तु' (त-वर्ग),
+          'स्' और 'म्' की इत्-संज्ञा (१.३.३ द्वारा) नहीं होती।
     """
-    if not varna_list:
+    if not varna_list or not is_vibhakti:
         return []
 
-    # १. अंतिम वर्ण की पहचान (Last Varna Index)
+    # १. अंतिम वर्ण की पहचान (Varna Object)
     last_idx = len(varna_list) - 1
-    last_varna = varna_list[last_idx]
+    last_varna_obj = varna_list[last_idx]
 
-    # २. 'तु' (त-वर्ग), 'स्', 'म्' की सूची
+    # २. 'तु' (त-वर्ग), 'स्', 'म्' की पहचान सूची
+    # ध्यान दें: हम यहाँ शुद्ध व्यंजन (क्लीन कैरेक्टर) देख रहे हैं
     tu_s_m = ['त्', 'थ्', 'द्', 'ध्', 'न्', 'स्', 'म्']
 
-    # ३. यदि अंतिम वर्ण इनमें से एक है, तो उसे 'Blocked' घोषित करें
-    if last_varna in tu_s_m:
-        # हम यहाँ इंडेक्स लौटा रहे हैं जिसे 1.3.3 टच नहीं करेगा
+    # ३. जाँच: क्या अंतिम वर्ण का मूल रूप इस लिस्ट में है?
+    # last_varna_obj.char का उपयोग TypeError से बचाता है
+    if last_varna_obj.char in tu_s_m:
+        # यह इंडेक्स १.३.३ (हलन्त्यम्) के लिए 'Blocked' माना जाएगा
         return [last_idx]
 
     return []
+
+
 def apply_adir_nitudavah_1_3_5(varna_list):
-    """१.३.५: आदि ञि, टु, डु की इत्-संज्ञा (केवल धातु)।"""
-    if len(varna_list) < 2: return [], []
+    """
+    सूत्र: १.३.५ आदिर्ञिटुडवः
+    नियम: धातु के आदि (शुरुआत) में स्थित 'ञि', 'टु', 'डु' की इत्-संज्ञा होती है।
+    """
+    # कम से कम २ वर्ण होने चाहिए (व्यंजन + स्वर)
+    if len(varna_list) < 2:
+        return [], []
 
     link = get_sutra_link("1.3.5")
-    starting_pattern = varna_list[0] + varna_list[1]
-    mapping = {'ञ्इ': 'ञि', 'ट्उ': 'टु', 'ड्उ': 'डु'}
+
+    # पहले दो वर्णों के .char को मिलाकर पैटर्न बनाएं
+    # उदा: 'ञ्' + 'इ' = 'ञ्इ'
+    first_char = varna_list[0].char
+    second_char = varna_list[1].char
+    starting_pattern = first_char + second_char
+
+    # मिलान के लिए मैप (धातु पाठ के उपदेशानुसार)
+    mapping = {
+        'ञ्इ': 'ञि',
+        'ट्उ': 'टु',
+        'ड्उ': 'डु'
+    }
 
     if starting_pattern in mapping:
-        return [0, 1], [f"[१.३.५ आदिर्ञिटुडवः ({mapping[starting_pattern]})]({link})"]
+        tag = f"[१.३.५ आदिर्ञिटुडवः ({mapping[starting_pattern]})]({link})"
+        # प्रथम दोनों वर्णों (व्यंजन और स्वर) की इत्-संज्ञा होगी
+        return [0, 1], [tag]
+
     return [], []
 
 
-def apply_shah_pratyayasya_1_3_6(varna_list):
-    """१.३.६: प्रत्यय के आदि 'ष्' की इत्-संज्ञा।"""
-    # नोट: इंजन में source_type फिल्टर पहले ही लगा है
-    if varna_list and varna_list[0] == 'ष्':
+def apply_shah_pratyayasya_1_3_6(varna_list, source_type):
+    """
+    सूत्र: १.३.६ षः प्रत्ययस्य
+    नियम: प्रत्यय के आदि (शुरुआत) में स्थित 'ष्' की इत्-संज्ञा होती है।
+    उदाहरण: 'ष्वुन्' प्रत्यय का 'ष्'।
+    """
+    from core.upadesha_registry import UpadeshaType
+
+    # यह नियम केवल प्रत्यय (PRATYAYA) पर लागू होता है
+    if not varna_list or source_type != UpadeshaType.PRATYAYA:
+        return [], []
+
+    # varna_list[0].char का उपयोग TypeError से बचाता है
+    if varna_list[0].char == 'ष्':
         link = get_sutra_link("1.3.6")
         return [0], [f"[१.३.६ षः प्रत्ययस्य]({link})"]
+
     return [], []
 
 
 def apply_chuttu_1_3_7(varna_list, source_type):
-    """१.३.७: प्रत्यय के आदि च-वर्ग/ट-वर्ग की इत्-संज्ञा।"""
+    """
+    सूत्र: १.३.७ चुटू
+    नियम: प्रत्यय के आदि में स्थित च-वर्ग (च, छ, ज, झ, ञ) और
+          ट-वर्ग (ट, ठ, ड, ढ, ण) की इत्-संज्ञा होती है।
+    """
     from core.upadesha_registry import UpadeshaType
+
     if not varna_list or source_type != UpadeshaType.PRATYAYA:
         return [], []
 
+    # च-वर्ग और ट-वर्ग की शुद्ध व्यंजन सूची
     chuvarga = ['च्', 'छ्', 'ज्', 'झ्', 'ञ्']
     tuvarga = ['ट्', 'ठ्', 'ड्', 'ढ्', 'ण्']
     target_varnas = chuvarga + tuvarga
 
-    if varna_list[0] in target_varnas:
+    # varna_list[0].char का उपयोग करें (TypeError Fix)
+    if varna_list[0].char in target_varnas:
         link = get_sutra_link("1.3.7")
-        return [0], [f"[१.३.७ चुट्टू]({link})"]
+        return [0], [f"[१.३.७ चुटू]({link})"]
+
     return [], []
 
 
 def apply_lashakvataddhite_1_3_8(varna_list, source_type, is_taddhita=False):
     """
-    १.३.८: प्रत्यय के आदि ल, श, कु की इत्-संज्ञा (तद्धित वर्जित)।
+    सूत्र: १.३.८ लशक्वतद्धिते
+    नियम: प्रत्यय के आदि में स्थित 'ल्', 'श्' और 'कु' (क-वर्ग) की इत्-संज्ञा होती है,
+          परन्तु 'तद्धित' प्रत्ययों को छोड़कर।
     """
     from core.upadesha_registry import UpadeshaType
 
-    # Clinical Fix 1: यह नियम प्रत्यय (PRATYAYA) और विभक्ति (VIBHAKTI) दोनों पर लागू होता है
-    allowed_types = [UpadeshaType.PRATYAYA, UpadeshaType.VIBHAKTI]
-
-    if not varna_list or source_type not in allowed_types or is_taddhita:
+    # १.३.८ केवल प्रत्ययों (PRATYAYA) पर लागू होता है (तद्धित वर्जित)
+    if not varna_list or source_type != UpadeshaType.PRATYAYA or is_taddhita:
         return [], []
 
-    # क-वर्ग की पूर्ण सूची (क्, ख्, ग्, घ्, ङ्)
-    kavarga = ['क्', 'ख्', 'ग्', 'घ्', 'ङ्']
-    target = ['ल्', 'श्'] + kavarga
+    # 'कु' (क-वर्ग), 'ल्' और 'श्' की शुद्ध व्यंजन सूची
+    target = ['ल्', 'श्', 'क्', 'ख्', 'ग्', 'घ्', 'ङ्']
 
-    # Clinical Fix 2: प्रत्यय के 'आदि' (शुरुआत) में वर्ण की जाँच
-    first_varna = varna_list[0]
+    # Clinical Fix: varna_list[0].char का उपयोग करें (TypeError से बचाव)
+    first_varna_obj = varna_list[0]
 
-    if first_varna in target:
-        # १.३.८ सूत्र का लिंक और इंडेक्स 0 को टैग करना
-        link = "https://ashtadhyayi.com/sutraani/1/3/8"
-        return [0], [f"१.३.८ लशक्वतद्धिते (आदि {first_varna} की इत्-संज्ञा)"]
+    if first_varna_obj.char in target:
+        # सूत्र लिंक और टैग
+        link = get_sutra_link("1.3.8")
+        tag = f"[१.३.८ लशक्वतद्धिते (आदि {first_varna_obj.char} की इत्-संज्ञा)]({link})"
+
+        return [0], [tag]
 
     return [], []

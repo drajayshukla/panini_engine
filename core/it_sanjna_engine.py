@@ -67,17 +67,17 @@ class ItSanjnaEngine:
         # प्रत्यय/विभक्ति-आदि नियम (१.३.६, १.३.७, १.३.८)
         elif source_type in [UpadeshaType.PRATYAYA, UpadeshaType.VIBHAKTI]:
 
-            # १.३.६: षः प्रत्ययस्य (आदि 'ष्')
-            idx6, tags6 = apply_shah_pratyayasya_1_3_6(varna_list)
+            # १.३.६: षः प्रत्ययस्य (source_type जोड़ें)
+            idx6, tags6 = apply_shah_pratyayasya_1_3_6(varna_list, source_type)
             it_indices.update(idx6)
             sutra_tags.extend(tags6)
 
-            # १.३.७: चुट्टू (आदि च-वर्ग/ट-वर्ग)
-            idx7, tags7 = apply_chuttu_1_3_7(varna_list)
+            # १.३.७: चुटू (source_type जोड़ें)
+            idx7, tags7 = apply_chuttu_1_3_7(varna_list, source_type)
             it_indices.update(idx7)
             sutra_tags.extend(tags7)
 
-            # १.३.८: लशक्वतद्धिते (आदि ल, श, कु - तद्धित वर्जित)
+            # १.३.८: लशक्वतद्धिते (is_taddhita पहले से है, perfect)
             idx8, tags8 = apply_lashakvataddhite_1_3_8(varna_list, source_type, is_taddhita)
             it_indices.update(idx8)
             sutra_tags.extend(tags8)
