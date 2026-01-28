@@ -8,7 +8,7 @@ from collections import defaultdict
 # --- १. डेटा लोडिंग ---
 @st.cache_data
 def load_shabd_data():
-    file_path = os.path.join("data", "shabdpath", "shabdroop.json")
+    file_path = os.path.join("data", "shabdroop.json")
     try:
         with open(file_path, "r", encoding="utf-8") as file:
             return json.load(file)
