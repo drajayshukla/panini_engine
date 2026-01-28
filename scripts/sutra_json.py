@@ -42,7 +42,7 @@ def parse_panini_text(file_path):
                 sutras[-1]["vartikas"].append(line.replace('•', '').strip())
 
     return sutras
-
+#__init__.py
 
 # फाइल को प्रोसेस करें
 file_input = '08_Kala_Lab.txt'
