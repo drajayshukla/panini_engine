@@ -197,15 +197,34 @@ if word_input:
 
             # CASE H: STANDARD (Rama, Gauri, Ramaa)
             else:
-                res_v, s68 = apply_hal_nyab_6_1_68(current_varnas)
-                if s68:
-                    current_varnas = res_v
-                    prev_str = add_history(s68, current_varnas, prev_str, "हल्ङ्याब्-लोपः")
-                else:
+                # 1. Surgical Check: Only apply 6.1.68 if it's actually a Nyāb (long feminine)
+                # or a transformed Hal-anta.
+                # For short 'a' stems like 'Rāma', we skip to Rutva.
+
+                is_long_fem = word_input.endswith(('आ', 'ई', 'ऊ'))
+
+                # We only run Lopa for Long Feminine or specific transformed stems
+                if is_long_fem:
+                    res_v, s68 = apply_hal_nyab_6_1_68(current_varnas)
+                    if s68:
+                        current_varnas = res_v
+                        prev_str = add_history(s68, current_varnas, prev_str, "हल्ङ्याब्-लोपः")
+
+                # 2. If S-Lopa didn't happen (like in Rāma), proceed to Rutva-Visarga
+                if current_varnas[-1].char == 'स्':
+                    # ८.२.६६ (स -> रुँ)
                     current_varnas, s66 = apply_rutva_8_2_66(current_varnas)
-                    prev_str = add_history(s66, current_varnas, prev_str, "रुत्वम्")
+                    prev_str = add_history(s66, current_varnas, prev_str, "ससजुषोः रुः (रुत्वम्)")
+
+                    # १.३.२ (रुँ -> र्) - इत्-लोपः logic
+                    current_varnas, _ = ItSanjnaEngine.run_it_sanjna_prakaran(
+                        current_varnas, "रुँ", UpadeshaType.VIBHAKTI
+                    )
+                    prev_str = add_history("१.३.२", current_varnas, prev_str, "इत्-लोपः (रुँ -> र्)")
+
+                    # ८.३.१५ (र् -> ः)
                     current_varnas, s15 = apply_visarga_8_3_15(current_varnas)
-                    prev_str = add_history(s15, current_varnas, prev_str, "विसर्गः")
+                    prev_str = add_history(s15, current_varnas, prev_str, "खरवसानयोर्विसर्जनीयः")
 
             # --- BEAUTIFUL UI RENDERING (Correctly Indented) ---
             st.subheader("🧪 Step-by-Step Surgical Derivation")
