@@ -10,7 +10,7 @@ st.set_page_config(page_title="Vibhakti Diagnostic Engine", layout="wide", page_
 
 @st.cache_data
 def load_shabd_data():
-    file_path = os.path.join("data", "shabdpath", "shabdroop.json")
+    file_path = os.path.join("data","shabdroop.json")
     try:
         if not os.path.exists(file_path): return []
         with open(file_path, "r", encoding="utf-8") as file:
