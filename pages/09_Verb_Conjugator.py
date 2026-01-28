@@ -21,7 +21,7 @@ def load_conjugation_data():
 
 @st.cache_data
 def load_dhatu_metadata():
-    path = 'data/dhatu_master_structured.json'
+    path = 'data/active_voice.json'
     if os.path.exists(path):
         with open(path, 'r', encoding='utf-8') as f:
             return json.load(f)
