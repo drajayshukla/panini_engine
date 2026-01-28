@@ -99,7 +99,7 @@ def main():
 
     if matches:
         # १. पहले २० रैंडम उदाहरण चुनें
-        sample_size = min(20, len(matches))
+        sample_size = min(50, len(matches))
         random_examples = random.sample(matches, sample_size)
 
         # २. अब इन्हें विभक्ति क्रम (order) के आधार पर सॉर्ट करें
