@@ -96,21 +96,42 @@ if word_input:
 
             # --- BRANCH A: SPECIAL STEM (Kroṣṭu Case) ---
             # --- BRANCH A: SPECIAL STEM (Kroṣṭu Case) ---
+            # --- BRANCH A: SPECIAL STEM (Kroṣṭu Case) ---
             if "क्रोष्टु" in word_input:
-                # Steps 1 to 4... (Keep as is, they are working)
+                # 1. 7.1.95 (तृज्वत्क्रोष्टुः) -> Changes 'u' to 'ṛ'
+                current_varnas, s95 = apply_trijvadbhava_7_1_95(current_varnas)
+                prev_str = add_history(s95, current_varnas, prev_str)
+
+                # 2. 7.1.94 (अनङ्-आदेशः) -> Replaces 'ṛ' with 'an-aṅ'
+                current_varnas, s94 = apply_anang_7_1_94(current_varnas)
+                prev_str = add_history(s94, current_varnas, prev_str)
+
+                # 3. 1.3.3 Surgical Removal of ङ् (Halantyam)
+                # We do this manually to ensure we only target the augment's marker
+                temp_list = list(current_varnas)
+                for i, v in enumerate(temp_list):
+                    if v.char == 'ङ्':
+                        temp_list.pop(i)
+                        break
+                current_varnas = temp_list
+                prev_str = add_history("१.३.३ (हलन्त्यम् - ङ् लोपः)", current_varnas, prev_str)
+
+                # 4. 6.4.11 (उपधा दीर्घ) -> Lengthens 'a' to 'ā' before 'n'
+                current_varnas, s11 = apply_upadha_dirgha_6_4_11(current_varnas)
+                prev_str = add_history(s11, current_varnas, prev_str)
 
                 # --- STEP 5: S-LOPA (६.१.६८) ---
-                # Important: We must capture the new list in current_varnas
+                # Now the word ends in '...āns'. Sutra 6.1.68 deletes the 's'.
                 res_v5, s68 = apply_hal_nyab_6_1_68(current_varnas)
                 if s68:
-                    current_varnas = res_v5
+                    current_varnas = res_v5  # CRITICAL: Update state for the next step
                 prev_str = add_history(s68 if s68 else "६.१.६८ (Failed)", current_varnas, prev_str)
 
                 # --- STEP 6: N-LOPA (८.२.७) ---
-                # Now that 'स्' is gone, 'न्' is at the end.
+                # Now that 's' is gone, 'n' is at the absolute end. Sutra 8.2.7 deletes 'n'.
                 res_v6, s7 = apply_nalopa_8_2_7(current_varnas)
                 if s7:
-                    current_varnas = res_v6
+                    current_varnas = res_v6  # CRITICAL: Final update
                 prev_str = add_history(s7 if s7 else "८.२.७ (Failed)", current_varnas, prev_str)
             ## --- BRANCH B/C: APRUKTA LOPA or RUTVA-VISARGA ---
             else:
