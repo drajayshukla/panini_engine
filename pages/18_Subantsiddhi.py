@@ -139,6 +139,13 @@ if word_input:
                 if s68:
                     current_varnas = res_v
                 prev_str = add_history(s68 if s68 else "६.१.६८ (Skipped)", current_varnas, prev_str)
+                # --- BRANCH J: FEMININE Ī-ANTA (गौरी, नदी, लक्ष्मी) ---
+            elif word_input.endswith("ई"):
+                # 1. 6.1.68 (Direct S-Lopa)
+                res_v, s68 = apply_hal_nyab_6_1_68(current_varnas)
+                if s68:
+                    current_varnas = res_v
+                prev_str = add_history(s68 if s68 else "६.१.६८ (Skipped)", current_varnas, prev_str)
                 # --- BRANCH I: ROOT-NOUNS (गोपा, विश्वपा) ---
             elif word_input == "गोपा":
                 # Skip 6.1.68 because it's not a Nyāb-anta stem

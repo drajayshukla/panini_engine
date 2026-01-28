@@ -19,7 +19,7 @@ from core.phonology import Varna
     return varna_list, None'''
 
 
-def apply_hal_nyab_6_1_68(varna_list):
+'''def apply_hal_nyab_6_1_68(varna_list):
     """
     ६.१.६८ (हल्ङ्याब्भ्यो...): Removal of 'स्'
     Aggressive search version to accommodate intermediate consonants like 'n'.
@@ -34,6 +34,22 @@ def apply_hal_nyab_6_1_68(varna_list):
             v_list.pop()  # Surgical removal of 'स्'
             return v_list, "६.१.६८ (हल्ङ्याब्भ्यो... अपृक्त-लोप)"
 
+    return varna_list, None'''
+# logic/subanta_operations.py
+
+def apply_hal_nyab_6_1_68(varna_list):
+    """
+    ६.१.६८ (हल्ङ्याब्भ्यो...): Removal of 'स्'
+    Aggressive search version to handle intermediate 'n' and
+    various long vowel triggers (ā, ī, ū).
+    """
+    v_list = list(varna_list)
+    if v_list and v_list[-1].char == 'स्':
+        # Examine the end of the word for the trigger vowel
+        last_chars_str = "".join([v.char for v in v_list[-4:]])
+        if any(v in last_chars_str for v in ['आ', 'ई', 'ऊ']):
+            v_list.pop()
+            return v_list, "६.१.६८ (हल्ङ्याब्भ्यो... अपृक्त-लोप)"
     return varna_list, None
 def apply_upadha_dirgha_6_4_8(varna_list):
     """
