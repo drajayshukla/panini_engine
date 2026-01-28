@@ -79,58 +79,59 @@ if word_input:
             current_varnas = list(clean_varnas)
             prev_str = intermediate_word
 
-            # Initial State Entry
-            history.append({
-                "Sutra": "Initial (Post-Cleaning)",
-                "Vichhed": [v.char for v in current_varnas],
-                "Form": intermediate_word
-            })
 
-            # --- BRANCH A: SPECIAL STEM (Kroṣṭu Case) ---
+            # Helper to log steps
+            def add_history(sutra, varnas, p_str):
+                f_str = sanskrit_varna_samyoga(varnas)
+                history.append({
+                    "Sutra": sutra if sutra else "---",
+                    "Vichhed": [v.char for v in varnas],
+                    "Form": get_diff_highlight(p_str, f_str)
+                })
+                return f_str
+
+
+            # Initial State
+            prev_str = add_history("Initial (Post-Cleaning)", current_varnas, prev_str)
+
             if "क्रोष्टु" in word_input:
-                # 5a. Trijvadbhava (7.1.95)
+                # 1. 7.1.95 (तृज्वत्क्रोष्टुः)
                 current_varnas, s95 = apply_trijvadbhava_7_1_95(current_varnas)
-                new_str = sanskrit_varna_samyoga(current_varnas)
-                history.append({"Sutra": s95, "Vichhed": [v.char for v in current_varnas],
-                                "Form": get_diff_highlight(prev_str, new_str)})
-                prev_str = new_str
+                prev_str = add_history(s95, current_varnas, prev_str)
 
-                # 5b. Anang Substitution (7.1.94)
+                # 2. 7.1.94 (अनङ्-आदेशः)
                 current_varnas, s94 = apply_anang_7_1_94(current_varnas)
-                new_str = sanskrit_varna_samyoga(current_varnas)
-                history.append({"Sutra": s94, "Vichhed": [v.char for v in current_varnas],
-                                "Form": get_diff_highlight(prev_str, new_str)})
-                prev_str = new_str
+                prev_str = add_history(s94, current_varnas, prev_str)
 
-                # 5c. Surgical ṅ removal (1.3.3)
+                # 3. 1.3.3 (ङ्-इत्-लोपः)
+                # Manual surgical removal of ङ् to ensure 'क्' is safe
                 for i, v in enumerate(current_varnas):
                     if v.char == 'ङ्':
                         current_varnas.pop(i)
                         break
-                new_str = sanskrit_varna_samyoga(current_varnas)
-                history.append({"Sutra": "१.३.३ (हलन्त्यम् - ङ् इत्-लोपः)", "Vichhed": [v.char for v in current_varnas],
-                                "Form": get_diff_highlight(prev_str, new_str)})
-                prev_str = new_str
+                prev_str = add_history("१.३.३ (हलन्त्यम् - ङ् लोपः)", current_varnas, prev_str)
 
-                # 5d. Upadha Dirgha (6.4.11)
+                # 4. 6.4.11 (उपधा दीर्घ)
                 current_varnas, s11 = apply_upadha_dirgha_6_4_11(current_varnas)
-                new_str = sanskrit_varna_samyoga(current_varnas)
-                history.append({"Sutra": s11, "Vichhed": [v.char for v in current_varnas],
-                                "Form": get_diff_highlight(prev_str, new_str)})
-                prev_str = new_str
+                prev_str = add_history(s11, current_varnas, prev_str)
 
-                # 5e. Apṛkta Lopa (6.1.68) - FIXED: Capture the returned list
+                # 5. 6.1.68 (अपृक्त-सकार-लोप) - THIS IS STEP 5
                 current_varnas, s68 = apply_hal_nyab_6_1_68(current_varnas)
-                new_str = sanskrit_varna_samyoga(current_varnas)
-                history.append({"Sutra": s68, "Vichhed": [v.char for v in current_varnas],
-                                "Form": get_diff_highlight(prev_str, new_str)})
-                prev_str = new_str
+                prev_str = add_history(s68, current_varnas, prev_str)
 
-                # 5f. N-Lopa (8.2.7) - FIXED: Capture the returned list
+                # 6. 8.2.7 (नलोपः) - THIS IS STEP 6
                 current_varnas, s7 = apply_nalopa_8_2_7(current_varnas)
-                new_str = sanskrit_varna_samyoga(current_varnas)
-                history.append({"Sutra": s7, "Vichhed": [v.char for v in current_varnas],
-                                "Form": get_diff_highlight(prev_str, new_str)})
+                prev_str = add_history(s7, current_varnas, prev_str)
+
+            elif intermediate_word.endswith('स्'):
+                # Rama logic...
+                pass
+
+            # Display the Trace Table
+            st.table(history)
+
+            final_output = sanskrit_varna_samyoga(current_varnas)
+            st.header(f"✅ Final Result: {final_output}")
 
             # --- BRANCH B: APRUKTA LOPA (Bahuśreyasī Case) ---
             else:
