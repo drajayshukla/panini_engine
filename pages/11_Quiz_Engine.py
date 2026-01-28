@@ -7,7 +7,7 @@ import random
 st.set_page_config(page_title="धातु-रूप क्विज - अष्टाध्यायी-यंत्र", layout="wide", page_icon="🎯")
 
 st.title("🎯 पाणिनीय धातु-रूप क्विज")
-st.caption("अपने ज्ञान का परीक्षण करें: डेटासेट आधारित रैंडम एमसीक्यू")
+st.caption("अपने ज्ञान का परीक्षण करें और संपूर्ण ३x३ मैट्रिक्स से तुलना करें")
 
 
 # --- २. डेटा लोडिंग ---
@@ -24,31 +24,20 @@ def load_quiz_data():
 
 db_meta, db_roopa = load_quiz_data()
 
-# --- ३. देवनागरी मैपिंग (The Clinical Nomenclature) ---
+# --- ३. देवनागरी मैपिंग ---
 lakara_labels = {
-    # परस्मैपद (Active/Parasmaipada)
-    "plat": "लट् (वर्तमान)", "plit": "लिट् (परोक्ष भूत)", "plut": "लुट् (अनद्यतन भविष्य)",
-    "plrut": "लृट् (सामान्य भविष्य)", "plot": "लोट् (आज्ञा)", "plang": "लङ् (अनद्यतन भूत)",
+    "plat": "लट् (वर्तमान)", "plit": "लिट् (परोक्ष भूत)", "plut": "लुट् (भविष्य १)",
+    "plrut": "लृट् (भविष्य २)", "plot": "लोट् (आज्ञा)", "plang": "लङ् (अनद्यतन भूत)",
     "pvidhiling": "विधिलिङ् (संभावना)", "pashirling": "आशीर्लिङ् (आशीर्वाद)",
     "plung": "लुङ् (सामान्य भूत)", "plrung": "लृङ् (हेतुहेतुमद्भाव)",
-    # आत्मनेपद (Atmanepada)
     "alat": "लट् (आत्मनेपद)", "alit": "लिट् (आत्मनेपद)", "alut": "लुट् (आत्मनेपद)",
     "alrut": "लृट् (आत्मनेपद)", "alot": "लोट् (आत्मनेपद)", "alang": "लङ् (आत्मनेपद)",
     "avidhiling": "विधिलिङ् (आत्मनेपद)", "aashirling": "आशीर्लिङ् (आत्मनेपद)",
     "alung": "लुङ् (आत्मनेपद)", "alrung": "लृङ् (आत्मनेपद)"
 }
 
-purusha_map = {
-    "prathama": "प्रथम",
-    "madhyama": "मध्यम",
-    "uttama": "उत्तम"
-}
-
-vachana_map = {
-    "ekavachana": "एकवचन",
-    "dvivachana": "द्विवचन",
-    "bahuvachana": "बहुवचन"
-}
+purusha_map = {"prathama": "प्रथम", "madhyama": "मध्यम", "uttama": "उत्तम"}
+vachana_map = {"ekavachana": "एकवचन", "dvivachana": "द्विवचन", "bahuvachana": "बहुवचन"}
 
 
 # --- ४. क्विज लॉजिक इंजन ---
@@ -66,14 +55,14 @@ def generate_question(metadata, roopa_db):
 
     correct_answer = roopa_db[target_id][lak_code][pur_key][vac_key]
 
-    # गलत विकल्प तैयार करना (Smart Distractors)
+    # गलत विकल्प
     distractors = set()
     while len(distractors) < 3:
         random_id = random.choice(clean_roopa_keys)
         random_lak = random.choice(list(roopa_db[random_id].keys()))
-        wrong_val = roopa_db[random_id][random_lak][pur_key][vac_key]
-        if wrong_val != correct_answer:
-            distractors.add(wrong_val)
+        wrong_val = roopa_db[random_id][random_lak][random.choice(["prathama", "madhyama", "uttama"])][
+            random.choice(["ekavachana", "dvivachana", "bahuvachana"])]
+        if wrong_val != correct_answer: distractors.add(wrong_val)
 
     options = list(distractors) + [correct_answer]
     random.shuffle(options)
@@ -85,61 +74,74 @@ def generate_question(metadata, roopa_db):
         "purusha": purusha_map.get(pur_key, pur_key),
         "vachana": vachana_map.get(vac_key, vac_key),
         "correct": correct_answer,
-        "options": options
+        "options": options,
+        "full_grid": roopa_db[target_id][lak_code]  # संपूर्ण ९ रूप यहाँ हैं
     }
 
 
-# --- ५. सेशन स्टेट मैनेजमेंट ---
-if 'current_question' not in st.session_state:
-    st.session_state.current_question = None
-if 'score' not in st.session_state:
-    st.session_state.score = 0
-if 'total' not in st.session_state:
-    st.session_state.total = 0
+# --- ५. सेशन स्टेट ---
+if 'q' not in st.session_state: st.session_state.q = None
+if 'score' not in st.session_state: st.session_state.score = 0
+if 'total' not in st.session_state: st.session_state.total = 0
+if 'answered' not in st.session_state: st.session_state.answered = False
 
 # --- ६. मुख्य इंटरफेस ---
 if db_meta and db_roopa:
-    st.sidebar.header("📊 प्रोग्रेस कार्ड")
-    st.sidebar.metric("आपका स्कोर", f"{st.session_state.score} / {st.session_state.total}")
+    st.sidebar.metric("स्कोर", f"{st.session_state.score} / {st.session_state.total}")
 
     if st.button("🔄 नया प्रश्न तैयार करें"):
-        st.session_state.current_question = generate_question(db_meta, db_roopa)
+        st.session_state.q = generate_question(db_meta, db_roopa)
+        st.session_state.answered = False
 
-    if st.session_state.current_question:
-        q = st.session_state.current_question
+    if st.session_state.q:
+        q = st.session_state.q
 
         st.markdown(f"""
-        <div style="background-color: #f8f9fa; padding: 30px; border-radius: 15px; border-left: 10px solid #2e7d32; text-align: center; box-shadow: 2px 2px 10px rgba(0,0,0,0.1);">
-            <h2 style="color: #2e7d32; font-family: 'Sanskrit Text', serif;">व्याकरण प्रश्न</h2>
-            <p style="font-size: 1.5em; color: #333; line-height: 1.6;">
+        <div style="background-color: #f8f9fa; padding: 25px; border-radius: 15px; border-left: 10px solid #1a73e8; text-align: center;">
+            <p style="font-size: 1.4em; color: #333;">
                 धातु <b>'{q['dhatu']}'</b> ({q['artha']}) का <br>
                 <span style="color: #d32f2f; font-weight: bold;">{q['lakara']}</span>, 
-                <b>{q['purusha']} पुरुष</b>, 
-                <b>{q['vachana']}</b> रूप क्या होगा?
+                <b>{q['purusha']} पुरुष</b>, <b>{q['vachana']}</b> रूप क्या होगा?
             </p>
         </div>
         """, unsafe_allow_html=True)
 
-        st.write("---")
-        user_choice = st.radio("शुद्ध विकल्प का चयन करें:", q['options'], index=None)
+        user_choice = st.radio("शुद्ध विकल्प का चयन करें:", q['options'], index=None,
+                               disabled=st.session_state.answered)
 
-        if st.button("✅ उत्तर सबमिट करें") and user_choice:
-            st.session_state.total += 1
-            if user_choice == q['correct']:
-                st.success(f"🚩 उत्तमम्! '{user_choice}' शुद्ध रूप है।")
-                st.session_state.score += 1
-            else:
-                st.error(f"❌ अशुद्धम्। शुद्ध रूप है: **{q['correct']}**")
+        if not st.session_state.answered:
+            if st.button("✅ उत्तर सबमिट करें") and user_choice:
+                st.session_state.total += 1
+                st.session_state.answered = True
+                if user_choice == q['correct']:
+                    st.success(f"🚩 उत्तमम्! '{user_choice}' शुद्ध रूप है।")
+                    st.session_state.score += 1
+                else:
+                    st.error(f"❌ अशुद्धम्। शुद्ध रूप था: **{q['correct']}**")
+
+        # उत्तर देने के बाद संपूर्ण ९ रूप दिखाना
+        if st.session_state.answered:
+            st.divider()
+            st.subheader(f"📊 '{q['dhatu']}' ({q['lakara']}) का संपूर्ण ३x३ रूप चक्र:")
+
+            # टेबल संरचना
+            cols = st.columns([1, 2, 2, 2])
+            v_names = ["एकवचन", "द्विवचन", "बहुवचन"]
+            for i, v in enumerate(v_names): cols[i + 1].markdown(f"**{v}**")
+
+            p_rows = [("prathama", "प्रथम"), ("madhyama", "मध्यम"), ("uttama", "उत्तम")]
+            for p_key, p_name in p_rows:
+                r_cols = st.columns([1, 2, 2, 2])
+                r_cols[0].markdown(f"**{p_name}**")
+                for i, v_key in enumerate(["ekavachana", "dvivachana", "bahuvachana"]):
+                    val = q['full_grid'][p_key][v_key]
+                    # सही उत्तर को हाईलाइट करना
+                    if val == q['correct']:
+                        r_cols[i + 1].success(val)
+                    else:
+                        r_cols[i + 1].code(val)
 
             st.info("अगले प्रश्न के लिए 'नया प्रश्न तैयार करें' बटन दबाएं।")
-            st.session_state.current_question = None
-
-    else:
-        st.info("💡 क्विज शुरू करने के लिए ऊपर दिए गए बटन पर क्लिक करें।")
 
 else:
-    st.error("डेटाबेस (JSON) प्राप्त नहीं हुआ।")
-
-# --- ७. फुटर ---
-st.markdown("---")
-st.caption("Paninian Quiz Engine v1.2 | Developed for Dr. Ajay Shukla")
+    st.error("डेटाबेस प्राप्त नहीं हुआ।")
