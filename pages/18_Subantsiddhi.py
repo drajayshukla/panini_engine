@@ -11,7 +11,9 @@ from logic.subanta_operations import (
     apply_anang_7_1_94,
     apply_upadha_dirgha_6_4_11,
     apply_upadha_dirgha_6_4_8,
-    apply_nalopa_8_2_7
+    apply_nalopa_8_2_7,
+apply_goto_nit_7_1_90,
+apply_vṛddhi_7_2_115
 )
 from logic.sanjna_rules import check_pada_sanjna_1_4_14
 
@@ -129,6 +131,29 @@ if word_input:
                 prev_str = add_history(s68 if s68 else "६.१.६८ (S-Removal)", current_varnas, prev_str)
                 current_varnas, s7 = apply_nalopa_8_2_7(current_varnas)
                 prev_str = add_history(s7 if s7 else "८.२.७ (N-Removal)", current_varnas, prev_str)
+                # --- BRANCH F: GO SPECIAL (ओकारान्त) ---
+            elif word_input == "गो":
+                # 1. 7.1.90 (णिद्वद्भावः)
+                current_varnas, s90 = apply_goto_nit_7_1_90(current_varnas)
+                prev_str = add_history(s90, current_varnas, prev_str)
+
+                # 2. 7.2.115 (ओ -> औ वृद्धिः)
+                current_varnas, s115 = apply_vṛddhi_7_2_115(current_varnas)
+                prev_str = add_history(s115, current_varnas, prev_str)
+
+                # 3. 8.2.66 (स् -> रुँ)
+                current_varnas, s66 = apply_rutva_8_2_66(current_varnas)
+                prev_str = add_history(s66, current_varnas, prev_str)
+
+                # 4. 1.3.2 (रुँ -> र् cleaning)
+                current_varnas, _ = ItSanjnaEngine.run_it_sanjna_prakaran(
+                    current_varnas, "रुँ", UpadeshaType.VIBHAKTI
+                )
+                prev_str = add_history("१.३.२ (रुँ-लोपः)", current_varnas, prev_str)
+
+                # 5. 8.3.15 (र् -> विसर्ग)
+                current_varnas, s15 = apply_visarga_8_3_15(current_varnas)
+                prev_str = add_history(s15, current_varnas, prev_str)
 
             # CASE D: STANDARD (RAMA / BAHUSHREYASI)
             else:

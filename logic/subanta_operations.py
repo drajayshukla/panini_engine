@@ -42,8 +42,17 @@ def apply_upadha_dirgha_6_4_11(varna_list):
             return v_list, "६.४.११ (अप्तृन्तृच्... उपधा दीर्घ)"
     return varna_list, None
 
-# --- ७. अध्याय (Chapter 7) ---
 
+
+# --- ७. अध्याय (Chapter 7) ---
+def apply_goto_nit_7_1_90(varna_list):
+    """
+    ७.१.९० गोतो णित्
+    Logic: Mark the current suffix/process as 'Nit' for Go-shabda.
+    (In our code, this serves as a trigger for 7.2.115).
+    """
+    # This is a conceptual rule, returns the list as is with a label.
+    return varna_list, "७.१.९० (गोतो णित् - णिद्वद्भावः)"
 def apply_anang_7_1_94(varna_list):
     """
     ७.१.९४ ऋदुशनस्... (अनङ्-आदेशः)
@@ -70,6 +79,17 @@ def apply_trijvadbhava_7_1_95(varna_list):
             return varna_list, "७.१.९५ (तृज्वत्क्रोष्टुः)"
     return varna_list, None
 
+def apply_vṛddhi_7_2_115(varna_list):
+    """
+    ७.२.११५ अचो ञ्णिति
+    Logic: Replace final 'ओ' with Vṛddhi 'औ' before a Nit suffix.
+    """
+    v_list = list(varna_list)
+    for i in range(len(v_list)):
+        if v_list[i].char == 'ओ':
+            v_list[i] = Varna('औ')
+            return v_list, "७.२.११५ (अचो ञ्णिति - वृद्धिः)"
+    return varna_list, None
 # --- ८. अध्याय (Chapter 8) ---
 
 def apply_nalopa_8_2_7(varna_list):
