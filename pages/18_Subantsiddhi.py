@@ -68,26 +68,17 @@ if word_input:
             prev_str = intermediate_word
 
 
-            '''def add_history(sutra, varnas, p_str):
+            def add_history(sutra, varnas, p_str):
                 f_str = sanskrit_varna_samyoga(varnas)
                 history.append({
                     "Sutra": sutra if sutra else "---",
                     "Vichhed": [v.char for v in varnas],
                     "Form": get_diff_highlight(p_str, f_str)
                 })
-                return f_str'''
-
-
-            def add_history(sutra, varnas, p_str, change_msg="---"):
-                f_str = sanskrit_varna_samyoga(varnas)
-                history.append({
-                    "Step": len(history),
-                    "Sutra": sutra,
-                    "Varna List": [v.char for v in varnas],
-                    "Form": f_str,
-                    "Change": change_msg
-                })
                 return f_str
+
+
+
 
 
             prev_str = add_history("Initial (Post-Cleaning)", current_varnas, prev_str)
