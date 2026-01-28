@@ -217,24 +217,34 @@ if word_input:
 
                 # --- BRANCH Q: MASCULINE/NEUTER A-ANTA (राम, बालक, ज्ञान) ---
                 # Trigger: Ends in short 'a'. Logic: MUST go to Visarga protocol.
-            elif word_input.endswith('अ'):
-                    # 1. ८.२.६६ (स -> रुँ)
+                        # --- BRANCH P: FEMININE NYĀB-ANTA (रमा, गौरी, वधू) ---
+                elif word_input.endswith(('आ', 'ई', 'ऊ')) and word_input not in ["लक्ष्मी", "तन्त्री", "तरी",
+                                                                                         "गोपा"]:
+                        res_v, s68 = apply_hal_nyab_6_1_68(current_varnas)
+                if s68:
+                            current_varnas = res_v
+                            prev_str = add_history(s68, current_varnas, prev_str, "हल्ङ्याब्-लोपः (S-Deletion)")
+
+                # --- BRANCH Q: MASCULINE/NEUTER A-ANTA (राम, बालक, देव) ---
+                # This branch specifically handles the Visarga path and IGNORES Lopa
+                elif word_input.endswith('अ'):
+                    # 1. 8.2.66 (स -> रुँ)
                     current_varnas, s66 = apply_rutva_8_2_66(current_varnas)
                     prev_str = add_history(s66, current_varnas, prev_str, "ससजुषोः रुः (रुत्वम्)")
 
-                    # 2. १.३.२ (रुँ -> र्)
+                    # 2. 1.3.2 (Cleaning रुँ to र्)
                     current_varnas, _ = ItSanjnaEngine.run_it_sanjna_prakaran(
                         current_varnas, "रुँ", UpadeshaType.VIBHAKTI
                     )
                     prev_str = add_history("१.३.२", current_varnas, prev_str, "इत्-लोपः (रुँ -> र्)")
 
-                    # 3. ८.३.१५ (र् -> ः)
+                    # 3. 8.3.15 (र् -> ः)
                     current_varnas, s15 = apply_visarga_8_3_15(current_varnas)
                     prev_str = add_history(s15, current_varnas, prev_str, "खरवसानयोर्विसर्जनीयः")
 
-                # --- BRANCH R: REMAINING (Consonant-ending / Others) ---
-            else:
-                    # Default safety for genuine Hal-anta stems
+                # --- BRANCH R: DEFAULT / HAL-ANTA ---
+                else:
+                    # Only apply Lopa if it's a genuine consonant-ending word
                     res_v, s68 = apply_hal_nyab_6_1_68(current_varnas)
                     if s68:
                         current_varnas = res_v
@@ -244,6 +254,9 @@ if word_input:
                         prev_str = add_history(s66, current_varnas, prev_str, "रुत्वम्")
                         current_varnas, s15 = apply_visarga_8_3_15(current_varnas)
                         prev_str = add_history(s15, current_varnas, prev_str, "विसर्गः")
+
+
+
 
             # --- BEAUTIFUL UI RENDERING (Correctly Indented) ---
             st.subheader("🧪 Step-by-Step Surgical Derivation")
