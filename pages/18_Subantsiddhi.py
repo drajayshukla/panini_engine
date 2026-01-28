@@ -96,43 +96,42 @@ if word_input:
 
             # --- BRANCH A: SPECIAL STEM (Kroṣṭu Case) ---
             # --- BRANCH A: SPECIAL STEM (Kroṣṭu Case) ---
+            # --- BRANCH A: SPECIAL STEM (Kroṣṭu Case) ---
             if "क्रोष्टु" in word_input:
-                # 1-2. 7.1.95 & 7.1.94 (Already working)
+                st.subheader("Step 5: Process Tracing (Surgical Deconstruction)")
+
+                # --- FRESH LOGIC PIPELINE ---
+                # 1. Trijvadbhava (7.1.95)
                 current_varnas, s95 = apply_trijvadbhava_7_1_95(current_varnas)
                 prev_str = add_history(s95, current_varnas, prev_str)
 
+                # 2. Anang (7.1.94)
                 current_varnas, s94 = apply_anang_7_1_94(current_varnas)
                 prev_str = add_history(s94, current_varnas, prev_str)
 
-                # 3. 1.3.3 Surgical Removal of ङ्
-                temp_list = list(current_varnas)
-                for i, v in enumerate(temp_list):
-                    if v.char == 'ङ्':
-                        temp_list.pop(i)
-                        break
-                current_varnas = temp_list
+                # 3. Manual ङ् removal (1.3.3)
+                # This ensures the first character 'क्' is never touched
+                temp_v = [v for v in current_varnas if v.char != 'ङ्']
+                current_varnas = temp_v
                 prev_str = add_history("१.३.३ (हलन्त्यम् - ङ् लोपः)", current_varnas, prev_str)
 
-                # 4. 6.4.11 Upadha Dirgha
+                # 4. Upadha Dirgha (6.4.11)
                 current_varnas, s11 = apply_upadha_dirgha_6_4_11(current_varnas)
                 prev_str = add_history(s11, current_varnas, prev_str)
 
-                # --- NEW MODULAR STEP: Classifier ---
-                from logic.stem_classifier import mark_dirgha_stems
-
-                current_varnas = mark_dirgha_stems(current_varnas)
-
-                # 5. 6.1.68 (Aggressive Update)
+                # 5. HAL-NYAB LOPA (6.1.68)
+                # We FORCE update current_varnas only if a change is detected
                 res_v5, s68 = apply_hal_nyab_6_1_68(current_varnas)
                 if s68:
                     current_varnas = res_v5
-                prev_str = add_history(s68 if s68 else "६.१.६८ (Failed)", current_varnas, prev_str)
+                prev_str = add_history(s68 if s68 else "६.१.६८ (Skipped/Failed)", current_varnas, prev_str)
 
-                # 6. 8.2.7 (Aggressive Update)
+                # 6. N-LOPA (8.2.7)
+                # This depends on Step 5 succeeding (so 'न्' is at the end)
                 res_v6, s7 = apply_nalopa_8_2_7(current_varnas)
                 if s7:
                     current_varnas = res_v6
-                prev_str = add_history(s7 if s7 else "८.२.७ (Failed)", current_varnas, prev_str)
+                prev_str = add_history(s7 if s7 else "८.२.७ (Skipped/Failed)", current_varnas, prev_str)
             ## --- BRANCH B/C: APRUKTA LOPA or RUTVA-VISARGA ---
             else:
                 # Try Branch B: Apṛkta Lopa (e.g. बहुश्रेयसी)
