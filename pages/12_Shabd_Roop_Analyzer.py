@@ -10,7 +10,7 @@ st.set_page_config(page_title="Shabd Roop Analyzer - अष्टाध्या
 @st.cache_data
 def load_shabd_data():
     # आपके नए फाइल पाथ के अनुसार (shabdroop.json)
-    file_path = os.path.join("data", "shabdpath", "shabdroop.json")
+    file_path = os.path.join("data", "shabdroop.json")
     try:
         if not os.path.exists(file_path):
             st.error(f"फाइल नहीं मिली: {file_path}")
