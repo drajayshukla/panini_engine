@@ -3,7 +3,7 @@ from core.phonology import Varna
 
 # --- ६. अध्याय (Chapter 6) ---
 
-def apply_hal_nyab_6_1_68(varna_list):
+'''def apply_hal_nyab_6_1_68(varna_list):
     """
     ६.१.६८ (हल्ङ्याब्भ्यो...): Removal of 'स्'
     Logic: If word ends in 'स्' and the stem has a long vowel (आ/ई)
@@ -16,8 +16,25 @@ def apply_hal_nyab_6_1_68(varna_list):
         if 'आ' in last_chars or 'ई' in last_chars:
             v_list.pop() # Surgical removal of 'स्'
             return v_list, "६.१.६८ (हल्ङ्याब्भ्यो... अपृक्त-लोप)"
-    return varna_list, None
+    return varna_list, None'''
 
+
+def apply_hal_nyab_6_1_68(varna_list):
+    """
+    ६.१.६८ (हल्ङ्याब्भ्यो...): Removal of 'स्'
+    Aggressive search version to accommodate intermediate consonants like 'n'.
+    """
+    v_list = list(varna_list)
+    if v_list and v_list[-1].char == 'स्':
+        # Create a string of the last 4 characters for easy searching
+        last_chars_str = "".join([v.char for v in v_list[-4:]])
+
+        # Check for Paninian triggers: Dirgha (Long) vowels
+        if 'आ' in last_chars_str or 'ई' in last_chars_str or 'ऊ' in last_chars_str:
+            v_list.pop()  # Surgical removal of 'स्'
+            return v_list, "६.१.६८ (हल्ङ्याब्भ्यो... अपृक्त-लोप)"
+
+    return varna_list, None
 def apply_upadha_dirgha_6_4_8(varna_list):
     """
     ६.४.८ सर्वनामस्थाने चासम्बुद्धौ
