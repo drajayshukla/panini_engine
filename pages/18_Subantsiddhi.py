@@ -196,29 +196,41 @@ if word_input:
                 prev_str = add_history(s56, current_varnas, prev_str, "वाऽवसाने (चर्त्वम्)")
 
             # CASE H: STANDARD (Rama, Gauri, Ramaa)
-            else:
-                # 1. PRIORITY: Check for Hal-Nyāb-Lopa (6.1.68)
-                # This applies to Long Feminine (आ, ई, ऊ) and Consonant-ending stems.
+                # --- BRANCH P: FEMININE NYĀB-ANTA (रमा, गौरी, वधू) ---
+                # Logic: These MUST undergo S-Lopa (6.1.68)
+            elif word_input.endswith(('आ', 'ई', 'ऊ')) and word_input not in ["लक्ष्मी", "तन्त्री", "तरी", "गोपा"]:
                 res_v, s68 = apply_hal_nyab_6_1_68(current_varnas)
-
                 if s68:
-                    # If the rule applied, the 'स्' is gone. We record it and STOP.
                     current_varnas = res_v
                     prev_str = add_history(s68, current_varnas, prev_str, "हल्ङ्याब्-लोपः (S-Deletion)")
 
-                # 2. FALLBACK: If 'स्' survived (meaning it's a short vowel stem like Rāma)
+            # --- BRANCH Q: MASCULINE A-ANTA (राम, बालक, देव) ---
+            # Logic: These MUST undergo Rutva-Visarga. Never apply 6.1.68 here.
+            elif word_input.endswith('अ'):
+                # 1. ८.२.६६ (स -> रुँ)
+                current_varnas, s66 = apply_rutva_8_2_66(current_varnas)
+                prev_str = add_history(s66, current_varnas, prev_str, "ससजुषोः रुः (रुत्वम्)")
+
+                # 2. १.३.२ (Cleaning रुँ)
+                current_varnas, _ = ItSanjnaEngine.run_it_sanjna_prakaran(
+                    current_varnas, "रुँ", UpadeshaType.VIBHAKTI
+                )
+                prev_str = add_history("१.३.२", current_varnas, prev_str, "इत्-लोपः (रुँ -> र्)")
+
+                # 3. ८.३.१५ (र् -> विसर्ग)
+                current_varnas, s15 = apply_visarga_8_3_15(current_varnas)
+                prev_str = add_history(s15, current_varnas, prev_str, "खरवसानयोर्विसर्जनीयः")
+
+            # --- BRANCH R: REMAINING CASES (Consonant endings etc.) ---
+            else:
+                # Default safety logic
+                res_v, s68 = apply_hal_nyab_6_1_68(current_varnas)
+                if s68:
+                    current_varnas = res_v
+                    prev_str = add_history(s68, current_varnas, prev_str, "हल्ङ्याब्-लोपः")
                 elif current_varnas[-1].char == 'स्':
-                    # ८.२.६६ (स -> रुँ)
                     current_varnas, s66 = apply_rutva_8_2_66(current_varnas)
-                    prev_str = add_history(s66, current_varnas, prev_str, "ससजुषोः रुः (रुत्वम्)")
-
-                    # १.३.२ (रुँ -> र् cleaning)
-                    current_varnas, _ = ItSanjnaEngine.run_it_sanjna_prakaran(
-                        current_varnas, "रुँ", UpadeshaType.VIBHAKTI
-                    )
-                    prev_str = add_history("१.३.२", current_varnas, prev_str, "इत्-लोपः (रुँ -> र्)")
-
-                    # ८.३.१५ (र् -> ः)
+                    prev_str = add_history(s66, current_varnas, prev_str, "रुत्वम्")
                     current_varnas, s15 = apply_visarga_8_3_15(current_varnas)
                     prev_str = add_history(s15, current_varnas, prev_str, "विसर्गः")
 
