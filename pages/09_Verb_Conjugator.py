@@ -9,101 +9,102 @@ st.title("📝 धातु-रूप सिद्घि (Verb Conjugator)")
 st.caption("पाणिनीय ३x३ मैट्रिक्स आधारित लकार-रूप विश्लेषण")
 
 
-# --- २. डायग्नोस्टिक लोडिंग (Diagnostic Loading) ---
-def load_json_safe(file_name):
-    path = os.path.join('data', file_name)
-    if not os.path.exists(path):
-        st.error(f"❌ फ़ाइल नहीं मिली: `{path}`")
-        return None
-    try:
-        with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except Exception as e:
-        st.error(f"❌ `{file_name}` को पढ़ने में त्रुटि: {e}")
-        return None
+# --- २. डेटा लोडिंग (Robust Logic) ---
+@st.cache_data
+def load_all_data():
+    meta_path = os.path.join('data', 'dhatu_master_structured.json')
+    roopa_path = os.path.join('data', 'active_voice.json')
+
+    if not os.path.exists(meta_path) or not os.path.exists(roopa_path):
+        return None, None
+
+    with open(meta_path, 'r', encoding='utf-8') as f:
+        meta = json.load(f)
+    with open(roopa_path, 'r', encoding='utf-8') as f:
+        roopa = json.load(f)
+
+    return meta, roopa
 
 
-db_conjugation = load_json_safe('active_voice.json')
-db_metadata = load_json_safe('dhatu_master_structured.json')
+db_metadata, db_conjugation = load_all_data()
 
-# --- ३. डेटा वैलिडेशन और मैपिंग ---
-if db_conjugation is not None and db_metadata is not None:
-    # एक 'Mapping' तैयार करें जो केवल वही धातु दिखाए जिनके रूप उपलब्ध हैं
+# --- ३. डेटा सिंकिंग (Clinical Normalization) ---
+if db_metadata and db_conjugation:
     dhatu_map = {}
 
-    # db_metadata एक लिस्ट है, इसे स्कैन करें
+    # रूप डेटाबेस की चाबियों को क्लीन करें (जैसे " 01.0001 " -> "01.0001")
+    clean_roopa = {str(k).strip(): v for k, v in db_conjugation.items()}
+
     for entry in db_metadata:
-        k_index = entry.get('kaumudi_index')
-        if k_index in db_conjugation:
-            label = f"{entry.get('upadesha', '???')} ({entry.get('artha_sanskrit', 'अर्थ अनुपलब्ध')})"
-            dhatu_map[label] = k_index
+        # 'identifier' ही '01.0001' के बराबर है
+        d_id = str(entry.get('identifier', '')).strip()
+
+        if d_id in clean_roopa:
+            label = f"[{d_id}] {entry.get('upadesha', '???')} ({entry.get('artha_sanskrit', 'N/A')})"
+            dhatu_map[label] = {
+                "id": d_id,
+                "forms": clean_roopa[d_id]
+            }
 
     if not dhatu_map:
-        st.warning("⚠️ डेटा तो लोड हो गया, पर 'Kaumudi Index' मैच नहीं हो रहे हैं।")
+        st.warning("⚠️ 'identifier' और रूप डेटाबेस की Keys मैच नहीं हो रही हैं। कृपया डेटा फॉर्मेट चेक करें।")
         st.stop()
 
     # --- ४. यूज़र इंटरफेस (Selection) ---
-    col1, col2 = st.columns([2, 1])
+    col_sel1, col_sel2 = st.columns([2, 1])
 
-    with col1:
-        selected_label = st.selectbox("धातु खोजें और चुनें:", options=list(dhatu_map.keys()))
-        target_id = dhatu_map[selected_label]
+    with col_sel1:
+        selected_label = st.selectbox("पाणिनीय क्रम के अनुसार धातु चुनें:", options=list(dhatu_map.keys()))
+        target_data = dhatu_map[selected_label]
 
-    # लकार मैपिंग
+    # लकार मैपिंग (Human Readable)
     lakara_labels = {
-        "plat": "लट् (वर्तमान)", "plit": "लिट् (परोक्ष अनद्यतन परोक्ष)",
-        "plut": "लुट् (अनद्यतन भविष्य)", "plrut": "लृट् (सामान्य भविष्य)",
-        "plot": "लोट् (आज्ञा/आशीष)", "plang": "लङ् (अनद्यतन भूत)",
-        "pvidhiling": "विधिलिङ् (विधि/संभावना)", "pashirling": "आशीर्लिङ् (आशीर्वाद)",
+        "plat": "लट् (वर्तमान)", "plit": "लिट् (परोक्ष भूत)", "plut": "लुट् (अनद्यतन भविष्य)",
+        "plrut": "लृट् (सामान्य भविष्य)", "plot": "लोट् (आज्ञा/आशीष)", "plang": "लङ् (अनद्यतन भूत)",
+        "pvidhiling": "विधिलिङ् (संभावना)", "pashirling": "आशीर्लिङ् (आशीर्वाद)",
         "plung": "लुङ् (सामान्य भूत)", "plrung": "लृङ् (हेतुहेतुमद्भाव)",
-        "alat": "लट् (आत्मनेपद)", "alit": "लिट् (आत्मनेपद)",
-        "alut": "लुट् (आत्मनेपद)", "alrut": "लृट् (आत्मनेपद)",
-        "alot": "लोट् (आत्मनेपद)", "alang": "लङ् (आत्मनेपद)",
-        "avidhiling": "विधिलिङ् (आत्मनेपद)", "aashirling": "आशीर्लिङ् (आत्मनेपद)",
-        "alung": "लुङ् (आत्मनेपद)", "alrung": "लृङ् (आत्मनेपद)"
+        "alat": "लट् (Atmanepada)", "alit": "लिट् (Atmanepada)", "alut": "लुट् (Atmanepada)",
+        "alrut": "लृट् (Atmanepada)", "alot": "लोट् (Atmanepada)", "alang": "लङ् (Atmanepada)",
+        "avidhiling": "विधिलिङ् (Atmanepada)", "aashirling": "आशीर्लिङ् (Atmanepada)",
+        "alung": "लुङ् (Atmanepada)", "alrung": "लृङ् (Atmanepada)"
     }
 
-    available_lakaras = db_conjugation[target_id].keys()
+    available_lakaras = target_data["forms"].keys()
 
-    with col2:
-        selected_lakara_key = st.selectbox(
+    with col_sel2:
+        selected_lakara = st.selectbox(
             "लकार चुनें:",
             options=list(available_lakaras),
             format_func=lambda x: lakara_labels.get(x, x)
         )
 
-    # --- ५. ३x३ मैट्रिक्स डिस्प्ले ---
-    st.markdown("---")
-    st.subheader(f"🛡️ रूप विवरण: {selected_label}")
+    # --- ५. ३x३ मैट्रिक्स रेंडरिंग ---
+    st.divider()
+    st.subheader(f"🛡️ {selected_label} - {lakara_labels.get(selected_lakara, selected_lakara)}")
 
-    grid = db_conjugation[target_id][selected_lakara_key]
+    grid = target_data["forms"][selected_lakara]
 
-    # पाणिनीय ग्रिड लेआउट
-    # प्रथम पुरुष (P1), मध्यम (P2), उत्तम (P3)
-    purushas = [("prathama", "प्रथम (III)"), ("madhyama", "मध्यम (II)"), ("uttama", "उत्तम (I)")]
-
-    # हेडर
+    # ग्रिड हेडर
     h_col1, h_col2, h_col3, h_col4 = st.columns([1, 2, 2, 2])
     h_col2.markdown("<center><b>एकवचन</b></center>", unsafe_allow_html=True)
     h_col3.markdown("<center><b>द्विवचन</b></center>", unsafe_allow_html=True)
     h_col4.markdown("<center><b>बहुवचन</b></center>", unsafe_allow_html=True)
 
+    purushas = [("prathama", "प्रथम (III)"), ("madhyama", "मध्यम (II)"), ("uttama", "उत्तम (I)")]
+    vachanas = ["ekavachana", "dvivachana", "bahuvachana"]
+
     for p_key, p_name in purushas:
         r_col1, r_col2, r_col3, r_col4 = st.columns([1, 2, 2, 2])
         r_col1.markdown(f"**{p_name}**")
 
-        # डेटा दिखाना
-        val_ek = grid.get(p_key, {}).get('ekavachana', '-')
-        val_dvi = grid.get(p_key, {}).get('dvivachana', '-')
-        val_bah = grid.get(p_key, {}).get('bahuvachana', '-')
-
-        r_col2.info(val_ek)
-        r_col3.info(val_dvi)
-        r_col4.info(val_bah)
+        # सुरक्षित डेटा फेचिंग
+        row_data = grid.get(p_key, {})
+        r_col2.info(row_data.get('ekavachana', '-'))
+        r_col3.info(row_data.get('dvivachana', '-'))
+        r_col4.info(row_data.get('bahuvachana', '-'))
 
 else:
-    st.info(
-        "💡 कृपया सुनिश्चित करें कि `data/` फोल्डर में `active_voice.json` और `dhatu_master_structured.json` मौजूद हैं।")
+    st.error("🚨 'data/' फोल्डर में आवश्यक JSON फाइलें (dhatu_master_structured.json / active_voice.json) नहीं मिलीं।")
 
 # --- ६. फुटर ---
 st.markdown("---")
