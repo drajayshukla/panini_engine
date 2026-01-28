@@ -10,7 +10,7 @@ from logic.subanta_operations import (
     apply_trijvadbhava_7_1_95,
     apply_anang_7_1_94,
     apply_upadha_dirgha_6_4_11,
-    apply_upadha_dirgha_6_4_8,  # Added missing import
+    apply_upadha_dirgha_6_4_8,
     apply_nalopa_8_2_7
 )
 from logic.sanjna_rules import check_pada_sanjna_1_4_14
@@ -75,7 +75,9 @@ if word_input:
 
             prev_str = add_history("Initial (Post-Cleaning)", current_varnas, prev_str)
 
-            # --- BRANCH A: KROSTU CASE ---
+            # --- BRANCHING LOGIC FOR DIFFERENT STEM TYPES ---
+
+            # CASE A: KROSTU
             if "क्रोष्टु" in word_input:
                 current_varnas, s95 = apply_trijvadbhava_7_1_95(current_varnas)
                 prev_str = add_history(s95, current_varnas, prev_str)
@@ -90,7 +92,7 @@ if word_input:
                 current_varnas, s7 = apply_nalopa_8_2_7(current_varnas)
                 prev_str = add_history(s7 if s7 else "८.२.७ (Manual)", current_varnas, prev_str)
 
-            # --- BRANCH B: JAMATR SPECIAL (ऋकारान्त) ---
+            # CASE B: JAMATR
             elif "जामातृ" in word_input:
                 current_varnas, s94 = apply_anang_7_1_94(current_varnas)
                 prev_str = add_history(s94, current_varnas, prev_str)
@@ -103,7 +105,20 @@ if word_input:
                 current_varnas, s7 = apply_nalopa_8_2_7(current_varnas)
                 prev_str = add_history(s7 if s7 else "८.२.७ (N-Removal)", current_varnas, prev_str)
 
-            # --- BRANCH C: STANDARD STEMS (RAMA / BAHUSHREYASI) ---
+            # CASE C: DHATR / KARTR (Agent Nouns)
+            elif any(x in word_input for x in ["धातृ", "कर्तृ", "हर्तृ"]):
+                current_varnas, s94 = apply_anang_7_1_94(current_varnas)
+                prev_str = add_history(s94, current_varnas, prev_str)
+                current_varnas = [v for v in current_varnas if v.char != 'ङ्']
+                prev_str = add_history("१.३.३ (हलन्त्यम् - ङ् लोपः)", current_varnas, prev_str)
+                current_varnas, s11 = apply_upadha_dirgha_6_4_11(current_varnas)
+                prev_str = add_history(s11, current_varnas, prev_str)
+                current_varnas, s68 = apply_hal_nyab_6_1_68(current_varnas)
+                prev_str = add_history(s68 if s68 else "६.१.६८ (S-Removal)", current_varnas, prev_str)
+                current_varnas, s7 = apply_nalopa_8_2_7(current_varnas)
+                prev_str = add_history(s7 if s7 else "८.२.७ (N-Removal)", current_varnas, prev_str)
+
+            # CASE D: STANDARD (RAMA / BAHUSHREYASI)
             else:
                 res_v, s68 = apply_hal_nyab_6_1_68(list(current_varnas))
                 if s68:
