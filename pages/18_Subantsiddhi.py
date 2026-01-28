@@ -105,7 +105,6 @@ if word_input:
                 prev_str = new_str
 
                 # 5c. Surgical ṅ removal (1.3.3 Halantyam)
-                # Target only the marker 'ङ्' added by Anaṅ
                 for i, v in enumerate(current_varnas):
                     if v.char == 'ङ्':
                         current_varnas.pop(i)
@@ -122,19 +121,23 @@ if word_input:
                                 "Form": get_diff_highlight(prev_str, new_str)})
                 prev_str = new_str
 
-                # 5e. Apṛkta Lopa (6.1.68) -> Removal of suffix 's' after long stem
+                # 5e. Apṛkta Lopa (6.1.68) -> Removal of suffix 'स्' after long stem
+                # Now applying the logic strictly to get 'क्रोष्टान्'
                 current_varnas, s68 = apply_hal_nyab_6_1_68(current_varnas)
                 new_str = sanskrit_varna_samyoga(current_varnas)
                 history.append({"Sutra": s68, "Vichhed": [v.char for v in current_varnas],
                                 "Form": get_diff_highlight(prev_str, new_str)})
                 prev_str = new_str
 
-                # 5f. N-Lopa (8.2.7) -> Final removal of 'n' at Pada-anta
+                # 5f. N-Lopa (8.2.7) -> Final removal of 'न्' at the end of Pada
+                # This completes the siddhi to 'क्रोष्टा'
                 current_varnas, s7 = apply_nalopa_8_2_7(current_varnas)
                 new_str = sanskrit_varna_samyoga(current_varnas)
                 history.append({"Sutra": s7, "Vichhed": [v.char for v in current_varnas],
                                 "Form": get_diff_highlight(prev_str, new_str)})
 
+            # --- DISPLAY TRACE TABLE ---
+            st.table(history)
             # --- BRANCH B: APRUKTA LOPA (Bahuśreyasī Case) ---
             else:
                 lopa_varnas, s68 = apply_hal_nyab_6_1_68(list(current_varnas))
