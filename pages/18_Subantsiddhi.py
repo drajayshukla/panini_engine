@@ -139,7 +139,7 @@ if word_input:
                 if s68:
                     current_varnas = res_v
                 prev_str = add_history(s68 if s68 else "६.१.६८ (Skipped)", current_varnas, prev_str)
-                # --- BRANCH J: FEMININE Ī-ANTA (गौरी, नदी, लक्ष्मी) ---
+                # --- BRANCH J: FEMININE Ī-ANTA (गौरी) ---
             elif word_input.endswith("ई"):
                 # 1. 6.1.68 (Direct S-Lopa)
                 res_v, s68 = apply_hal_nyab_6_1_68(current_varnas)
@@ -147,14 +147,14 @@ if word_input:
                     current_varnas = res_v
                 prev_str = add_history(s68 if s68 else "६.१.६८ (Skipped)", current_varnas, prev_str)
                 # --- BRANCH K: NON-NYAB Ī-ANTA (तन्त्री, तरी) ---
-            elif word_input == "तन्त्री":
-                # DO NOT call apply_hal_nyab_6_1_68
+            elif any(x == word_input for x in ["लक्ष्मी", "तन्त्री", "तरी"]):
+                # Bypass 6.1.68 Hal-nyab-lopa
 
                 # 1. 8.2.66 (स् -> रुँ)
                 current_varnas, s66 = apply_rutva_8_2_66(current_varnas)
                 prev_str = add_history(s66, current_varnas, prev_str)
 
-                # 2. 1.3.2 (Cleaning रुँ)
+                # 2. 1.3.2 (रुँ-लोपः)
                 current_varnas, _ = ItSanjnaEngine.run_it_sanjna_prakaran(
                     current_varnas, "रुँ", UpadeshaType.VIBHAKTI
                 )
