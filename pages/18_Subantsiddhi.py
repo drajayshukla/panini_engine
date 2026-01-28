@@ -93,16 +93,28 @@ if word_input:
                 prev_str = add_history(s7 if s7 else "८.२.७ (Manual)", current_varnas, prev_str)
 
             # CASE B: JAMATR
-            elif "जामातृ" in word_input:
+                # --- BRANCH B: KINSHIP TERMS (जामातृ, पितृ, भ्रातृ etc.) ---
+            elif any(x in word_input for x in ["जामातृ", "पितृ", "भ्रातृ", "नृ"]):
+                # 1. 7.1.94 (अनङ्-आदेशः: ऋ -> अन्)
                 current_varnas, s94 = apply_anang_7_1_94(current_varnas)
                 prev_str = add_history(s94, current_varnas, prev_str)
+
+                # 2. 1.3.3 (इत्-लोपः: ङ् removal)
                 current_varnas = [v for v in current_varnas if v.char != 'ङ्']
                 prev_str = add_history("१.३.३ (हलन्त्यम् - ङ् लोपः)", current_varnas, prev_str)
+
+                # 3. 6.4.8 (उपधा दीर्घ: अ -> आ specifically for kinship/N-anta)
                 current_varnas, s8 = apply_upadha_dirgha_6_4_8(current_varnas)
                 prev_str = add_history(s8, current_varnas, prev_str)
-                current_varnas, s68 = apply_hal_nyab_6_1_68(current_varnas)
+
+                # 4. 6.1.68 (S-LOPA: पितान्स् -> पितान्)
+                res_v5, s68 = apply_hal_nyab_6_1_68(current_varnas)
+                current_varnas = res_v5
                 prev_str = add_history(s68 if s68 else "६.१.६८ (S-Removal)", current_varnas, prev_str)
-                current_varnas, s7 = apply_nalopa_8_2_7(current_varnas)
+
+                # 5. 8.2.7 (N-LOPA: पितान् -> पिता)
+                res_v6, s7 = apply_nalopa_8_2_7(current_varnas)
+                current_varnas = res_v6
                 prev_str = add_history(s7 if s7 else "८.२.७ (N-Removal)", current_varnas, prev_str)
 
             # CASE C: DHATR / KARTR (Agent Nouns)
