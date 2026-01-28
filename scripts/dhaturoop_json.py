@@ -1,50 +1,53 @@
 import json
-import os
+from collections import OrderedDict
 
-def refine_dhatupath(input_file, output_file):
-    """
-    धातु-रूप डेटा को ३x३ मैट्रिक्स (पुरुष x वचन) में बदलना।
-    """
-    if not os.path.exists(input_file):
-        print(f"Error: {input_file} नहीं मिली।")
-        return
 
-    with open(input_file, 'r', encoding='utf-8') as f:
-        raw_data = json.load(f)
+def refine_active_voice_db(file_path, output_path):
+    with open(file_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
 
-    refined_data = {}
+    # १. पाणिनीय लकार क्रम (Standard Order Mapping)
+    lakara_order = {
+        "plat": 1, "alat": 2,  # लट्
+        "plit": 3, "alit": 4,  # लिट्
+        "plut": 5, "alut": 6,  # लुट्
+        "plrut": 7, "alrut": 8,  # लृट्
+        "plot": 9, "alot": 10,  # लोट्
+        "plang": 11, "alang": 12,  # लङ्
+        "pvidhiling": 13, "avidhiling": 14,  # विधिलिङ्
+        "pashirling": 15, "aashirling": 16,  # आशीर्लिङ्
+        "plung": 17, "alung": 18,  # लुङ्
+        "plrung": 19, "alrung": 20  # लृङ्
+    }
 
-    # पाणिनीय ग्रिड के मानक नाम
-    vachanas = ["ekavachana", "dvivachana", "bahuvachana"]
-    purushas = ["prathama", "madhyama", "uttama"]
+    refined_db = {}
 
-    for index, lakaras in raw_data.items():
-        refined_data[index] = {}
+    for dhatu_id, lakaras in data.items():
+        # २. लकारों को क्रमबद्ध करना (Sorting Lakaras)
+        sorted_lakaras = sorted(
+            lakaras.items(),
+            key=lambda x: lakara_order.get(x[0], 99)
+        )
 
-        for lakara_key, forms_str in lakaras.items():
-            # ';' के आधार पर ९ खानों को अलग करना
-            # उदाहरण: "भवति;भवतः;भवन्ति..."
-            forms_list = [f.strip() for f in forms_str.split(';')]
+        # ३. पुरुष और वचन का क्रम भी सुनिश्चित करना (OrderedDict)
+        ordered_lakaras = OrderedDict()
+        for lakara_name, grid in sorted_lakaras:
+            ordered_grid = OrderedDict()
+            for purusha in ["prathama", "madhyama", "uttama"]:
+                if purusha in grid:
+                    ordered_grid[purusha] = OrderedDict(
+                        (v, grid[purusha][v]) for v in ["ekavachana", "dvivachana", "bahuvachana"] if v in grid[purusha]
+                    )
+            ordered_lakaras[lakara_name] = ordered_grid
 
-            # यदि ९ रूप मौजूद हैं, तो उन्हें ३x३ मैट्रिक्स में मैप करें
-            if len(forms_list) == 9:
-                matrix = {}
-                for i, p in enumerate(purushas):
-                    matrix[p] = {}
-                    for j, v in enumerate(vachanas):
-                        # फ्लैट लिस्ट को पुरुष-वचन मैट्रिक्स में डालना
-                        # यदि एक खाने में विकल्प हों (जैसे: 'अभवत्,अभवद्'), वे स्ट्रिंग के रूप में सुरक्षित रहेंगे
-                        matrix[p][v] = forms_list[i * 3 + j]
-                refined_data[index][lakara_key] = matrix
-            else:
-                # यदि ९ से कम या ज्यादा हों, तो उन्हें लिस्ट के रूप में ही रखें
-                refined_data[index][lakara_key] = forms_list
+        refined_db[dhatu_id] = ordered_lakaras
 
-    # नया रिफाइंड JSON सेव करना (active_voice.json)
-    with open(output_file, 'w', encoding='utf-8') as f:
-        json.dump(refined_data, f, ensure_ascii=False, indent=4)
+    # ४. सुरक्षित रूप से फाइल सेव करना
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(refined_db, f, ensure_ascii=False, indent=4)
 
-    print(f"✅ Refinement Complete: {output_file} तैयार है।")
+    return "✅ Database Examination & Refinement Successful!"
 
-# रन करने के लिए (पाथ को सरल बनाया गया है)
-refine_dhatupath('dhatupath_best7.json', '../data/active_voice.json')
+# निष्पादन
+status = refine_active_voice_db('active_voice.json', 'active_voice_refined.json')
+print(status)
