@@ -32,17 +32,29 @@ db_conjugation = load_conjugation_data()
 db_metadata = load_dhatu_metadata()
 
 # --- ३. सिलेक्शन इंटरफेस (Surgical Selection) ---
+# --- ३. सिलेक्शन इंटरफेस (Surgical & Error-Proof) ---
+
+# १. पहले सुरक्षित मैप तैयार करें
 dhatu_map = {
     f"{d.get('upadesha', 'Unknown')} ({d.get('artha_sanskrit', 'N/A')})": d.get('kaumudi_index')
     for d in db_metadata
-    if isinstance(d, dict) and 'upadesha' in d
+    if isinstance(d, dict) and 'upadesha' in d and 'kaumudi_index' in d
 }
 
+# २. सिलेक्शन कॉलम
 col_s1, col_s2 = st.columns([2, 1])
 
 with col_s1:
-    selected_name = st.selectbox("धातु चुनें:", options=list(dhatu_map.keys()), index=0)
-    dhatu_id = dhatu_map[selected_name]
+    # 'options' में केवल वही लिस्ट भेजें जो dhatu_map की Keys हैं
+    available_options = list(dhatu_map.keys())
+
+    if available_options:
+        selected_name = st.selectbox("धातु चुनें:", options=available_options, index=0)
+        # अब यह लाइन कभी KeyError नहीं देगी क्योंकि 'selected_name' हमेशा Map के अंदर से आएगा
+        dhatu_id = dhatu_map[selected_name]
+    else:
+        st.error("डेटाबेस में कोई वैध धातु नहीं मिली।")
+        st.stop()
 
 # --- ४. लकार चयन ---
 # लकार की मैपिंग (Human Readable)
