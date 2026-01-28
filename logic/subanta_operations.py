@@ -87,7 +87,23 @@ def apply_upadha_dirgha_6_4_11(varna_list):
             return v_list, "६.४.११ (अप्तृन्तृच्... उपधा दीर्घ)"
     return varna_list, None
 
-
+def apply_ti_lopa_6_4_143(varna_list):
+    """
+    ६.४.१४३ टेः
+    Logic: Delete the 'Ti' (final vowel and following consonants)
+    of the stem before a 'Dit' suffix (Adḍ).
+    Example: अन्य (अ-न्-य्-अ) -> अन्य् (अ-न्-य्)
+    """
+    v_list = list(varna_list)
+    # The 'Ti' of 'अन्य' is the final 'अ'.
+    # Since 'अद्ड्' is Dit (has 'ḍ' as it), we drop the stem's final 'अ'.
+    # In our varna list: [अ, न्, य्, अ, अ, द्, ड्] -> drop the 'अ' at index 3.
+    # Logic: Find the boundary between stem and suffix.
+    if len(v_list) > 3:
+        # For 'anya', the stem vowel is at index -4 relative to [अ, द्, ड्]
+        v_list.pop(-4)
+        return v_list, "६.४.१४३ (टेः - टि-लोपः)"
+    return varna_list, None
 
 # --- ७. अध्याय (Chapter 7) ---
 
@@ -103,6 +119,19 @@ def apply_ato_am_7_1_24(varna_list):
         v_list.append(Varna('अ'))
         v_list.append(Varna('म्'))
         return v_list, "७.१.२४ (अतोऽम् - सुँ -> अम् आदेशः)"
+    return varna_list, None
+
+def apply_add_7_1_25(varna_list):
+    """
+    ७.१.२५ अद्ड् डतरादिभ्यः पञ्चभ्यः
+    Logic: Replace 'su' (s) with 'adḍ' for specific pronouns.
+    """
+    v_list = list(varna_list)
+    if v_list and v_list[-1].char == 'स्':
+        v_list.pop() # Remove 'स्'
+        # Add 'अ', 'द्', 'ड्'
+        v_list.extend([Varna('अ'), Varna('द्'), Varna('ड्')])
+        return v_list, "७.१.२५ (अद्ड्-आदेशः)"
     return varna_list, None
 
 def apply_goto_nit_7_1_90(varna_list):
@@ -189,4 +218,15 @@ def apply_visarga_8_3_15(varna_list):
         varna_list.pop()
         varna_list.append(Varna('ः'))
         return varna_list, "८.३.१५ (खरवसानयोर्विसर्जनीयः)"
+    return varna_list, None
+
+def apply_chartva_8_4_56(varna_list):
+    """
+    ८.४.५६ वाऽवसाने
+    Logic: Optional replacement of 'd' with 't' at the end of a word.
+    """
+    v_list = list(varna_list)
+    if v_list and v_list[-1].char == 'द्':
+        v_list[-1] = Varna('त्')
+        return v_list, "८.४.५६ (चर्त्वम् - वैकल्पिके)"
     return varna_list, None

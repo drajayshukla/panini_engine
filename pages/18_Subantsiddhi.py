@@ -16,7 +16,10 @@ from logic.subanta_operations import (
     apply_vṛddhi_7_2_115,
     apply_rayo_hali_7_2_85,
     apply_ato_am_7_1_24,
-    apply_ami_purvah_6_1_107
+    apply_ami_purvah_6_1_107,
+apply_add_7_1_25,
+apply_ti_lopa_6_4_143,
+apply_chartva_8_4_56
 )
 from logic.sanjna_rules import check_pada_sanjna_1_4_14
 
@@ -160,6 +163,23 @@ if word_input:
                 prev_str = add_history(s66, current_varnas, prev_str, "रुत्वम्")
                 current_varnas, s15 = apply_visarga_8_3_15(current_varnas)
                 prev_str = add_history(s15, current_varnas, prev_str, "विसर्गः")
+                # --- BRANCH N: PRONOUN SPECIAL (अन्य, इतर, कतर) ---
+            elif any(x == word_input for x in ["अन्य", "इतर", "कतर", "कतम", "अन्यतर"]):
+                # 1. 7.1.25 (सुँ -> अद्ड्)
+                current_varnas, s25 = apply_add_7_1_25(current_varnas)
+                prev_str = add_history(s25, current_varnas, prev_str, "सुँ -> अद्ड् आदेशः")
+
+                # 2. 1.3.3 (ड्-लोपः)
+                current_varnas = [v for v in current_varnas if v.char != 'ड्']
+                prev_str = add_history("१.३.३", current_varnas, prev_str, "हलन्त्यम् - ड् लोपः")
+
+                # 3. 6.4.143 (Ti-Lopa: अन्य + अद् -> अन्य् + अद्)
+                current_varnas, s143 = apply_ti_lopa_6_4_143(current_varnas)
+                prev_str = add_history(s143, current_varnas, prev_str, "टेः (टि-लोपः)")
+
+                # 4. 8.4.56 (चर्त्वम्: द -> त)
+                current_varnas, s56 = apply_chartva_8_4_56(current_varnas)
+                prev_str = add_history(s56, current_varnas, prev_str, "वाऽवसाने (चर्त्वम्)")
 
             # CASE H: STANDARD (Rama, Gauri, Ramaa)
             else:
