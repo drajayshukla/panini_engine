@@ -14,7 +14,9 @@ from logic.subanta_operations import (
     apply_nalopa_8_2_7,
 apply_goto_nit_7_1_90,
 apply_vṛddhi_7_2_115,
-apply_rayo_hali_7_2_85
+apply_rayo_hali_7_2_85,
+apply_ato_am_7_1_24,
+apply_ami_purvah_6_1_107
 )
 from logic.sanjna_rules import check_pada_sanjna_1_4_14
 
@@ -151,6 +153,16 @@ if word_input:
                 if s68:
                     current_varnas = res_v
                 prev_str = add_history(s68 if s68 else "६.१.६८ (Skipped)", current_varnas, prev_str)
+                # --- BRANCH M: NEUTER A-ANTA (ज्ञान, फल, वन) ---
+                # Note: We assume the PratipadikaEngine identifies gender
+            elif word_input in ["ज्ञान", "फल", "वन", "पुष्प"]:
+                # 1. 7.1.24 (सुँ -> अम्)
+                current_varnas, s24 = apply_ato_am_7_1_24(current_varnas)
+                prev_str = add_history(s24, current_varnas, prev_str)
+
+                # 2. 6.1.107 (अ + अ -> अ पूर्वरूपम्)
+                current_varnas, s107 = apply_ami_purvah_6_1_107(current_varnas)
+                prev_str = add_history(s107, current_varnas, prev_str)
                 # --- BRANCH J: FEMININE Ī-ANTA (गौरी) ---
             elif word_input.endswith("ई"):
                 # 1. 6.1.68 (Direct S-Lopa)

@@ -36,7 +36,19 @@ from core.phonology import Varna
 
     return varna_list, None'''
 # logic/subanta_operations.py
-
+def apply_ami_purvah_6_1_107(varna_list):
+    """
+    ६.१.१०७ अमि पूर्वः
+    Logic: Merge stem-final 'a' and suffix 'a' into a single 'a'.
+    Example: ज्ञान + अम् -> ज्ञानम्
+    """
+    v_list = list(varna_list)
+    # Check for two consecutive 'अ's followed by 'म्'
+    for i in range(len(v_list) - 2):
+        if v_list[i].char == 'अ' and v_list[i+1].char == 'अ' and v_list[i+2].char == 'म्':
+            v_list.pop(i+1) # Remove the second 'अ'
+            return v_list, "६.१.१०७ (अमि पूर्वः - पूर्वरूपम्)"
+    return varna_list, None
 def apply_hal_nyab_6_1_68(varna_list):
     """
     ६.१.६८ (हल्ङ्याब्भ्यो...): Removal of 'स्'
@@ -78,6 +90,21 @@ def apply_upadha_dirgha_6_4_11(varna_list):
 
 
 # --- ७. अध्याय (Chapter 7) ---
+
+def apply_ato_am_7_1_24(varna_list):
+    """
+    ७.१.२४ अतोऽम्
+    Logic: For neuter stems ending in 'a', replace 'su' (s) with 'am'.
+    """
+    v_list = list(varna_list)
+    # Find where the suffix starts (after 'न' in 'ज्ञान')
+    if v_list and v_list[-1].char == 'स्':
+        v_list.pop() # Remove 'स्'
+        v_list.append(Varna('अ'))
+        v_list.append(Varna('म्'))
+        return v_list, "७.१.२४ (अतोऽम् - सुँ -> अम् आदेशः)"
+    return varna_list, None
+
 def apply_goto_nit_7_1_90(varna_list):
     """
     ७.१.९० गोतो णित्
