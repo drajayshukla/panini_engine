@@ -78,7 +78,19 @@ def apply_trijvadbhava_7_1_95(varna_list):
             varna_list[i] = Varna('ऋ')
             return varna_list, "७.१.९५ (तृज्वत्क्रोष्टुः)"
     return varna_list, None
+# logic/subanta_operations.py
 
+def apply_rayo_hali_7_2_85(varna_list):
+    """
+    ७.२.८५ रायो हलि
+    Logic: Replace 'ऐ' with 'आ' when followed by a Hal-ādi suffix.
+    """
+    v_list = list(varna_list)
+    for i in range(len(v_list)):
+        if v_list[i].char == 'ऐ':
+            v_list[i] = Varna('आ')
+            return v_list, "७.२.८५ (रायो हलि - आकारादेशः)"
+    return varna_list, None
 def apply_vṛddhi_7_2_115(varna_list):
     """
     ७.२.११५ अचो ञ्णिति

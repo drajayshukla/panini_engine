@@ -13,7 +13,8 @@ from logic.subanta_operations import (
     apply_upadha_dirgha_6_4_8,
     apply_nalopa_8_2_7,
 apply_goto_nit_7_1_90,
-apply_vṛddhi_7_2_115
+apply_vṛddhi_7_2_115,
+apply_rayo_hali_7_2_85
 )
 from logic.sanjna_rules import check_pada_sanjna_1_4_14
 
@@ -152,6 +153,25 @@ if word_input:
                 prev_str = add_history("१.३.२ (रुँ-लोपः)", current_varnas, prev_str)
 
                 # 5. 8.3.15 (र् -> विसर्ग)
+                current_varnas, s15 = apply_visarga_8_3_15(current_varnas)
+                prev_str = add_history(s15, current_varnas, prev_str)
+                # --- BRANCH G: RAI SPECIAL (ऐकारान्त) ---
+            elif word_input == "रै":
+                # 1. 7.2.85 (ऐ -> आ आदेशः)
+                current_varnas, s85 = apply_rayo_hali_7_2_85(current_varnas)
+                prev_str = add_history(s85, current_varnas, prev_str)
+
+                # 2. 8.2.66 (स् -> रुँ)
+                current_varnas, s66 = apply_rutva_8_2_66(current_varnas)
+                prev_str = add_history(s66, current_varnas, prev_str)
+
+                # 3. 1.3.2 (रुँ-लोपः)
+                current_varnas, _ = ItSanjnaEngine.run_it_sanjna_prakaran(
+                    current_varnas, "रुँ", UpadeshaType.VIBHAKTI
+                )
+                prev_str = add_history("१.३.२ (रुँ-लोपः)", current_varnas, prev_str)
+
+                # 4. 8.3.15 (र् -> विसर्ग)
                 current_varnas, s15 = apply_visarga_8_3_15(current_varnas)
                 prev_str = add_history(s15, current_varnas, prev_str)
 
