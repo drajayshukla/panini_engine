@@ -1,49 +1,35 @@
 import streamlit as st
-import json
 import pandas as pd
 import os
+import json
 
 # 'Gold Standard' Modules
 from core.phonology import sanskrit_varna_vichhed, sanskrit_varna_samyoga
 from core.it_sanjna_engine import ItSanjnaEngine
 from core.upadesha_registry import UpadeshaType
 
-# --- १. पेज कॉन्फ़िगरेशन ---
-st.set_page_config(page_title="Explorer - अष्टाध्यायी-यंत्र", layout="wide")
+# --- १. पेज कॉन्फ़िगरेशन एवं स्टाइल ---
+st.set_page_config(page_title="Explorer - अष्टाध्यायी-यंत्र", layout="wide", page_icon="🔍")
 
 st.title("🔍 व्याकरण डेटाबेस एक्सप्लोरर")
-st.caption("पाणिनीय शुद्धिकरण: एकीकृत Engine आधारित अनुबन्ध-लोप विश्लेषण")
+st.markdown("---")
 
 
-# --- २. लोप गणना इंजन (Simplified & Integrated) ---
+# --- २. लोप गणना इंजन (Cashed for Performance) ---
+@st.cache_data
 def calculate_lopa(upadesha, u_type=UpadeshaType.DHATU):
-    """
-    लाइव लोप गणना:
-    विच्छेद -> इंजन (सभी इत्-संज्ञा सूत्र) -> संयोग
-    """
-    if not upadesha or upadesha == "०":
-        return "०"
-
+    if not upadesha or upadesha == "०": return "०"
     try:
-        # क. विच्छेद (Gold Standard)
         v_list = sanskrit_varna_vichhed(upadesha)
-
-        # ख. तद्धित फ्लैग डिटेक्शन (Sutra 1.3.8 के लिए आवश्यक)
         _, is_taddhita = UpadeshaType.auto_detect(upadesha)
-
-        # ग. एकीकृत इंजन प्रक्रिया (१.३.२ से १.३.८ तक के सभी नियम यहीं समाहित हैं)
-        # अब मैन्युअल apply_bonded_lopa की आवश्यकता नहीं है
         remaining, _ = ItSanjnaEngine.run_it_sanjna_prakaran(
             varna_list=v_list.copy(),
             original_input=upadesha,
             source_type=u_type,
             is_taddhita=is_taddhita
         )
-
-        # घ. संयोग (शुद्ध रूप निर्माण)
         return sanskrit_varna_samyoga(remaining)
-
-    except Exception:
+    except:
         return upadesha
 
 
@@ -57,59 +43,92 @@ def load_json(filename):
     return None
 
 
-tabs = st.tabs(["💎 धातु-पाठ", "📦 कृत् प्रत्यय", "🏷️ तद्धित प्रत्यय", "🔱 विभक्ति/तिङ्"])
+# --- ४. साइडबार फिल्टर्स (The Diagnostic Matrix) ---
+st.sidebar.header("🎯 सूक्ष्म फिल्टर (Filters)")
+search_query = st.sidebar.text_input("वैश्विक खोज (Global Search):", placeholder="धातु या अर्थ लिखें...")
 
-# --- TAB 1: धातु-पाठ ---
+# --- ५. टैब आधारित डेटा विज़ुअलाइज़ेशन ---
+tabs = st.tabs(["💎 धातु-पाठ", "📦 कृत् प्रत्यय", "🔱 विभक्ति/तिङ्", "📊 सांख्यिकी"])
+
+# --- TAB 1: धातु-पाठ (Enhanced with Filtering) ---
 with tabs[0]:
-    st.subheader("1500+ धातु मास्टर लिस्ट")
     dhatu_data = load_json('dhatu_master_structured.json')
     if dhatu_data:
-        df_dhatu = pd.DataFrame(dhatu_data)
-        if st.checkbox("🔄 लाइव अनुबन्ध-लोप दिखाएँ", value=True, key="dhatu_live"):
-            with st.spinner("पाणिनीय गणना जारी..."):
-                df_dhatu['shuddha_anga'] = df_dhatu['upadesha'].apply(
-                    lambda x: calculate_lopa(x, UpadeshaType.DHATU)
-                )
+        df = pd.DataFrame(dhatu_data)
 
+        # फिल्टर्स का ग्रिड
+        f1, f2, f3 = st.columns(3)
+        with f1:
+            gana_filter = st.multiselect("गण (Gana):", options=df['gana'].unique())
+        with f2:
+            pada_filter = st.multiselect("पद (Pada):", options=df['pada'].unique())
+        with f3:
+            it_filter = st.multiselect("इट्-प्रकार (It-type):", options=df['it_type'].unique())
+
+        # डेटा फिल्टरिंग लॉजिक
+        if gana_filter: df = df[df['gana'].isin(gana_filter)]
+        if pada_filter: df = df[df['pada'].isin(pada_filter)]
+        if it_filter: df = df[df['it_type'].isin(it_filter)]
+        if search_query:
+            df = df[df.apply(lambda row: search_query in str(row.values), axis=1)]
+
+        # लाइव गणना चेकबॉक्स
+        live_calc = st.checkbox("🔄 लाइव अनुबन्ध-लोप (Shuddha Anga) लागू करें", value=True)
+        if live_calc:
+            with st.spinner("पाणिनीय गणना जारी..."):
+                df['shuddha_anga'] = df['upadesha'].apply(lambda x: calculate_lopa(x, UpadeshaType.DHATU))
+
+        # डिस्प्ले कॉलम्स सेटिंग
         display_cols = {
-            'identifier': 'ID',
-            'mula_dhatu': 'मूल धातु',
+            'kaumudi_index': 'ID',
             'upadesha': 'उपदेश',
             'shuddha_anga': 'शुद्ध अङ्ग',
+            'artha_sanskrit': 'अर्थ (Sanskrit)',
             'gana': 'गण',
-            'artha_sanskrit': 'अर्थ'
+            'pada': 'पद'
         }
-        actual_cols = [c for c in display_cols.keys() if c in df_dhatu.columns]
-        st.dataframe(df_dhatu[actual_cols].rename(columns=display_cols), use_container_width=True, height=600)
+
+        st.dataframe(
+            df[list(display_cols.keys())].rename(columns=display_cols),
+            use_container_width=True,
+            height=500,
+            column_config={
+                "शुद्ध अङ्ग": st.column_config.TextColumn("शुद्ध अङ्ग", help="इत्-संज्ञा और लोप के बाद का रूप",
+                                                          width="medium", required=True)
+            }
+        )
+        st.download_button("📥 फिल्टर किया गया डेटा डाउनलोड करें", df.to_csv(index=False), "filtered_dhatus.csv",
+                           "text/csv")
 
 # --- TAB 2: कृत् प्रत्यय ---
 with tabs[1]:
-    st.subheader("कृत् प्रत्यय विश्लेषण")
     krit_data = load_json('krut_pratyayas.json')
     if krit_data:
-        df_krit = pd.DataFrame(krit_data.get('data', krit_data))
-        if st.checkbox("प्रत्यय का अवशेष (Lopa) गणना करें", key="krit_lopa"):
-            df_krit['shuddha_pratyaya'] = df_krit['pratyay'].apply(
-                lambda x: calculate_lopa(x, UpadeshaType.PRATYAYA)
-            )
-        st.dataframe(df_krit, use_container_width=True)
+        df_k = pd.DataFrame(krit_data.get('data', krit_data))
+        df_k['shuddha'] = df_k['pratyay'].apply(lambda x: calculate_lopa(x, UpadeshaType.PRATYAYA))
+        st.dataframe(df_k, use_container_width=True)
 
-# --- TAB 3: तद्धित प्रत्यय ---
+# --- TAB 3: विभक्ति/तिङ् ---
 with tabs[2]:
-    st.subheader("तद्धित प्रत्यय सूची")
-    taddhita_data = load_json('taddhita_master_data.json')
-    if taddhita_data:
-        st.json(taddhita_data)
-
-# --- TAB 4: विभक्ति/तिङ् ---
-with tabs[3]:
-    st.subheader("विभक्ति और तिङ् प्रत्यय")
     v_data = load_json('vibhaktipatha.json')
     if v_data:
         c1, c2 = st.columns(2)
         with c1:
-            st.write("**सुप् प्रत्यय (Declension)**")
-            st.dataframe(pd.DataFrame(v_data.get('sup_pratyayas', [])))
+            st.info("**सुप् प्रत्यय**")
+            st.table(v_data.get('sup_pratyayas', []))
         with c2:
-            st.write("**तिङ् प्रत्यय (Conjugation)**")
-            st.dataframe(pd.DataFrame(v_data.get('tin_pratyayas', [])))
+            st.info("**तिङ् प्रत्यय**")
+            st.table(v_data.get('tin_pratyayas', []))
+
+# --- TAB 4: सांख्यिकी (Analytics) ---
+with tabs[3]:
+    if dhatu_data:
+        st.subheader("📊 धातुपाठ का सांख्यिकीय विश्लेषण")
+        df_stats = pd.DataFrame(dhatu_data)
+        col1, col2 = st.columns(2)
+        with col1:
+            st.write("**गणों के अनुसार वितरण**")
+            st.bar_chart(df_stats['gana'].value_counts())
+        with col2:
+            st.write("**पद के अनुसार वितरण**")
+            st.pie_chart(df_stats['pada'].value_counts())
