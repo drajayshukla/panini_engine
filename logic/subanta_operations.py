@@ -1,68 +1,98 @@
 # logic/subanta_operations.py
 from core.phonology import Varna
 
-# --- Standard Pada-Anta Operations ---
-
-def apply_rutva_8_2_66(varna_list):
-    """८.२.६६ ससजुषोः रुः: Converts padanta 's' to 'ruँ'."""
-    if varna_list and varna_list[-1].char == 'स्':
-        varna_list.pop()  # Surgical removal of 's'
-        varna_list.append(Varna('र्'))
-        varna_list.append(Varna('उँ'))
-        return varna_list, "८.२.६६ (ससजुषोः रुः)"
-    return varna_list, None
-
-def apply_visarga_8_3_15(varna_list):
-    """८.३.१५ खरवसानयोर्विसर्जनीयः: Converts padanta 'r' to Visarga."""
-    if varna_list and varna_list[-1].char == 'र्':
-        varna_list.pop()
-        varna_list.append(Varna('ः'))
-        return varna_list, "८.३.१५ (खरवसानयोर्विसर्जनीयः)"
-    return varna_list, None
+# --- ६. अध्याय (Chapter 6) ---
 
 def apply_hal_nyab_6_1_68(varna_list):
-    """६.१.६८ हल्ङ्याब्भ्यो...: Deletes single-letter 's' after long vowels."""
+    """
+    ६.१.६८ हल्ङ्याब्भ्यो दीर्घात् सुतिस्यपृक्तं हल्
+    नियम: दीर्घ 'ई' (ङी), 'आ' (आप्) या हल् के बाद सु-ति-सि के अपृक्त 'स्' का लोप।
+    """
     if varna_list and varna_list[-1].char == 'स्':
         if len(varna_list) >= 2:
             prev_varna = varna_list[-2].char
+            # क्रोष्टा (आ) और बहुश्रेयसी (ई) जैसे उदाहरणों के लिए
             if prev_varna in ['ई', 'आ']:
                 varna_list.pop()
                 return varna_list, "६.१.६८ (हल्ङ्याब्भ्यो दीर्घात् सुतिस्यपृक्तं हल्)"
     return varna_list, None
 
-# --- Special Stem Transformations (Kroṣṭu/Tṛj-vat) ---
-
-def apply_trijvadbhava_7_1_95(varna_list):
-    """७.१.९५ तृज्वत्क्रोष्टुः: Position-aware search to change 'u' to 'ṛ'."""
-    for i in range(len(varna_list) - 1, -1, -1):
-        if varna_list[i].char == 'उ':
-            varna_list[i] = Varna('ऋ')
-            return varna_list, "७.१.९५ (तृज्वत्क्रोष्टुः)"
-    return varna_list, None
-
-def apply_anang_7_1_94(varna_list):
-    """७.१.९४ ऋदुशनस्...: Replaces 'ṛ' with 'an-aṅ' (अ न् ङ्)."""
-    for i in range(len(varna_list) - 1, -1, -1):
-        if varna_list[i].char == 'ऋ':
-            varna_list.pop(i)
-            # ङिच्च (1.1.53): The whole 'anang' replaces 'ṛ'
-            varna_list.insert(i, Varna('अ'))
-            varna_list.insert(i+1, Varna('न्'))
-            varna_list.insert(i+2, Varna('ङ्'))
-            return varna_list, "७.१.९४ (ऋदुशनस्... अनङ्-आदेशः)"
-    return varna_list, None
 
 def apply_upadha_dirgha_6_4_11(varna_list):
-    """६.४.११: Penultimate lengthening (a -> ā) before 'n'."""
+    """
+    ६.४.११ अप्तृन्तृच्स्वसृनप्तृनेष्टृत्वष्टृक्षत्तृहोतृपोतृप्रशास्तॄणाम्
+    नियम: 'न्' से पहले स्थित उपधा 'अ' को दीर्घ 'आ' आदेश।
+    """
     for i in range(len(varna_list) - 1, 0, -1):
         if varna_list[i].char == 'न्' and varna_list[i-1].char == 'अ':
             varna_list[i-1] = Varna('आ')
             return varna_list, "६.४.११ (अप्तृन्तृच्... उपधा दीर्घ)"
     return varna_list, None
 
+
+# --- ७. अध्याय (Chapter 7) ---
+
+def apply_anang_7_1_94(varna_list):
+    """
+    ७.१.९४ ऋदुशनस्पुरुदंसोऽनेहसां च
+    नियम: ऋदन्त अङ्ग को 'अनङ्' (अ न् ङ्) आदेश। ङित् होने से अन्त्य ऋकार के स्थान पर।
+    """
+    for i in range(len(varna_list) - 1, -1, -1):
+        if varna_list[i].char == 'ऋ':
+            varna_list.pop(i)
+            # १.१.५३ ङिच्च: अन्त्य के स्थान पर अ, न्, ङ्
+            varna_list.insert(i, Varna('अ'))
+            varna_list.insert(i+1, Varna('न्'))
+            varna_list.insert(i+2, Varna('ङ्'))
+            return varna_list, "७.१.९४ (ऋदुशनस्... अनङ्-आदेशः)"
+    return varna_list, None
+
+
+def apply_trijvadbhava_7_1_95(varna_list):
+    """
+    ७.१.९५ तृज्वत्क्रोष्टुः
+    नियम: 'क्रोष्टु' शब्द के 'उ' को 'ऋ' (तृच् प्रत्यय के समान) आदेश।
+    """
+    for i in range(len(varna_list) - 1, -1, -1):
+        if varna_list[i].char == 'उ':
+            varna_list[i] = Varna('ऋ')
+            return varna_list, "७.१.९५ (तृज्वत्क्रोष्टुः)"
+    return varna_list, None
+
+
+# --- ८. अध्याय (Chapter 8) ---
+
 def apply_nalopa_8_2_7(varna_list):
-    """८.२.७ नलोपः प्रातिपदिकान्तस्य: Deletes 'n' at end of Pada."""
+    """
+    ८.२.७ नलोपः प्रातिपदिकान्तस्य
+    नियम: प्रातिपदिक के अन्त में स्थित 'न्' का लोप (पद संज्ञा होने पर)।
+    """
     if varna_list and varna_list[-1].char == 'न्':
         varna_list.pop()
         return varna_list, "८.२.७ (नलोपः प्रातिपदिकान्तस्य)"
+    return varna_list, None
+
+
+def apply_rutva_8_2_66(varna_list):
+    """
+    ८.२.६६ ससजुषोः रुः
+    नियम: पदान्त 'स्' के स्थान पर 'रुँ' (र् उँ) आदेश।
+    """
+    if varna_list and varna_list[-1].char == 'स्':
+        varna_list.pop()
+        varna_list.append(Varna('र्'))
+        varna_list.append(Varna('उँ'))
+        return varna_list, "८.२.६६ (ससजुषोः रुः)"
+    return varna_list, None
+
+
+def apply_visarga_8_3_15(varna_list):
+    """
+    ८.३.१५ खरवसानयोर्विसर्जनीयः
+    नियम: अवसान या खर परे होने पर पदान्त 'र्' को विसर्ग (ः) आदेश।
+    """
+    if varna_list and varna_list[-1].char == 'र्':
+        varna_list.pop()
+        varna_list.append(Varna('ः'))
+        return varna_list, "८.३.१५ (खरवसानयोर्विसर्जनीयः)"
     return varna_list, None
