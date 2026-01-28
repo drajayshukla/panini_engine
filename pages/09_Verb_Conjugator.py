@@ -13,7 +13,7 @@ st.caption("पाणिनीय ३x३ मैट्रिक्स आधा�
 @st.cache_data
 def load_all_data():
     meta_path = os.path.join('data', 'dhatu_master_structured.json')
-    roopa_path = os.path.join('data', 'active_voice.json')
+    roopa_path = os.path.join('data', 'passive_voice.json')
 
     if not os.path.exists(meta_path) or not os.path.exists(roopa_path):
         return None, None
@@ -104,7 +104,7 @@ if db_metadata and db_conjugation:
         r_col4.info(row_data.get('bahuvachana', '-'))
 
 else:
-    st.error("🚨 'data/' फोल्डर में आवश्यक JSON फाइलें (dhatu_master_structured.json / active_voice.json) नहीं मिलीं।")
+    st.error("🚨 'data/' फोल्डर में आवश्यक JSON फाइलें (dhatu_master_structured.json / passive_voice.json) नहीं मिलीं।")
 
 # --- ६. फुटर ---
 st.markdown("---")
