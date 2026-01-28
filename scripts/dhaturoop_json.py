@@ -49,5 +49,5 @@ def refine_active_voice_db(file_path, output_path):
     return "✅ Database Examination & Refinement Successful!"
 
 # निष्पादन
-status = refine_active_voice_db('passive_voice.json', 'active_voice_refined.json')
+status = refine_active_voice_db('active_voice.json', 'active_voice_refined.json')
 print(status)
