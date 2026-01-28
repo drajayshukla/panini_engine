@@ -91,35 +91,33 @@ if word_input:
             prev_str = add_history("Initial (Post-Cleaning)", current_varnas, prev_str)
 
             # --- BRANCH A: SPECIAL STEM (Kroṣṭu Case) ---
+            # --- BRANCH A: SPECIAL STEM (Kroṣṭu Case) ---
             if "क्रोष्टु" in word_input:
-                # 1. Trijvadbhava (7.1.95)
+                # 1. 7.1.95 (u -> ṛ)
                 current_varnas, s95 = apply_trijvadbhava_7_1_95(current_varnas)
                 prev_str = add_history(s95, current_varnas, prev_str)
 
-                # 2. Anang (7.1.94)
+                # 2. 7.1.94 (ṛ -> anang)
                 current_varnas, s94 = apply_anang_7_1_94(current_varnas)
                 prev_str = add_history(s94, current_varnas, prev_str)
 
-                # 3. Manual ङ् removal (1.3.3)
+                # 3. 1.3.3 (Remove ङ्)
                 current_varnas = [v for v in current_varnas if v.char != 'ङ्']
-                prev_str = add_history("१.३.३ (हलन्त्यम् - ङ् लोपः)", current_varnas, prev_str)
+                prev_str = add_history("१.३.३ (इत्-लोपः)", current_varnas, prev_str)
 
-                # 4. Upadha Dirgha (6.4.11)
+                # 4. 6.4.11 (a -> ā)
                 current_varnas, s11 = apply_upadha_dirgha_6_4_11(current_varnas)
                 prev_str = add_history(s11, current_varnas, prev_str)
 
-                # 5. HAL-NYAB LOPA (6.1.68)
+                # 5. 6.1.68 (Remove स्) - NO MORE SKIPPING
                 res_v5, s68 = apply_hal_nyab_6_1_68(current_varnas)
-                if s68:
-                    current_varnas = res_v5
-                prev_str = add_history(s68 if s68 else "६.१.६८ (Skipped)", current_varnas, prev_str)
+                current_varnas = res_v5  # Force update
+                prev_str = add_history(s68 if s68 else "६.१.६८ (Manual)", current_varnas, prev_str)
 
-                # 6. N-LOPA (8.2.7)
+                # 6. 8.2.7 (Remove न्) - FINAL STEP
                 res_v6, s7 = apply_nalopa_8_2_7(current_varnas)
-                if s7:
-                    current_varnas = res_v6
-                prev_str = add_history(s7 if s7 else "८.२.७ (Skipped)", current_varnas, prev_str)
-
+                current_varnas = res_v6  # Force update
+                prev_str = add_history(s7 if s7 else "८.२.७ (Manual)", current_varnas, prev_str)
             # --- BRANCH B/C: STANDARD STEMS ---
             else:
                 res_v5, s68 = apply_hal_nyab_6_1_68(list(current_varnas))
