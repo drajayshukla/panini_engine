@@ -72,14 +72,14 @@ with tabs[0]:
         if search_query:
             df = df[df.apply(lambda row: search_query in str(row.values), axis=1)]
 
-        # लाइव गणना चेकबॉक्स
+        # १. लाइव गणना चेकबॉक्स
         live_calc = st.checkbox("🔄 लाइव अनुबन्ध-लोप (Shuddha Anga) लागू करें", value=True)
         if live_calc:
             with st.spinner("पाणिनीय गणना जारी..."):
                 df['shuddha_anga'] = df['upadesha'].apply(lambda x: calculate_lopa(x, UpadeshaType.DHATU))
 
-        # डिस्प्ले कॉलम्स सेटिंग
-        display_cols = {
+        # २. मास्टर डिस्प्ले मैपिंग (सभी संभावित कॉलम्स)
+        master_display_map = {
             'kaumudi_index': 'ID',
             'upadesha': 'उपदेश',
             'shuddha_anga': 'शुद्ध अङ्ग',
@@ -88,17 +88,31 @@ with tabs[0]:
             'pada': 'पद'
         }
 
+        # ३. उपलब्ध कॉलम्स की पहचान (Dynamic Filtering)
+        # यह केवल उन्हीं कॉलम्स को चुनेगा जो DataFrame में वास्तव में मौजूद हैं
+        available_cols = {k: v for k, v in master_display_map.items() if k in df.columns}
+
+        # ४. सुरक्षित विज़ुअलाइज़ेशन
         st.dataframe(
-            df[list(display_cols.keys())].rename(columns=display_cols),
+            df[list(available_cols.keys())].rename(columns=available_cols),
             use_container_width=True,
             height=500,
             column_config={
-                "शुद्ध अङ्ग": st.column_config.TextColumn("शुद्ध अङ्ग", help="इत्-संज्ञा और लोप के बाद का रूप",
-                                                          width="medium", required=True)
+                "शुद्ध अङ्ग": st.column_config.TextColumn(
+                    "शुद्ध अङ्ग",
+                    help="इत्-संज्ञा और लोप के बाद का रूप",
+                    width="medium"
+                )
             }
         )
-        st.download_button("📥 फिल्टर किया गया डेटा डाउनलोड करें", df.to_csv(index=False), "filtered_dhatus.csv",
-                           "text/csv")
+
+        # ५. डाउनलोड बटन (फिल्टर किए गए डेटा के साथ)
+        st.download_button(
+            label="📥 फिल्टर किया गया डेटा डाउनलोड करें",
+            data=df.to_csv(index=False).encode('utf-8'),
+            file_name="filtered_dhatus.csv",
+            mime="text/csv"
+        )
 
 # --- TAB 2: कृत् प्रत्यय ---
 with tabs[1]:
