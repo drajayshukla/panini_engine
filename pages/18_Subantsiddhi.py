@@ -59,28 +59,26 @@ if word_input:
         varna_list = sanskrit_varna_vichhed(combined_raw)
         st.write(f"**{word_input} + {selected_suffix}** [४.१.२ स्वौजसमौट्...]")
 
-        # --- STEP 3: IT-SANJNA & LOPA ---
-        st.subheader("Step 3: It-Sanjna & Lopa (Cleaning)")
+        # --- STEP 3: IT-SANJNA & LOPA (Cleaning) ---
+        st.subheader("Step 3: It-Sanjna & Lopa")
         clean_varnas, it_tags = ItSanjnaEngine.run_it_sanjna_prakaran(
             varna_list, combined_raw, source_type=UpadeshaType.VIBHAKTI
         )
         intermediate_word = sanskrit_varna_samyoga(clean_varnas)
         st.write(f"**→ {intermediate_word}** [१.३.२, १.३.९]")
 
-        # --- STEP 4: PADA SANJNA (1.4.14) ---
+        # --- STEP 4: PADA SANJNA ---
         is_pada, pada_msg = check_pada_sanjna_1_4_14(clean_varnas, UpadeshaType.VIBHAKTI)
 
         if is_pada:
             st.info(f"✨ **Step 4: Pada Sanjna** - {pada_msg}")
 
-            # --- STEP 5: FINAL PHONOLOGY & DEBUGGER ---
+            # --- STEP 5: PROCESS TRACING ---
             st.subheader("Step 5: Process Tracing (Varna Debugger)")
             history = []
             current_varnas = list(clean_varnas)
             prev_str = intermediate_word
 
-
-            # Helper to log steps into history
             def add_history(sutra, varnas, p_str):
                 f_str = sanskrit_varna_samyoga(varnas)
                 history.append({
@@ -90,17 +88,10 @@ if word_input:
                 })
                 return f_str
 
-
-            # Record Initial State
             prev_str = add_history("Initial (Post-Cleaning)", current_varnas, prev_str)
 
             # --- BRANCH A: SPECIAL STEM (Kroṣṭu Case) ---
-            # --- BRANCH A: SPECIAL STEM (Kroṣṭu Case) ---
-            # --- BRANCH A: SPECIAL STEM (Kroṣṭu Case) ---
             if "क्रोष्टु" in word_input:
-                st.subheader("Step 5: Process Tracing (Surgical Deconstruction)")
-
-                # --- FRESH LOGIC PIPELINE ---
                 # 1. Trijvadbhava (7.1.95)
                 current_varnas, s95 = apply_trijvadbhava_7_1_95(current_varnas)
                 prev_str = add_history(s95, current_varnas, prev_str)
@@ -110,9 +101,7 @@ if word_input:
                 prev_str = add_history(s94, current_varnas, prev_str)
 
                 # 3. Manual ङ् removal (1.3.3)
-                # This ensures the first character 'क्' is never touched
-                temp_v = [v for v in current_varnas if v.char != 'ङ्']
-                current_varnas = temp_v
+                current_varnas = [v for v in current_varnas if v.char != 'ङ्']
                 prev_str = add_history("१.३.३ (हलन्त्यम् - ङ् लोपः)", current_varnas, prev_str)
 
                 # 4. Upadha Dirgha (6.4.11)
@@ -120,50 +109,42 @@ if word_input:
                 prev_str = add_history(s11, current_varnas, prev_str)
 
                 # 5. HAL-NYAB LOPA (6.1.68)
-                # We FORCE update current_varnas only if a change is detected
                 res_v5, s68 = apply_hal_nyab_6_1_68(current_varnas)
                 if s68:
                     current_varnas = res_v5
-                prev_str = add_history(s68 if s68 else "६.१.६८ (Skipped/Failed)", current_varnas, prev_str)
+                prev_str = add_history(s68 if s68 else "६.१.६८ (Skipped)", current_varnas, prev_str)
 
                 # 6. N-LOPA (8.2.7)
-                # This depends on Step 5 succeeding (so 'न्' is at the end)
                 res_v6, s7 = apply_nalopa_8_2_7(current_varnas)
                 if s7:
                     current_varnas = res_v6
-                prev_str = add_history(s7 if s7 else "८.२.७ (Skipped/Failed)", current_varnas, prev_str)
-            ## --- BRANCH B/C: APRUKTA LOPA or RUTVA-VISARGA ---
+                prev_str = add_history(s7 if s7 else "८.२.७ (Skipped)", current_varnas, prev_str)
+
+            # --- BRANCH B/C: STANDARD STEMS ---
             else:
-                # Try Branch B: Apṛkta Lopa (e.g. बहुश्रेयसी)
                 res_v5, s68 = apply_hal_nyab_6_1_68(list(current_varnas))
                 if s68:
                     current_varnas = res_v5
                     prev_str = add_history(s68, current_varnas, prev_str)
-
-                # Try Branch C: Rutva & Visarga (e.g. राम)
                 elif intermediate_word.endswith('स्'):
-                    # 5g. Rutva (8.2.66)
                     current_varnas, s66 = apply_rutva_8_2_66(current_varnas)
                     prev_str = add_history(s66, current_varnas, prev_str)
 
-                    # 5h. ruँ-Lopa (It-cleaning)
                     current_varnas, _ = ItSanjnaEngine.run_it_sanjna_prakaran(
                         current_varnas, "रुँ", UpadeshaType.VIBHAKTI
                     )
                     prev_str = add_history("१.३.२ (रुँ-लोपः)", current_varnas, prev_str)
 
-                    # 5i. Visarga (8.3.15)
                     current_varnas, s15 = apply_visarga_8_3_15(current_varnas)
                     prev_str = add_history(s15, current_varnas, prev_str)
 
-            # --- FINAL OUTPUT RENDERING ---
+            # --- FINAL RENDERING ---
             st.table(history)
             final_output = sanskrit_varna_samyoga(current_varnas)
             st.markdown("---")
             st.header(f"✅ Final Result: {final_output}")
             st.balloons()
-
         else:
-            st.warning("Could not establish Pada Sanjna. Word is still a Base/Pratyaya.")
+            st.warning("Could not establish Pada Sanjna.")
     else:
         st.error(f"❌ Rejection: {base_info['reason']}")

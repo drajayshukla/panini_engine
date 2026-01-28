@@ -5,22 +5,14 @@ from core.phonology import Varna
 
 def apply_hal_nyab_6_1_68(varna_list):
     """
-    ६.१.६८ (हल्ङ्याब्भ्यो दीर्घात् सुतिस्यपृक्तं हल्): Deletes Apṛkta 's' after long vowel, including with intervening consonant if upadha is dirgha.
+    ६.१.६८ (हल्ङ्याब्भ्यो...): Deletes 'स्' after a long vowel.
     """
     v_list = list(varna_list)
-    if len(v_list) < 2 or v_list[-1].char != 'स्':
-        return varna_list, None
-
-    # Direct: long vowel + 'स्'
-    if v_list[-2].char in ['आ', 'ई', 'ऊ', 'ऐ', 'औ']:
-        v_list.pop()
-        return v_list, "६.१.६८ (हल्ङ्याब्भ्यो दीर्घात् सुतिस्यपृक्तं हल्)"
-
-    # Indirect: long vowel + hal (consonant) + 'स्'
-    elif len(v_list) >= 3 and v_list[-2].is_hal() and v_list[-3].char in ['आ', 'ई', 'ऊ', 'ऐ', 'औ']:
-        v_list.pop()
-        return v_list, "६.१.६८ (हल्ङ्याब्भ्यो दीर्घात् सुतिस्यपृक्तं हल्)"
-
+    # Check if 'स्' is at the end and 'आ' or 'ई' is right before it
+    if len(v_list) >= 2 and v_list[-1].char == 'स्':
+        if v_list[-2].char in ['आ', 'ई']:
+            v_list.pop() # Remove 'स्'
+            return v_list, "६.१.६८ (हल्ङ्याब्भ्यो... अपृक्त-लोप)"
     return varna_list, None
 def apply_upadha_dirgha_6_4_11(varna_list):
     """
