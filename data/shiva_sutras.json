@@ -1,3 +1,4 @@
+#/data/shiva_sutras.json
 {
   "shiva_sutras": [
     {"id": 1, "sutra": "अइउण्", "varnas": ["अ", "इ", "उ"], "it_varna": "ण्"},
