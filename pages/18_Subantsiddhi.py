@@ -97,7 +97,7 @@ if word_input:
 
             # CASE B: JAMATR
                 # --- BRANCH B: KINSHIP TERMS (जामातृ, पितृ, भ्रातृ etc.) ---
-            elif any(x in word_input for x in ["जामातृ", "पितृ", "भ्रातृ", "नृ"]):
+            elif any(x in word_input for x in ["जामातृ", "पितृ", "भ्रातृ", "नृ","मातृ"]):
                 # 1. 7.1.94 (अनङ्-आदेशः: ऋ -> अन्)
                 current_varnas, s94 = apply_anang_7_1_94(current_varnas)
                 prev_str = add_history(s94, current_varnas, prev_str)
