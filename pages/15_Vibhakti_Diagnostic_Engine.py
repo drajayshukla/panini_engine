@@ -120,7 +120,7 @@ def main():
 
     # --- ६. रैंडम २० एवं क्रमानुसार प्रदर्शन ---
     if matches:
-        sample_size = min(20, len(matches))
+        sample_size = min(100, len(matches))
         random_examples = random.sample(matches, sample_size)
         sorted_examples = sorted(random_examples, key=lambda x: x['order'])
 
