@@ -3,56 +3,39 @@ import json
 import os
 import random
 import pandas as pd
+from collections import Counter
 
 # --- १. पेज सेटअप ---
 st.set_page_config(page_title="Vibhakti Diagnostic Engine", layout="wide", page_icon="🔬")
 
-
 @st.cache_data
 def load_shabd_data():
-    # डॉक्टर साहब द्वारा निर्देशित नया पाथ
     file_path = os.path.join("data", "shabdroop.json")
     try:
-        if not os.path.exists(file_path):
-            return []
+        if not os.path.exists(file_path): return []
         with open(file_path, "r", encoding="utf-8") as file:
             return json.load(file)
     except:
         return []
 
-
-# --- २. Sanskrit-Aware Suffix Matcher (The Fix) ---
+# --- २. Sanskrit-Aware Suffix Matcher ---
 def sanskrit_match(word, suffix):
-    """संस्कृत के अदृश्य 'अ' और मात्राओं को पहचानने वाला लॉजिक"""
     if not suffix or suffix == "--सभी दिखाएं--": return True
     word = word.strip()
-
-    # १. पूर्ण स्वर (आ, ई, उ...) को उनकी मात्राओं (ा, ी, ु...) में बदलना
     vowel_to_matra = {
         'आ': 'ा', 'इ': 'ि', 'ई': 'ी', 'उ': 'ु', 'ऊ': 'ू',
         'ऋ': 'ृ', 'ए': 'े', 'ऐ': 'ै', 'ओ': 'ो', 'औ': 'ौ'
     }
-
-    # २. अदृश्य 'अ' (Inherent A) का लॉजिक: उदा. 'अः' matches 'रामः'
     if suffix.startswith('अ'):
-        core_suffix = suffix[1:]  # उदा. 'ः'
+        core_suffix = suffix[1:]
         if not word.endswith(core_suffix): return False
-        # विसर्ग से ठीक पहले वाला वर्ण देखें
         pos = len(word) - len(core_suffix) - 1
         if pos < 0: return False
-        char_before = word[pos]
-        # यदि वह व्यंजन है और उस पर कोई मात्रा नहीं है, तो वह 'अ' अंत वाला है
-        return '\u0915' <= char_before <= '\u0939'
-
-    # ३. अन्य स्वरों के लिए मात्रा चेक करना (उदा. 'आः' matches 'रमायाः')
+        return '\u0915' <= word[pos] <= '\u0939'
     for vowel, matra in vowel_to_matra.items():
         if suffix.startswith(vowel):
-            m_suffix = matra + suffix[1:]
-            if word.endswith(m_suffix): return True
-
-    # ४. सामान्य मैचिंग (विसर्ग, हलन्त आदि के लिए)
+            if word.endswith(matra + suffix[1:]): return True
     return word.endswith(suffix)
-
 
 # --- ३. मास्टर लॉजिक एवं क्रम ---
 LOGIC_RULES = {
@@ -72,28 +55,31 @@ VIBHAKTI_ORDER = {
     "षष्ठी एकवचन": 16, "सप्तमी एकवचन": 19
 }
 
-
 def main():
     st.title("🔬 Clinical Vibhakti Diagnostic Engine")
-    st.caption("संस्कृत व्याकरण विश्लेषण | क्रमानुसार प्रदर्शन (1.1 → 7.1)")
+    st.caption("विभक्ति क्रमानुसार संतुलित प्रदर्शन (Max 5 per category)")
 
     data = load_shabd_data()
     if not data:
-        st.error("डेटाबेस (data/shabdroop.json) अप्राप्त है।")
+        st.error("डेटाबेस अप्राप्त है।")
         st.stop()
 
-    # --- ४. साइडबार फ़िल्टर ---
     all_symptoms = []
     for symptoms in LOGIC_RULES.values():
         all_symptoms.extend(symptoms)
 
     selected_symptom = st.sidebar.selectbox(
-        "विशिष्ट प्रत्यय अंत (Suffix) चुनें:",
+        "विशिष्ट प्रत्यय अंत चुनें:",
         ["--सभी दिखाएं--"] + sorted(list(set(all_symptoms)))
     )
 
-    # --- ५. डायग्नोस्टिक प्रोसेसिंग ---
+    # --- ४. संतुलित डायग्नोस्टिक प्रोसेसिंग (The Smart Balancer) ---
     matches = []
+    category_counter = Counter() # प्रत्येक विभक्ति के लिए काउंटर
+
+    # डेटा को पहले शफल (Shuffle) करना ताकि रैंडम सैंपलिंग शुरू से ही हो
+    random.shuffle(data)
+
     for entry in data:
         raw_forms = entry.get("forms", "").split(";")
         if len(raw_forms) < 21: continue
@@ -105,9 +91,12 @@ def main():
         }
 
         for vibhakti, roop in mapping.items():
+            # नियम: यदि इस विभक्ति के ५ उदाहरण पहले ही मिल चुके हैं, तो इसे छोड़ दें
+            if category_counter[vibhakti] >= 5:
+                continue
+
             patterns = LOGIC_RULES[vibhakti]
             for p in patterns:
-                # यहाँ 'Sanskrit-Aware' मैचिंग का उपयोग हो रहा है
                 if sanskrit_match(roop, p):
                     if selected_symptom == "--सभी दिखाएं--" or sanskrit_match(roop, selected_symptom):
                         matches.append({
@@ -117,19 +106,19 @@ def main():
                             "रूप": roop,
                             "लक्षण": p
                         })
+                        category_counter[vibhakti] += 1
+                        break # एक ही शब्द के एक ही रूप के लिए मल्टीपल लक्षण न जोड़ें
 
-    # --- ६. रैंडम २० एवं क्रमानुसार प्रदर्शन ---
+    # --- ५. सॉर्टिंग एवं प्रदर्शन ---
     if matches:
-        sample_size = min(100, len(matches))
-        random_examples = random.sample(matches, sample_size)
-        sorted_examples = sorted(random_examples, key=lambda x: x['order'])
+        # यहाँ random.sample की ज़रूरत नहीं क्योंकि डेटा पहले ही शफल हो चुका है और ५ की लिमिट लग चुकी है
+        sorted_examples = sorted(matches, key=lambda x: x['order'])
 
         df = pd.DataFrame(sorted_examples)
         st.table(df[["शब्द", "विभक्ति", "रूप", "लक्षण"]])
-        st.info(f"💡 कुल {len(matches)} परिणामों में से {sample_size} उदाहरण क्रमानुसार प्रदर्शित हैं।")
+        st.info(f"💡 संतुलित प्रदर्शन: प्रत्येक उपलब्ध श्रेणी से अधिकतम ५ उदाहरण लिए गए हैं। कुल {len(matches)} रूप प्रदर्शित हैं।")
     else:
-        st.warning(f"लक्षण '{selected_symptom}' के लिए कोई सटीक मेल नहीं मिला।")
-
+        st.warning(f"लक्षण '{selected_symptom}' के लिए कोई मेल नहीं मिला।")
 
 if __name__ == "__main__":
     main()
