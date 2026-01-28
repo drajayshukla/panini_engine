@@ -24,7 +24,7 @@ with col2:
     selected_suffix = sup_map[vib_choice][vac_choice]
 
 if word_input:
-    # --- STEP 1: AUTOMATIC VERIFICATION ---
+    # --- STEP 1: AUTOMATIC VERIFICATION (The Gatekeeper) ---
     base_info = PratipadikaEngine.identify_base(word_input)
 
     if base_info['is_pratipadika']:
@@ -45,7 +45,7 @@ if word_input:
 
         # --- STEP 3: IT-SANJNA ENGINE ---
         st.subheader("Step 3: It-Sanjna & Lopa (Cleaning)")
-        # We pass UpadeshaType.VIBHAKTI to trigger the 1.3.4 (Na Vibhaktau) shield
+        # VIBHAKTI type triggers the 1.3.4 shield for endings like 's', 'm', 't-varga'
         clean_varnas, it_tags = ItSanjnaEngine.run_it_sanjna_prakaran(
             varna_list, combined_raw, source_type=UpadeshaType.VIBHAKTI
         )
@@ -61,22 +61,20 @@ if word_input:
         # --- STEP 4 & 5: SUBANTA OPERATIONS ---
         final_processed_varnas = clean_varnas
 
-        # Clinical Check: Is this a Pada ending in 's'?
-        # In Panini, 's' at the end of a Pada (word) must undergo Rutva.
+        # Clinical Check: Apply Rutva-Visarga only if the word ends in 's'
         if intermediate_word.endswith('स्'):
             st.subheader("Step 4: Final Phonology (Rutva & Visarga)")
 
-            # Rutva 8.2.66: ससजुषोः रुः
+            # Rutva 8.2.66: ससजुषोः रुः (Converts 's' to 'ru')
             rutva_varnas, s66 = apply_rutva_8_2_66(clean_varnas)
 
-            # Re-clean the 'रुँ' to get 'र्' (Using 1.3.2)
-            # This is a recursive step: new markers must be removed immediately.
+            # Recursive Step: Clean 'ru' markers to get pure 'r'
             final_r_varnas, _ = ItSanjnaEngine.run_it_sanjna_prakaran(
                 rutva_varnas, "रुँ", source_type=UpadeshaType.VIBHAKTI
             )
             st.write(f"Applied: {s66} → `{sanskrit_varna_samyoga(final_r_varnas)}`")
 
-            # Visarga 8.3.15: खरवसानयोर्विसर्जनीयः
+            # Visarga 8.3.15: खरवसानयोर्विसर्जनीयः (Converts 'r' to Visarga)
             final_processed_varnas, s15 = apply_visarga_8_3_15(final_r_varnas)
             st.write(f"Applied: {s15} → `{sanskrit_varna_samyoga(final_processed_varnas)}`")
 
@@ -85,10 +83,14 @@ if word_input:
         st.markdown("---")
         st.header(f"✅ Result: {final_output}")
 
-        # Comparison with shabdroop.json forms if available
+        # Reference Comparison
         if 'metadata' in base_info and base_info['metadata'].get('forms'):
-            with st.expander("View Reference Forms"):
+            with st.expander("View Reference Forms (From Database)"):
                 st.write(base_info['metadata']['forms'])
 
     else:
+        # --- REJECTION LOGIC (e.g. for 'एध्') ---
         st.error(f"❌ Rejection: {base_info['reason']}")
+        if base_info.get('detected_as'):
+            st.warning(f"Detected as: {base_info.get('detected_as')}")
+        st.info("Sutra: १.२.४५ (अर्थवदधातुरप्रत्ययः प्रातिपदिकम्) - A Pratipadika cannot be a Dhatu or Pratyaya.")

@@ -2,7 +2,7 @@ import json
 import os
 from enum import Enum
 
-# 'Surgical' Cache: डेटा को बार-बार डिस्क से लोड होने से बचाने के लिए
+# 'Surgical' Cache: To prevent redundant disk I/O during Streamlit reruns
 _UPADESHA_CACHE = {}
 
 
@@ -21,11 +21,10 @@ class UpadeshaType(Enum):
 
     @staticmethod
     def _load_data(filename):
-        """डेटा लोड करने के लिए इंटरनल हेल्पर (With Caching Logic)।"""
+        """Internal helper with caching logic."""
         if filename in _UPADESHA_CACHE:
             return _UPADESHA_CACHE[filename]
 
-        # Path relative to project root /data/
         path = os.path.join("data", filename)
         if os.path.exists(path):
             try:
@@ -34,25 +33,23 @@ class UpadeshaType(Enum):
                     _UPADESHA_CACHE[filename] = data
                     return data
             except Exception:
-                # सुरक्षित रिटर्न यदि फ़ाइल करप्ट हो
                 return {} if any(x in filename for x in ["master", "patha", "data"]) else []
         return None
 
     @classmethod
     def auto_detect(cls, text):
         """
-        Diagnostic Scanner: उपदेश का प्रकार और १.२.४६ (तद्धित) स्टेटस की पहचान।
-        Returns: (UpadeshaType, is_taddhita)
+        Diagnostic Scanner: Identifies Upadesha type and 1.2.46 (Taddhita) status.
+        Specifically designed to block Dhatus (like एध्) from Pratipadika derivation.
         """
         if not text:
             return None, False
 
         cleaned_text = text.strip()
 
-        # १. विभक्तियों में खोजें (vibhaktipatha.json) - Priority 1 (Exclusion for 1.2.45)
+        # १. Vibhakti Check (vibhaktipatha.json) - Priority 1 (Exclusion for 1.2.45)
         v_patha = cls._load_data('vibhaktipatha.json')
         if v_patha and isinstance(v_patha, dict):
-            # सुँप्, तिङ् और अन्य विभक्ति प्रत्ययों का एकीकरण
             all_vibs = v_patha.get('sup_pratyayas', []) + \
                        v_patha.get('tin_pratyayas', []) + \
                        v_patha.get('extra_taddhita_avyaya', [])
@@ -60,10 +57,9 @@ class UpadeshaType(Enum):
             if any(cleaned_text == v.get('name') for v in all_vibs if isinstance(v, dict)):
                 return cls.VIBHAKTI, False
 
-        # २. तद्धित मास्टर डेटा चेक (Surgical Inclusion for 1.2.46)
+        # २. Taddhita Inclusion (taddhita_master_data.json) - (Inclusion for 1.2.46)
         t_raw = cls._load_data('taddhita_master_data.json')
         if t_raw:
-            # सपोर्ट: 'taddhita_sections' (nested) या 'data' (flat list)
             t_data = []
             if isinstance(t_raw, dict):
                 if 'taddhita_sections' in t_raw:
@@ -76,19 +72,22 @@ class UpadeshaType(Enum):
                    for p in t_data if isinstance(p, dict)):
                 return cls.PRATYAYA, True
 
-        # ३. धातुओं में खोजें (dhatu_master_structured.json) - (Exclusion for 1.2.45)
+        # ३. Dhatu Check (dhatu_master_structured.json) - (Strict Exclusion for 1.2.45)
+        # Clinical Fix: Checks both 'mula_dhatu' (एध्) and 'upadesha' (एधँ)
         d_raw = cls._load_data('dhatu_master_structured.json')
         dhatus = d_raw.get('dhatus', d_raw) if isinstance(d_raw, dict) else d_raw
 
         if isinstance(dhatus, list):
-            if any(cleaned_text == d.get('upadesha') or cleaned_text == d.get('mula_dhatu')
-                   for d in dhatus if isinstance(d, dict)):
-                return cls.DHATU, False
+            for d in dhatus:
+                if isinstance(d, dict):
+                    # High-precision match across both the base root and instructional form
+                    if cleaned_text == d.get('mula_dhatu') or cleaned_text == d.get('upadesha'):
+                        return cls.DHATU, False
 
-        # ४. अन्य कृत् और षित् प्रत्ययों की विस्तृत खोज
+        # ४. General Pratyaya/Krit/Shit Search
         files_to_scan = [
             ('shit_pratyayas.json', 'pratyaya'),
-            ('krut_pratyayas.json', 'pratyay'),  # Note: JSON key variation handled
+            ('krut_pratyayas.json', 'pratyay'),
             ('krit_pratyaya.json', 'pratyay')
         ]
 
@@ -96,7 +95,6 @@ class UpadeshaType(Enum):
             data = cls._load_data(f_name)
             if not data: continue
 
-            # डेटा लिस्ट को एक्सट्रैक्ट करें (Handles different JSON structures)
             p_list = []
             if isinstance(data, dict):
                 if 'shit_pratyaya_database' in data:
@@ -110,7 +108,6 @@ class UpadeshaType(Enum):
             if isinstance(p_list, list):
                 for p in p_list:
                     if isinstance(p, dict) and cleaned_text == p.get(target_key):
-                        # १.२.४६ के लिए तद्धित फ्लैग चेक करें
                         is_t = (p.get('type') == 'Taddhita' or 'taddhita' in f_name)
                         return cls.PRATYAYA, is_t
 
@@ -118,6 +115,6 @@ class UpadeshaType(Enum):
 
     @classmethod
     def validate_input(cls, text, upadesha_type):
-        """इनपुट और अपेक्षित टाइप का मिलान।"""
+        """Validates if the input matches the expected Upadesha category."""
         detected_type, _ = cls.auto_detect(text)
         return detected_type == upadesha_type
