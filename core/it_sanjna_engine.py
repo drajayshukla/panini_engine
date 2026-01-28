@@ -1,4 +1,3 @@
-#/core/it_sanjna_engine.py
 from core.upadesha_registry import UpadeshaType
 from logic.sanjna_rules import (
     apply_upadeshe_ajanunasika_1_3_2,
@@ -10,83 +9,64 @@ from logic.sanjna_rules import (
     apply_lashakvataddhite_1_3_8
 )
 
-
-# ==============================================================================
-# INTEGRATED ENGINE FEATURES (KAUMUDI + BULK CAPABILITIES):
-# 1. Sequential Sutra Processing: Follows Siddhanta Kaumudi's Sanjna Prakaran order.
-# 2. Shield-First Architecture: na-vibhaktau (1.3.4) creates a blockade before halantyam (1.3.3).
-# 3. Comprehensive Scoping: Distinct logic paths for Dhatu vs. Pratyaya/Vibhakti scope.
-# 4. Global It-Registry: Collects all indices before a single surgical deletion (1.3.9).
-# 5. Taddhita Isolation: Automatically restricts 1.3.8 if the Upadesha is a Taddhita.
-# 6. Duplicate Prevention: Uses Set and list(set()) to ensure tags and indices are unique.
-# ==============================================================================
-
 class ItSanjnaEngine:
     """
     पाणिनीय इत्-संज्ञा मास्टर इंजन (एकीकृत कौमुदी-प्रकरण मॉडल)
-    प्रवाह: अजनुनासिक -> विभक्ति सुरक्षा (1.3.4) -> हलन्त्यम् -> आदि-इत् (1.3.5-8) -> लोप
+    Orders: 1.3.2 -> 1.3.4 (Shield) -> 1.3.3 (Halantyam) -> 1.3.5-8 (Adi-It) -> 1.3.9 (Lopa)
     """
 
     @staticmethod
     def run_it_sanjna_prakaran(varna_list, original_input, source_type, is_taddhita=False):
         """
-        varna_list: विच्छेदित वर्णों की सूची
-        source_type: UpadeshaType (DHATU, PRATYAYA, VIBHAKTI, etc.)
-        is_taddhita: तद्धित मास्टर डेटा से प्राप्त ऑटो-फ्लैग
+        Orchestrates the 1.3.2 - 1.3.8 sequence with surgical precision.
         """
-        # क्लिनिकल चेक (Vital Signs)
-        if not isinstance(source_type, UpadeshaType) or not varna_list:
+        if not varna_list or not isinstance(source_type, UpadeshaType):
             return varna_list, []
 
         it_indices = set()
         sutra_tags = []
 
-        # १. उपदेशेऽजनुनासिक इत् (१.३.२) - सबसे पहले अच् (स्वर) का परीक्षण
+        # १. उपदेशेऽजनुनासिक इत् (१.३.२)
         idx2, tags2 = apply_upadeshe_ajanunasika_1_3_2(varna_list)
         it_indices.update(idx2)
         sutra_tags.extend(tags2)
 
-        # २. सुरक्षा कवच: न विभक्तौ तुस्माः (१.३.४) - विभक्ति निषेध सबसे पहले
-        # यह विधि हलन्त्यम् (१.३.३) को 'Blocked' इंडेक्स की सूची प्रदान करती है
-        blocked_indices = []
-        if source_type == UpadeshaType.VIBHAKTI:
-            blocked_indices = apply_na_vibhaktau_1_3_4(varna_list)
+        # २. सुरक्षा कवच: न विभक्तौ तुस्माः (१.३.४) - FIX: Passing source_type
+        # This prevents 1.3.3 from deleting 's', 'm', or 'tu-varga' in Vibhaktis.
+        blocked_indices = apply_na_vibhaktau_1_3_4(varna_list, source_type)
 
-        # ३. हलन्त्यम् (१.३.३) - ब्लॉक्ड इंडेक्स (१.३.४) का सम्मान करते हुए
+        # ३. हलन्त्यम् (१.३.३) - Respects the blocked indices from 1.3.4
         idx3, tags3 = apply_halantyam_1_3_3(varna_list, blocked_indices)
         it_indices.update(idx3)
         sutra_tags.extend(tags3)
 
-        # ४. आदि-इत् संज्ञा (Identification: आदिः - १.३.५ से १.३.८)
-
-        # धातु-आदि नियम (१.३.५ आदिर्ञिटुडवः)
+        # ४. आदि-इत् संज्ञा (Identifying initial markers)
         if source_type == UpadeshaType.DHATU:
             idx5, tags5 = apply_adir_nitudavah_1_3_5(varna_list)
             it_indices.update(idx5)
             sutra_tags.extend(tags5)
 
-        # प्रत्यय/विभक्ति-आदि नियम (१.३.६, १.३.७, १.३.८)
         elif source_type in [UpadeshaType.PRATYAYA, UpadeshaType.VIBHAKTI]:
-
-            # १.३.६: षः प्रत्ययस्य (source_type जोड़ें)
+            # 1.3.6: षः प्रत्ययस्य
             idx6, tags6 = apply_shah_pratyayasya_1_3_6(varna_list, source_type)
             it_indices.update(idx6)
             sutra_tags.extend(tags6)
 
-            # १.३.७: चुटू (source_type जोड़ें)
+            # 1.3.7: चुटू
             idx7, tags7 = apply_chuttu_1_3_7(varna_list, source_type)
             it_indices.update(idx7)
             sutra_tags.extend(tags7)
 
-            # १.३.८: लशक्वतद्धिते (is_taddhita पहले से है, perfect)
+            # 1.3.8: लशक्वतद्धिते (Respects is_taddhita flag)
             idx8, tags8 = apply_lashakvataddhite_1_3_8(varna_list, source_type, is_taddhita)
             it_indices.update(idx8)
             sutra_tags.extend(tags8)
 
-        # ५. तस्य लोपः (१.३.९) - चिह्नित इंडेक्स के वर्णों का निष्कासन
+        # ५. तस्य लोपः (१.३.९) - Final surgical removal
         remaining_varnas = [
             v for idx, v in enumerate(varna_list)
             if idx not in it_indices
         ]
 
+        # Ensure unique tags for the UI
         return remaining_varnas, list(set(sutra_tags))
