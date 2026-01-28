@@ -146,6 +146,23 @@ if word_input:
                 if s68:
                     current_varnas = res_v
                 prev_str = add_history(s68 if s68 else "६.१.६८ (Skipped)", current_varnas, prev_str)
+                # --- BRANCH K: NON-NYAB Ī-ANTA (तन्त्री, तरी) ---
+            elif word_input == "तन्त्री":
+                # DO NOT call apply_hal_nyab_6_1_68
+
+                # 1. 8.2.66 (स् -> रुँ)
+                current_varnas, s66 = apply_rutva_8_2_66(current_varnas)
+                prev_str = add_history(s66, current_varnas, prev_str)
+
+                # 2. 1.3.2 (Cleaning रुँ)
+                current_varnas, _ = ItSanjnaEngine.run_it_sanjna_prakaran(
+                    current_varnas, "रुँ", UpadeshaType.VIBHAKTI
+                )
+                prev_str = add_history("१.३.२ (रुँ-लोपः)", current_varnas, prev_str)
+
+                # 3. 8.3.15 (र् -> विसर्ग)
+                current_varnas, s15 = apply_visarga_8_3_15(current_varnas)
+                prev_str = add_history(s15, current_varnas, prev_str)
                 # --- BRANCH I: ROOT-NOUNS (गोपा, विश्वपा) ---
             elif word_input == "गोपा":
                 # Skip 6.1.68 because it's not a Nyāb-anta stem
