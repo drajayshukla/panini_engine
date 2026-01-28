@@ -78,11 +78,10 @@ if word_input:
             st.subheader("Step 5: Process Tracing (Varna Debugger)")
 
             history = []
-            # We work strictly with a copy of the Varna list
             current_varnas = list(clean_varnas)
             prev_str = intermediate_word
 
-            # Initial State
+            # Initial State Entry
             history.append({
                 "Sutra": "Initial (Post-Cleaning)",
                 "Vichhed": [v.char for v in current_varnas],
@@ -91,42 +90,46 @@ if word_input:
 
             # --- BRANCH A: SPECIAL STEM (Kroṣṭu Case) ---
             if "क्रोष्टु" in word_input:
-                # 5a. Trijvadbhava (7.1.95)
+                # 5a. Trijvadbhava (7.1.95) -> Changes 'u' to 'ṛ'
                 current_varnas, s95 = apply_trijvadbhava_7_1_95(current_varnas)
                 new_str = sanskrit_varna_samyoga(current_varnas)
                 history.append({"Sutra": s95, "Vichhed": [v.char for v in current_varnas],
                                 "Form": get_diff_highlight(prev_str, new_str)})
                 prev_str = new_str
 
-                # 5b. Anang Substitution (7.1.94)
+                # 5b. Anang Substitution (7.1.94) -> Stem gets 'anaṅ' augment
                 current_varnas, s94 = apply_anang_7_1_94(current_varnas)
                 new_str = sanskrit_varna_samyoga(current_varnas)
                 history.append({"Sutra": s94, "Vichhed": [v.char for v in current_varnas],
                                 "Form": get_diff_highlight(prev_str, new_str)})
                 prev_str = new_str
 
-                # 5c. Cleaning 'anang' markers (1.3.3)
-                current_varnas, _ = ItSanjnaEngine.run_it_sanjna_prakaran(current_varnas, "अनङ्", UpadeshaType.PRATYAYA)
+                # 5c. Surgical ṅ removal (1.3.3 Halantyam)
+                # Target only the marker 'ङ्' added by Anaṅ
+                for i, v in enumerate(current_varnas):
+                    if v.char == 'ङ्':
+                        current_varnas.pop(i)
+                        break
                 new_str = sanskrit_varna_samyoga(current_varnas)
-                history.append({"Sutra": "१.३.३ (हलन्त्यम् इत्-लोपः)", "Vichhed": [v.char for v in current_varnas],
+                history.append({"Sutra": "१.३.३ (हलन्त्यम् - ङ् इत्-लोपः)", "Vichhed": [v.char for v in current_varnas],
                                 "Form": get_diff_highlight(prev_str, new_str)})
                 prev_str = new_str
 
-                # 5d. Upadha Dirgha (6.4.11)
+                # 5d. Upadha Dirgha (6.4.11) -> Penultimate vowel lengthening
                 current_varnas, s11 = apply_upadha_dirgha_6_4_11(current_varnas)
                 new_str = sanskrit_varna_samyoga(current_varnas)
                 history.append({"Sutra": s11, "Vichhed": [v.char for v in current_varnas],
                                 "Form": get_diff_highlight(prev_str, new_str)})
                 prev_str = new_str
 
-                # 5e. Apṛkta Lopa (6.1.68)
+                # 5e. Apṛkta Lopa (6.1.68) -> Removal of suffix 's' after long stem
                 current_varnas, s68 = apply_hal_nyab_6_1_68(current_varnas)
                 new_str = sanskrit_varna_samyoga(current_varnas)
                 history.append({"Sutra": s68, "Vichhed": [v.char for v in current_varnas],
                                 "Form": get_diff_highlight(prev_str, new_str)})
                 prev_str = new_str
 
-                # 5f. N-Lopa (8.2.7)
+                # 5f. N-Lopa (8.2.7) -> Final removal of 'n' at Pada-anta
                 current_varnas, s7 = apply_nalopa_8_2_7(current_varnas)
                 new_str = sanskrit_varna_samyoga(current_varnas)
                 history.append({"Sutra": s7, "Vichhed": [v.char for v in current_varnas],
@@ -141,16 +144,16 @@ if word_input:
                     history.append({"Sutra": s68, "Vichhed": [v.char for v in current_varnas],
                                     "Form": get_diff_highlight(prev_str, new_str)})
 
-                # --- BRANCH C: RUTVA & VISARGA (Rāma Case) ---
+                # --- BRANCH C: RUTVA & VISARGA (Standard Rāma Case) ---
                 elif intermediate_word.endswith('स्'):
-                    # Rutva
+                    # 5g. Rutva (8.2.66)
                     current_varnas, s66 = apply_rutva_8_2_66(current_varnas)
                     new_str = sanskrit_varna_samyoga(current_varnas)
                     history.append({"Sutra": s66, "Vichhed": [v.char for v in current_varnas],
                                     "Form": get_diff_highlight(prev_str, new_str)})
                     prev_str = new_str
 
-                    # Cleaning ru
+                    # 5h. Second cleaning cycle for 'ruँ'
                     current_varnas, _ = ItSanjnaEngine.run_it_sanjna_prakaran(current_varnas, "रुँ",
                                                                               UpadeshaType.VIBHAKTI)
                     new_str = sanskrit_varna_samyoga(current_varnas)
@@ -158,18 +161,18 @@ if word_input:
                                     "Form": get_diff_highlight(prev_str, new_str)})
                     prev_str = new_str
 
-                    # Visarga
+                    # 5i. Visarga (8.3.15)
                     current_varnas, s15 = apply_visarga_8_3_15(current_varnas)
                     new_str = sanskrit_varna_samyoga(current_varnas)
                     history.append({"Sutra": s15, "Vichhed": [v.char for v in current_varnas],
                                     "Form": get_diff_highlight(prev_str, new_str)})
 
-            # Display Output
+            # Render the Trace Table
             st.table(history)
 
             final_output = sanskrit_varna_samyoga(current_varnas)
             st.markdown("---")
-            st.header(f"✅ Final Siddhi Form: {final_output}")
+            st.header(f"✅ Final Result: {final_output}")
             st.balloons()
         else:
             st.warning("Could not establish Pada Sanjna. Word is still a Base/Pratyaya.")

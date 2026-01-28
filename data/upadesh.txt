@@ -1,0 +1,8 @@
+अनङ्
+dhatu_master_structured.json
+ganpath.json
+krit_pratyaya.json
+panini_sutras_final.json
+pratyahara_list.json
+taddhita_master_data.json
+vibhaktipatha.json
