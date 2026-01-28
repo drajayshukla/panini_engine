@@ -10,93 +10,98 @@ from collections import defaultdict
 def load_shabd_data():
     file_path = os.path.join("data", "shabdroop.json")
     try:
+        if not os.path.exists(file_path): return []
         with open(file_path, "r", encoding="utf-8") as file:
             return json.load(file)
     except:
         return []
 
 
-# --- २. प्रत्यय निष्कर्षण इंजन (Suffix Extraction) ---
-def get_stem_and_suffix(word, forms_str):
-    """शब्द और उसके रूपों से प्रत्यय पैटर्न निकालना"""
+# --- २. प्रत्यय विश्लेषण इंजन ---
+def get_ekavachana_pattern(forms_str):
+    """एकवचन के प्रमुख विभक्तियों का प्रत्यय पैटर्न निकालना"""
     forms = [f.strip() for f in forms_str.split(";")]
-    # प्रथम-एकवचन से स्टेम का अनुमान लगाना
-    first_form = forms[0].replace('ः', '').replace('म्', '')
+    if len(forms) < 21: return None
 
-    # प्रत्यय सूची तैयार करना (एकवचन के ७ रूप)
-    suffixes = []
-    for f in forms[:21]:  # सम्बोधन छोड़कर
-        suffix = f.replace(word[:-1], "-", 1) if len(word) > 1 else f
-        suffixes.append(suffix)
-    return tuple(suffixes)
+    # विश्लेषण के लिए महत्वपूर्ण एकवचन स्थान:
+    # प्रथमा(0), तृतीया(6), चतुर्थी(9), षष्ठी(15), सप्तमी(18)
+    indices = [0, 6, 9, 15, 18]
+    pattern = tuple(forms[i] for i in indices)
+    return pattern
 
 
 # --- ३. मुख्य इंटरफेस ---
 def main():
-    st.set_page_config(page_title="Suffix Explorer", layout="wide")
-    st.title("🔬 Suffix-based Shabd Roop Categorization")
-    st.caption("समान प्रत्यय पैटर्न वाले शब्दों का समूहिक विश्लेषण")
+    st.set_page_config(page_title="Unique Suffix Navigator", layout="wide", page_icon="🧬")
+    st.title("🧬 Unique Suffix Navigator & Categorizer")
+    st.info("यह यंत्र शब्दों को उनके 'एकवचन' प्रत्यय व्यवहार के आधार पर ५०+ समूहों में वर्गीकृत करता है।")
 
     data = load_shabd_data()
     if not data:
-        st.error("डेटाबेस अप्राप्त!")
+        st.error("डेटाबेस (shabdroop.json) नहीं मिला।")
         st.stop()
 
-    # --- ४. प्रत्यय आधारित वर्गीकरण (The Analysis) ---
-    suffix_groups = defaultdict(list)
-
+    # --- ४. ऑटो-वर्गीकरण (Categorization Logic) ---
+    groups = defaultdict(list)
     for entry in data:
-        forms = entry.get("forms", "")
-        if forms:
-            # प्रथम-एकवचन (Nominal Suffix) को 'Key' बनाना
-            raw_list = [f.strip() for f in forms.split(";")]
-            prathama_ek = raw_list[0]
-            # प्रत्यय का मुख्य लक्षण (Ending)
-            pattern_key = prathama_ek[-2:] if len(prathama_ek) > 2 else prathama_ek
-            suffix_groups[pattern_key].append(entry)
+        pattern = get_ekavachana_pattern(entry.get("forms", ""))
+        if pattern:
+            # प्रथमा एकवचन के अंत को 'Key' बनाना (जैसे 'अः', 'इः', 'ई')
+            main_suffix = pattern[0][-2:] if len(pattern[0]) > 1 else pattern[0]
+            groups[main_suffix].append(entry)
 
-    # --- ५. UI डिस्प्ले ---
-    col_sidebar, col_main = st.columns([1, 3])
+    # ५०+ विशिष्ट समूहों को सॉर्ट करना
+    sorted_suffixes = sorted(groups.keys(), key=lambda x: len(groups[x]), reverse=True)
 
-    with col_sidebar:
-        st.subheader("📊 प्रत्यय श्रेणियाँ")
-        sorted_keys = sorted(suffix_groups.keys(), key=lambda x: len(suffix_groups[x]), reverse=True)
+    # --- ५. UI लेआउट ---
+    st.sidebar.header("📁 प्रत्यय श्रेणियाँ (Top 50+)")
+    selected_suffix = st.sidebar.radio(
+        "मुख्य प्रत्यय अंत चुनें:",
+        sorted_suffixes[:60]  # टॉप ६० यूनिक पैटर्न्स
+    )
 
-        selected_pattern = st.radio(
-            "मुख्य प्रत्यय अंत चुनें (Top 50+ Patterns):",
-            sorted_keys[:60]  # सबसे विशिष्ट ५०+ प्रत्यय
-        )
+    if selected_suffix:
+        entries = groups[selected_suffix]
+        st.subheader(f"📊 समूह '...{selected_suffix}' के विशिष्ट शब्द-रूप (एकवचन विश्लेषण)")
 
-        st.metric("इस समूह में शब्द", len(suffix_groups[selected_pattern]))
-
-    with col_main:
-        st.header(f"श्रेणी: '...{selected_pattern}' प्रत्यय वाले शब्द")
-
-        # चयनित समूह के शब्दों की तालिका
-        group_data = []
-        for e in suffix_groups[selected_pattern]:
-            group_data.append({
-                "शब्द": e['word'],
-                "लिंग": e['linga'],
-                "अर्थ": e['artha_hin'],
-                "प्रथमा एकवचन": e['forms'].split(";")[0],
-                "षष्ठी एकवचन": e['forms'].split(";")[15] if len(e['forms'].split(";")) > 15 else "-"
+        # टेबल के लिए डेटा तैयार करना
+        table_list = []
+        for e in entries:
+            f = [forms.strip() for forms in e["forms"].split(";")]
+            table_list.append({
+                "शब्द": e["word"],
+                "लिंग": e["linga"],
+                "प्रथमा (1.1)": f[0],
+                "तृतीया (3.1)": f[6],
+                "चतुर्थी (4.1)": f[9],
+                "षष्ठी (6.1)": f[15],
+                "सप्तमी (7.1)": f[18],
+                "अर्थ": e["artha_hin"]
             })
 
-        df = pd.DataFrame(group_data)
-        st.dataframe(df, use_container_width=True)
+        df = pd.DataFrame(table_list)
 
-        # विज़ुअलाइज़ेशन
+        # इंटरएक्टिव टेबल
+        st.dataframe(
+            df.style.applymap(lambda x: 'color: #d32f2f; font-weight: bold' if selected_suffix in str(x) else ''),
+            use_container_width=True,
+            height=500
+        )
+
+        # विज़ुअलाइज़ेशन और तुलना
         st.divider()
-        st.subheader("💡 व्याकरणिक अंतर्दृष्टि (Insight)")
-        st.info(f"'{selected_pattern}' पर समाप्त होने वाले शब्द प्रायः समान विभक्ति नियमों का पालन करते हैं। "
-                f"इनमें संधि कार्य (जैसे णत्व विधान) प्रातिपदिक के अंतिम वर्ण पर निर्भर करते हैं।")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.success(f"✅ इस श्रेणी में कुल **{len(entries)}** विशिष्ट शब्द मिले हैं।")
+            st.write("**व्याकरणिक टिप:** समान अंत वाले शब्दों में विभक्ति परिवर्तन प्रायः एक जैसे होते हैं।")
 
-        # किसी एक शब्द का विस्तृत विवरण
-        if not df.empty:
-            selected_word = st.selectbox("विस्तृत विश्लेषण के लिए शब्द चुनें:", df["शब्द"])
-            # यहाँ आपका पुराना ३x८ टेबल वाला कोड कॉल किया जा सकता है
-            st.write(f"आप '{selected_word}' का संपूर्ण शब्द-रूप चक्र मुख्य 'Analyzer' पेज पर देख सकते हैं।")
+        with col2:
+            st.download_button(
+                "📥 इस श्रेणी का डेटा डाउनलोड करें",
+                df.to_csv(index=False).encode('utf-8'),
+                f"suffix_{selected_suffix}.csv",
+                "text/csv"
+            )
 
 
 if __name__ == "__main__":
