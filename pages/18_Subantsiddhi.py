@@ -132,6 +132,13 @@ if word_input:
                 prev_str = add_history(s68 if s68 else "६.१.६८ (S-Removal)", current_varnas, prev_str)
                 current_varnas, s7 = apply_nalopa_8_2_7(current_varnas)
                 prev_str = add_history(s7 if s7 else "८.२.७ (N-Removal)", current_varnas, prev_str)
+                # --- BRANCH H: FEMININE Ā-ANTA (रमा, सीता, लता) ---
+            elif word_input.endswith("आ"):
+                # 1. 6.1.68 (Direct S-Lopa)
+                res_v, s68 = apply_hal_nyab_6_1_68(current_varnas)
+                if s68:
+                    current_varnas = res_v
+                prev_str = add_history(s68 if s68 else "६.१.६८ (Skipped)", current_varnas, prev_str)
                 # --- BRANCH F: GO SPECIAL (ओकारान्त) ---
             elif word_input == "गो":
                 # 1. 7.1.90 (णिद्वद्भावः)
