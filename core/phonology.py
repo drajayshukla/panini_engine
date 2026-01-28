@@ -1,17 +1,13 @@
 import re
 
-# आंतरिक नियमों से इम्पोर्ट (सुनिश्चित करें कि ये फाइलें मौजूद हैं)
+# आंतरिक नियमों से इम्पोर्ट (सुनिश्चित करें कि ये फाइलें logic/ फोल्डर में मौजूद हैं)
 try:
     from logic.svara_rules import apply_svara_sanjna
     from logic.sthana_rules import apply_sthana_to_varna
 except ImportError:
-    # टेस्टिंग के लिए डमी फंक्शन्स (यदि फाइलें न मिलें)
-    def apply_svara_sanjna(obj, unit):
-        pass
-
-
-    def apply_sthana_to_varna(obj):
-        pass
+    # यदि फाइलें न मिलें तो क्रैश से बचने के लिए डमी फंक्शन्स
+    def apply_svara_sanjna(obj, unit): pass
+    def apply_sthana_to_varna(obj): pass
 
 # --- १. व्याकरणिक स्थिरांक (Grammar Constants) ---
 VOWELS_MAP = {
@@ -23,47 +19,48 @@ VOWELS_MAP = {
 REVERSE_VOWELS_MAP = {v: k for k, v in VOWELS_MAP.items()}
 INDEPENDENT_VOWELS = 'अआइईउऊऋॠऌॡएऐओऔ'
 
+# १.२.२७ ऊकालोऽज्झ्रस्वदीर्घप्लुतः के लिए डेटा
 MATRA_DATA = {
     'अ': 1, 'इ': 1, 'उ': 1, 'ऋ': 1, 'ऌ': 1,
     'आ': 2, 'ई': 2, 'ऊ': 2, 'ॠ': 2, 'ए': 2, 'ओ': 2, 'ऐ': 2, 'औ': 2
 }
 
-
 # --- २. वर्ण क्लास (The Varna Entity) ---
 class Varna:
     def __init__(self, raw_unit):
         """
-        raw_unit: वर्ण के साथ स्वर-चिह्न (उदा. 'अ॒', 'ई॑', 'ओ३', या पृथक 'ँ')
+        raw_unit: वर्ण के साथ उसके चिह्न भी हो सकते हैं (उदा. 'अ॒', 'ई॑', 'ओ३', या 'ँ')
         """
+        # स्वर-चिह्नों को अलग कर शुद्ध वर्ण निकालें
         self.char = raw_unit[0]
-        # प्लुत '३' को वर्ण का हिस्सा माना (उदा. 'ओ३')
+        # प्लुत '३' को वर्ण का हिस्सा माना
         if len(raw_unit) > 1 and raw_unit[1] == '३':
             self.char = raw_unit[:2]
 
         # अच् (Vowel) की पहचान
         self.is_vowel = self.char in INDEPENDENT_VOWELS or '३' in self.char
 
-        # मात्रा निर्धारण (१.२.२७ ऊकालोऽज्झ्रस्वदीर्घप्लुतः)
+        # मात्रा निर्धारण (१.२.२७)
         self.matra = self._calculate_matra(self.char)
 
         # संज्ञा स्लॉट्स
         self.kala_sanjna = None
-        self.svara = "उदात्त"  # डिफ़ॉल्ट
+        self.svara = "उदात्त"  # डिफ़ॉल्ट (१.२.२९)
         self.svara_mark = None
 
-        # अनुनासिक पहचान (१.१.८ मुखनासिकावचनोऽनुनासिकः)
+        # १.१.८: मुखनासिकावचनोऽनुनासिकः
         self.is_anunasika = 'ँ' in raw_unit
 
         # १.१.९: स्थान एवं प्रयत्न
         self.sthana = None
         self.prayatna = None
 
-        # संज्ञाएँ अपडेट करना (Diagnostics)
+        # डायग्नोस्टिक प्रोसेस: संज्ञाएँ अपडेट करना
         apply_svara_sanjna(self, raw_unit)
         apply_sthana_to_varna(self)
 
     def _calculate_matra(self, char):
-        """पाणिनीय मात्रा गणना"""
+        """पाणिनीय मात्रा गणना का कड़ाई से पालन।"""
         if char in 'ंःँ': return 0
         if '३' in char: return 3
         if char == 'ऌ' or char == 'ॡ': return 1
@@ -73,31 +70,29 @@ class Varna:
         return 0
 
     def __repr__(self):
-        # अ(१)[ह्रस्व][उदात्त][निरनुनासिक][कण्ठ]
+        # क्लीन रिप्रजेंटेशन: अ(१)[ह्रस्व][उदात्त][निरनुनासिक][कण्ठ]
         kala = f"[{self.kala_sanjna}]" if self.kala_sanjna else ""
         svara = f"[{self.svara}]" if self.is_vowel else ""
         anu = "[अनुनासिक]" if self.is_anunasika else "[निरनुनासिक]"
         sth = f"[{self.sthana}]" if self.sthana else ""
         return f"{self.char}({self.matra}){kala}{svara}{anu}{sth}"
 
-
-# --- ३. विच्छेद इंजन (Surgical Patch for Anunasika Separation) ---
+# --- ३. विच्छेद इंजन (16 Rules + Anunasika Patch) ---
 def sanskrit_varna_vichhed(text, return_objects=True):
     """
-    गाधृँ -> ग् + आ + ध् + ऋ + ँ (अनुनासिक पृथक इकाई)
-    व्यंजन हमेशा हलन्त रहेंगे।
+    पाणिनीय विच्छेद: गाधृँ -> ग् + आ + ध् + ऋ + ँ
+    व्यंजन हमेशा हलन्त (Pure Consonants) रहेंगे।
     """
     if not text:
         return []
 
-    # नियम १६, ३, १२: विशिष्ट संयुक्ताक्षर
+    # नियम १६, ३, १२: मूल प्रतिस्थापन
     if text == "ॐ":
         res_strings = ["अ", "उ", "म्"]
     else:
-        text = text.replace('क्ष', 'क्‌ष').replace('त्र', 'त्‌र').replace('ज्ञ', 'ज्‌ञ').replace('श्र', 'श्‌र').replace(
-            'ऽ', 'अ')
+        text = text.replace('क्ष', 'क्‌ष').replace('त्र', 'त्‌र').replace('ज्ञ', 'ज्‌ञ').replace('श्र', 'श्‌र').replace('ऽ', 'अ')
 
-        # नियम ६: पञ्चम वर्ण
+        # नियम ६: पञ्चम वर्ण (अनुस्वार परिवर्तन)
         text = re.sub(r'ं(?=[कखगघ])', 'ङ्', text)
         text = re.sub(r'ं(?=[चछजझ])', 'ञ्', text)
         text = re.sub(r'ं(?=[टठडढ])', 'ण्', text)
@@ -109,20 +104,20 @@ def sanskrit_varna_vichhed(text, return_objects=True):
         while i < len(text):
             char = text[i]
 
-            # १. स्वतंत्र स्वर
+            # १. स्वतंत्र स्वर (Independent Vowels)
             if char in INDEPENDENT_VOWELS:
                 current_unit = char
                 if i + 1 < len(text) and text[i + 1] == '३':
                     current_unit += '३'
                     i += 1
 
-                # स्वर-चिह्नों को साथ रखें (॒ ॑) पर 'ँ' को अलग करें
+                # स्वर-चिह्न (॒ ॑) को साथ रखें पर 'ँ' को अलग करें
                 while i + 1 < len(text) and text[i + 1] in '\u0331\u030d_॒॑|':
                     current_unit += text[i + 1]
                     i += 1
                 res_strings.append(current_unit)
 
-                # अयोगवाह/अनुनासिक (पृथक वर्ण के रूप में)
+                # अयोगवाह/अनुनासिक पृथक वर्ण के रूप में
                 while i + 1 < len(text) and text[i + 1] in 'ंःँ':
                     if text[i + 1] == 'ं' and (i + 2 == len(text) or text[i + 2] == ' '):
                         res_strings.append('म्')
@@ -130,9 +125,9 @@ def sanskrit_varna_vichhed(text, return_objects=True):
                         res_strings.append(text[i + 1])
                     i += 1
 
-            # २. व्यंजन प्रबंधन (Consonants)
+            # २. व्यंजन प्रबंधन (Pure Consonants - Always Halanta)
             elif '\u0915' <= char <= '\u0939' or char == 'ळ':
-                res_strings.append(char + '्')  # हमेशा हलन्त
+                res_strings.append(char + '्') # व्यंजन हमेशा हलन्त
                 found_vowel = False
 
                 if i + 1 < len(text):
@@ -175,15 +170,13 @@ def sanskrit_varna_vichhed(text, return_objects=True):
                 res_strings.append(char)
             i += 1
 
-    if return_objects:
-        return [Varna(s) for s in res_strings]
-    return res_strings
+    return [Varna(s) for s in res_strings] if return_objects else res_strings
 
-
-# --- ४. संयोग इंजन (Samyoga) ---
+# --- ४. संयोग इंजन (Joining Logic) ---
 def sanskrit_varna_samyoga(varna_list):
     """
-    विच्छेदित वर्णों को पुनः जोड़ना। 'ग्' + 'आ' + 'ध्' -> 'गाध्'
+    'ग्' + 'आ' + 'ध्' -> 'गाध्'
+    हलन्त व्यंजन और स्वरों का शुद्ध मिलन।
     """
     if not varna_list:
         return ""
@@ -196,11 +189,11 @@ def sanskrit_varna_samyoga(varna_list):
             res = char
             continue
 
-        # १. व्यंजन + स्वर (हलन्त लोप और मात्रा योग)
+        # १. व्यंजन + स्वर (हलन्त हटाना और मात्रा जोड़ना)
         if res.endswith('्') and char in INDEPENDENT_VOWELS:
             res = res[:-1] + REVERSE_VOWELS_MAP.get(char, "")
 
-        # २. अयोगवाह / अनुनासिक
+        # २. अयोगवाह / अनुनासिक का जुड़ाव
         elif char in 'ँंः':
             res += char
 
