@@ -70,29 +70,26 @@ def apply_upadeshe_ajanunasika_1_3_2(varna_list):
 
 def apply_halantyam_1_3_3(varna_list, blocked_indices):
     """
-    सूत्र: १.३.३ हलन्त्यम्
-    नियम: उपदेश के अन्त में स्थित व्यंजन (हल्) की इत्-संज्ञा होती है।
-    निषेध: १.३.४ (न विभक्तौ तुस्माः) द्वारा रक्षित इंडेक्स को छोड़कर।
+    सूत्र: हलन्त्यम् (१.३.३)
+    संशोधित लॉजिक: केवल तभी लागू होगा जब अन्तिम वर्ण शुद्ध व्यंजन (हल्) हो।
     """
     if not varna_list:
         return [], []
 
     last_idx = len(varna_list) - 1
-    last_varna_obj = varna_list[last_idx]
 
-    # जाँच: क्या अन्तिम वर्ण व्यंजन है?
-    # (v.is_vowel का उपयोग स्ट्रिंग एंड्स-विथ से ज्यादा सटीक है)
-    if not last_varna_obj.is_vowel:
+    # १. सुरक्षा कवच (१.३.४ न विभक्तौ तुस्माः) की जाँच
+    if last_idx in blocked_indices:
+        return [], []
 
-        # १.३.४ प्रतिषेध जाँच (Shield Check)
-        if last_idx in blocked_indices:
-            # वर्ण हल है, पर १.३.४ ने उसे 'विभक्ति' होने के कारण बचा लिया है
-            return [], ["१.३.४ न विभक्तौ तुस्माः (हलन्त्यम् निषेध सक्रिय)"]
+    v = varna_list[last_idx]
 
-        # यदि सुरक्षित नहीं है, तो इत्-संज्ञा होगी
-        link = get_sutra_link("1.3.3")
-        tag = f"[१.३.३ हलन्त्यम्]({link})"
-        return [last_idx], [tag]
+    # २. पाणिनीय फिल्टर: क्या यह 'हल्' (व्यंजन) है?
+    # स्वर (v.is_vowel) और अनुनासिक/अयोगवाह (ँ, ं, ः) पर १.३.३ लागू नहीं होता।
+    is_hal = not v.is_vowel and v.char[0] not in 'ंःँ' and '्' in v.char
+
+    if is_hal:
+        return [last_idx], ["१.३.३ हलन्त्यम्"]
 
     return [], []
 def apply_na_vibhaktau_1_3_4(varna_list, is_vibhakti=True):
