@@ -32,7 +32,11 @@ db_conjugation = load_conjugation_data()
 db_metadata = load_dhatu_metadata()
 
 # --- ३. सिलेक्शन इंटरफेस (Surgical Selection) ---
-dhatu_map = {f"{d['upadesha']} ({d['artha_sanskrit']})": d['kaumudi_index'] for d in db_metadata}
+dhatu_map = {
+    f"{d.get('upadesha', 'Unknown')} ({d.get('artha_sanskrit', 'N/A')})": d.get('kaumudi_index')
+    for d in db_metadata
+    if isinstance(d, dict) and 'upadesha' in d
+}
 
 col_s1, col_s2 = st.columns([2, 1])
 
