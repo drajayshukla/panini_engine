@@ -15,6 +15,19 @@ def apply_hal_nyab_6_1_68(varna_list):
             v_list.pop() # Remove 'स्'
             return v_list, "६.१.६८ (हल्ङ्याब्भ्यो... अपृक्त-लोप)"
     return varna_list, None
+def apply_upadha_dirgha_6_4_8(varna_list):
+    """
+    ६.४.८ सर्वनामस्थाने चासम्बुद्धौ
+    Logic: Penultimate 'a' -> 'ā' for N-anta stems before Sarvanamasthana.
+    """
+    v_list = list(varna_list)
+    for i in range(len(v_list) - 1, 0, -1):
+        if v_list[i].char == 'न्' and v_list[i-1].char == 'अ':
+            v_list[i-1] = Varna('आ')
+            return v_list, "६.४.८ (सर्वनामस्थाने चासम्बुद्धौ - उपधा दीर्घ)"
+    return varna_list, None
+
+
 def apply_upadha_dirgha_6_4_11(varna_list):
     """
     ६.४.११ अप्तृन्तृच्स्वसृनप्तृनेष्टृत्वष्टृक्षत्तृहोतृपोतृप्रशास्तॄणाम्
