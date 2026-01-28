@@ -68,12 +68,25 @@ if word_input:
             prev_str = intermediate_word
 
 
-            def add_history(sutra, varnas, p_str):
+            #def add_history(sutra, varnas, p_str):
+               # f_str = sanskrit_varna_samyoga(varnas)
+               # history.append({
+                 #   "Sutra": sutra if sutra else "---",
+                 #   "Vichhed": [v.char for v in varnas],
+                 #   "Form": get_diff_highlight(p_str, f_str)
+               # })
+               # return f_str
+
+
+            def add_history(sutra, varnas, p_str, change_desc=""):
                 f_str = sanskrit_varna_samyoga(varnas)
                 history.append({
-                    "Sutra": sutra if sutra else "---",
-                    "Vichhed": [v.char for v in varnas],
-                    "Form": get_diff_highlight(p_str, f_str)
+                    "step": len(history),
+                    "sutra": sutra if sutra else "Initial",
+                    "vichhed": " + ".join([f"`{v.char}`" for v in varnas]),  # Monospaced badges
+                    "form": f_str,
+                    "highlighted": get_diff_highlight(p_str, f_str),
+                    "change": change_desc
                 })
                 return f_str
 
