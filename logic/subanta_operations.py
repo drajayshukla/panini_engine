@@ -9,12 +9,14 @@ def apply_hal_nyab_6_1_68(varna_list):
     Logic: If the stem ends in a long vowel (आ, ई, ऊ)
     and is followed by a single 'स्', delete the 'स्'.
     """
-    # Ensure we have a list and at least two characters
-    if len(varna_list) >= 2 and varna_list[-1].char == 'स्':
-        # Check if the preceding character is a long vowel
-        if varna_list[-2].char in ['आ', 'ई', 'ऊ']:
-            varna_list.pop()  # Remove 'स्'
-            return varna_list, "६.१.६८ (हल्ङ्याब्भ्यो... अपृक्त-लोप)"
+    # Work on a copy to avoid mutation issues
+    v_list = list(varna_list)
+    if len(v_list) >= 2 and v_list[-1].char == 'स्':
+        # Check if penultimate character is long vowel
+        # For Kroṣṭā, this is the 'आ' created by 6.4.11
+        if v_list[-2].char in ['आ', 'ई', 'ऊ']:
+            v_list.pop()  # Remove 'स्'
+            return v_list, "६.१.६८ (हल्ङ्याब्भ्यो... अपृक्त-लोप)"
 
     return varna_list, None
 
@@ -65,11 +67,12 @@ def apply_trijvadbhava_7_1_95(varna_list):
 def apply_nalopa_8_2_7(varna_list):
     """
     ८.२.७ नलोपः प्रातिपदिकान्तस्य
-    Logic: If the absolute final character is 'न्', delete it.
+    Logic: If ending in 'न्' (now that 'स्' is gone), delete it.
     """
-    if varna_list and varna_list[-1].char == 'न्':
-        varna_list.pop()  # Remove 'न्'
-        return varna_list, "८.२.७ (नलोपः प्रातिपदिकान्तस्य)"
+    v_list = list(varna_list)
+    if v_list and v_list[-1].char == 'न्':
+        v_list.pop()  # Remove 'न्'
+        return v_list, "८.२.७ (नलोपः प्रातिपदिकान्तस्य)"
 
     return varna_list, None
 

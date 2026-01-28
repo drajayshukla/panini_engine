@@ -97,37 +97,33 @@ if word_input:
             # --- BRANCH A: SPECIAL STEM (Kroṣṭu Case) ---
             # --- BRANCH A: SPECIAL STEM (Kroṣṭu Case) ---
             if "क्रोष्टु" in word_input:
-                # 1. 7.1.95
+                # Steps 1-4 (Already working in your trace)
                 current_varnas, s95 = apply_trijvadbhava_7_1_95(current_varnas)
                 prev_str = add_history(s95, current_varnas, prev_str)
 
-                # 2. 7.1.94
                 current_varnas, s94 = apply_anang_7_1_94(current_varnas)
                 prev_str = add_history(s94, current_varnas, prev_str)
 
-                # 3. 1.3.3 Surgical Removal of ङ्
-                temp_list = list(current_varnas)
-                for i, v in enumerate(temp_list):
+                # Surgical removal of ङ्
+                for i, v in enumerate(current_varnas):
                     if v.char == 'ङ्':
-                        temp_list.pop(i)
+                        current_varnas.pop(i)
                         break
-                current_varnas = temp_list
                 prev_str = add_history("१.३.३ (हलन्त्यम् - ङ् लोपः)", current_varnas, prev_str)
 
-                # 4. 6.4.11 (Create the 'आ')
                 current_varnas, s11 = apply_upadha_dirgha_6_4_11(current_varnas)
                 prev_str = add_history(s11, current_varnas, prev_str)
 
-                # 5. 6.1.68 (Remove 'स्')
+                # --- FIX FOR STEP 5 ---
                 res_v5, s68 = apply_hal_nyab_6_1_68(current_varnas)
                 if s68:
-                    current_varnas = res_v5
+                    current_varnas = res_v5  # Update the list!
                 prev_str = add_history(s68 if s68 else "६.१.६८ (Failed)", current_varnas, prev_str)
 
-                # 6. 8.2.7 (Remove 'न्')
+                # --- FIX FOR STEP 6 ---
                 res_v6, s7 = apply_nalopa_8_2_7(current_varnas)
                 if s7:
-                    current_varnas = res_v6
+                    current_varnas = res_v6  # Update the list!
                 prev_str = add_history(s7 if s7 else "८.२.७ (Failed)", current_varnas, prev_str)
             ## --- BRANCH B/C: APRUKTA LOPA or RUTVA-VISARGA ---
             else:
