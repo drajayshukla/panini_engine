@@ -5,15 +5,22 @@ from core.phonology import Varna
 
 def apply_hal_nyab_6_1_68(varna_list):
     """
-    ६.१.६८ (हल्ङ्याब्भ्यो...): Deletes Apṛkta 's' after long vowel.
+    ६.१.६८ (हल्ङ्याब्भ्यो दीर्घात् सुतिस्यपृक्तं हल्): Deletes Apṛkta 's' after long vowel, including with intervening consonant if upadha is dirgha.
     """
-    # Create a fresh copy to prevent reference issues
     v_list = list(varna_list)
-    if len(v_list) >= 2 and v_list[-1].char == 'स्':
-        # Check penultimate: for Kroṣṭā, this is 'आ'
-        if v_list[-2].char in ['आ', 'ई']:
-            v_list.pop() # Remove 'स्'
-            return v_list, "६.१.६८ (हल्ङ्याब्भ्यो दीर्घात् सुतिस्यपृक्तं हल्)"
+    if len(v_list) < 2 or v_list[-1].char != 'स्':
+        return varna_list, None
+
+    # Direct: long vowel + 'स्'
+    if v_list[-2].char in ['आ', 'ई', 'ऊ', 'ऐ', 'औ']:
+        v_list.pop()
+        return v_list, "६.१.६८ (हल्ङ्याब्भ्यो दीर्घात् सुतिस्यपृक्तं हल्)"
+
+    # Indirect: long vowel + hal (consonant) + 'स्'
+    elif len(v_list) >= 3 and v_list[-2].is_hal() and v_list[-3].char in ['आ', 'ई', 'ऊ', 'ऐ', 'औ']:
+        v_list.pop()
+        return v_list, "६.१.६८ (हल्ङ्याब्भ्यो दीर्घात् सुतिस्यपृक्तं हल्)"
+
     return varna_list, None
 def apply_upadha_dirgha_6_4_11(varna_list):
     """
@@ -61,7 +68,7 @@ def apply_trijvadbhava_7_1_95(varna_list):
 
 def apply_nalopa_8_2_7(varna_list):
     """
-    ८.२.७ (नलोपः...): Deletes final 'n' of a Padanta Pratipadika.
+    ८.२.७ (नलोपः...): Deletes 'न्' if it is now the absolute final character.
     """
     v_list = list(varna_list)
     if v_list and v_list[-1].char == 'न्':
