@@ -97,33 +97,20 @@ if word_input:
             # --- BRANCH A: SPECIAL STEM (Kroṣṭu Case) ---
             # --- BRANCH A: SPECIAL STEM (Kroṣṭu Case) ---
             if "क्रोष्टु" in word_input:
-                # Steps 1-4 (Already working in your trace)
-                current_varnas, s95 = apply_trijvadbhava_7_1_95(current_varnas)
-                prev_str = add_history(s95, current_varnas, prev_str)
+                # Steps 1 to 4... (Keep as is, they are working)
 
-                current_varnas, s94 = apply_anang_7_1_94(current_varnas)
-                prev_str = add_history(s94, current_varnas, prev_str)
-
-                # Surgical removal of ङ्
-                for i, v in enumerate(current_varnas):
-                    if v.char == 'ङ्':
-                        current_varnas.pop(i)
-                        break
-                prev_str = add_history("१.३.३ (हलन्त्यम् - ङ् लोपः)", current_varnas, prev_str)
-
-                current_varnas, s11 = apply_upadha_dirgha_6_4_11(current_varnas)
-                prev_str = add_history(s11, current_varnas, prev_str)
-
-                # --- FIX FOR STEP 5 ---
+                # --- STEP 5: S-LOPA (६.१.६८) ---
+                # Important: We must capture the new list in current_varnas
                 res_v5, s68 = apply_hal_nyab_6_1_68(current_varnas)
                 if s68:
-                    current_varnas = res_v5  # Update the list!
+                    current_varnas = res_v5
                 prev_str = add_history(s68 if s68 else "६.१.६८ (Failed)", current_varnas, prev_str)
 
-                # --- FIX FOR STEP 6 ---
+                # --- STEP 6: N-LOPA (८.२.७) ---
+                # Now that 'स्' is gone, 'न्' is at the end.
                 res_v6, s7 = apply_nalopa_8_2_7(current_varnas)
                 if s7:
-                    current_varnas = res_v6  # Update the list!
+                    current_varnas = res_v6
                 prev_str = add_history(s7 if s7 else "८.२.७ (Failed)", current_varnas, prev_str)
             ## --- BRANCH B/C: APRUKTA LOPA or RUTVA-VISARGA ---
             else:
