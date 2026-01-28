@@ -5,14 +5,13 @@ from core.phonology import Varna
 
 def apply_hal_nyab_6_1_68(varna_list):
     """
-    ६.१.६८ हल्ङ्याब्भ्यो...
-    Condition: If word ends in 'स्' and the character BEFORE it is 'आ' or 'ई'.
+    Sutra: हल्ङ्याब्भ्यो...
+    Refined logic: Check if preceded by 'आ' or 'ई'.
     """
     v_list = list(varna_list)
     if len(v_list) >= 2 and v_list[-1].char == 'स्':
-        # Check if penultimate is a long vowel (आ or ई)
         if v_list[-2].char in ['आ', 'ई']:
-            v_list.pop()  # Surgical removal of 'स्'
+            v_list.pop() # Surgical removal
             return v_list, "६.१.६८ (हल्ङ्याब्भ्यो... अपृक्त-लोप)"
     return varna_list, None
 def apply_upadha_dirgha_6_4_11(varna_list):
@@ -61,12 +60,12 @@ def apply_trijvadbhava_7_1_95(varna_list):
 
 def apply_nalopa_8_2_7(varna_list):
     """
-    ८.२.७ नलोपः प्रातिपदिकान्तस्य
-    Condition: If word ends in 'न्' (after 'स्' is already gone).
+    Sutra: नलोपः प्रातिपदिकान्तस्य
+    Refined logic: Target the 'न्' only when it's the final varna.
     """
     v_list = list(varna_list)
     if v_list and v_list[-1].char == 'न्':
-        v_list.pop()  # Surgical removal of 'न्'
+        v_list.pop()
         return v_list, "८.२.७ (नलोपः प्रातिपदिकान्तस्य)"
     return varna_list, None
 
