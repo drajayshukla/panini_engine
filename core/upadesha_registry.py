@@ -1,3 +1,5 @@
+
+# panini_engine/core/upadesha_registry.py
 import json
 import os
 from enum import Enum

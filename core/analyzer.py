@@ -1,4 +1,5 @@
 import os
+#/core/analyzer.py
 from logic.sanjna_rules import check_vriddhi_1_1_1, check_guna_1_1_2, get_sutra_link
 
 def analyze_sanjna(varna_list):

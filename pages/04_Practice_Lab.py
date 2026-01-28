@@ -54,7 +54,7 @@ def load_panini_ecosystem():
         "🏷️ तद्धित प्रत्यय (Taddhita)": "taddhita_master_data.json",
         "🔱 विभक्ति/तिङ् (Vibhakti)": "vibhaktipatha.json",
         "⚙️ चुट्टू विशिष्ट (1.3.7)": "chuttu_pratyayas.json",
-        "🛡️ शित् विशिष्ट (1.3.6)": "shit_pratyayas_addition.json"
+        "🛡️ शित् विशिष्ट (1.3.6)": "shit_pratyaya.json"
     }
     data_store = {}
     for label, fname in files.items():

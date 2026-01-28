@@ -1,3 +1,4 @@
+# panini_engine/core/phonology.py
 import re
 
 # आंतरिक नियमों से इम्पोर्ट (सुनिश्चित करें कि logic/ फोल्डर में ये मौजूद हैं)
