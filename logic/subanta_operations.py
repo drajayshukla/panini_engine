@@ -1,22 +1,25 @@
 from core.phonology import Varna
 
 
+# logic/subanta_operations.py
+
 def apply_rutva_8_2_66(varna_list):
     """
-    Step 4: ससजुषोः रुः (८.२.६६)
+    ससजुषोः रुः (८.२.६६)
     Converts padanta 's' to 'ruँ'.
-    The 'uँ' is an anunasika-vowel marker for the next It-Sanjna cycle.
     """
     if varna_list and varna_list[-1].char == 'स्':
         varna_list.pop()  # Remove 's'
 
-        # Adding 'ruँ' (r + uँ)
+        # We append 'र्' and 'उँ' as separate Varna objects.
+        # The ItSanjnaEngine will detect 'उँ' as anunasika automatically
+        # based on your phonology logic.
+        from core.phonology import Varna
         varna_list.append(Varna('र्'))
-        varna_list.append(Varna('उँ', is_anunasika=True))  # Marker for 1.3.2
+        varna_list.append(Varna('उँ'))
 
         return varna_list, "८.२.६६ (ससजुषोः रुः)"
     return varna_list, None
-
 
 def apply_visarga_8_3_15(varna_list):
     """
