@@ -125,10 +125,34 @@ with tabs[3]:
     if dhatu_data:
         st.subheader("📊 धातुपाठ का सांख्यिकीय विश्लेषण")
         df_stats = pd.DataFrame(dhatu_data)
+
         col1, col2 = st.columns(2)
+
         with col1:
             st.write("**गणों के अनुसार वितरण**")
             st.bar_chart(df_stats['gana'].value_counts())
+
         with col2:
             st.write("**पद के अनुसार वितरण**")
-            st.pie_chart(df_stats['pada'].value_counts())
+
+            # वर्शन-सेफ चार्टिंग (Version-Safe Charting)
+            data = df_stats['pada'].value_counts()
+
+            # तरीका १: यदि स्ट्रीमलिट नया है (>= 1.34.0)
+            if hasattr(st, "pie_chart"):
+                st.pie_chart(data)
+
+            # तरीका २: पुराने वर्शन के लिए फॉलबैक (Plotly या Matplotlib)
+            else:
+                try:
+                    import plotly.express as px
+
+                    fig = px.pie(values=data.values, names=data.index)
+                    st.plotly_chart(fig, use_container_width=True)
+                except ImportError:
+                    # यदि Plotly भी नहीं है, तो Matplotlib का उपयोग करें
+                    import matplotlib.pyplot as plt
+
+                    fig, ax = plt.subplots()
+                    ax.pie(data, labels=data.index, autopct='%1.1f%%')
+                    st.pyplot(fig)
