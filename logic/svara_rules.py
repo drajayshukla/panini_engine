@@ -1,11 +1,12 @@
 # logic/svara_rules.py
-from core.phonology import Varna
 
+
+# logic/svara_rules.py
 
 def apply_svara_sanjna(varna_obj, raw_string):
     """
     सूत्र: उच्चैरुदात्तः (१.२.२९), नीचैरनुदात्तः (१.२.३०), समाहारः स्वरितः (१.२.३१)
-    उद्देश्य: यूनिकोड चिह्नों के आधार पर अच् (Vowel) की पिच संज्ञा निर्धारित करना।
+    वृत्तीय आयात (Circular Import) से बचने के लिए यहाँ Varna इम्पोर्ट नहीं किया गया है।
     """
 
     # १. अचश्च (१.२.२८) नियम का पालन: केवल अच् पर ही स्वर संज्ञा संभव है
@@ -27,7 +28,6 @@ def apply_svara_sanjna(varna_obj, raw_string):
         varna_obj.svara_mark = "॑"
 
     # ४. उदात्त (Default) - उच्चैरुदात्तः (१.२.२९)
-    # यदि कोई चिह्न नहीं है, तो पाणिनीय तंत्र में उसे उदात्त माना जाता है
     else:
         varna_obj.svara = "उदात्त"
         varna_obj.svara_mark = None

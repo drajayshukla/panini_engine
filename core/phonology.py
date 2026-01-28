@@ -1,6 +1,7 @@
 import re
+# यहाँ से इम्पोर्ट करना सुरक्षित है
 from logic.svara_rules import apply_svara_sanjna
-
+from logic.sthana_rules import apply_sthana_to_varna
 # --- व्याकरणिक स्थिरांक (Grammar Constants) ---
 VOWELS_MAP = {
     'ा': 'आ', 'ि': 'इ', 'ी': 'ई', 'ु': 'उ', 'ू': 'ऊ',
@@ -44,12 +45,17 @@ class Varna:
         # १.१.८: मुखनासिकावचनोऽनुनासिकः (चंद्रबिंदु की पहचान)
         self.is_anunasika = 'ँ' in raw_unit
 
-        # चिह्नों के आधार पर सवर अपडेट करना (१.२.२९-३१)
+        # १.१.९: स्थान एवं प्रयत्न
+        self.sthana = None  # logic/sthana_rules.py द्वारा भरा जाएगा
+        self.prayatna = None
+
+        # --- डायग्नोस्टिक प्रोसेस: संज्ञाएँ अपडेट करना ---
+
+        # १. पिच (Pitch) अपडेट करें
         apply_svara_sanjna(self, raw_unit)
 
-        # १.१.९: स्थान एवं प्रयत्न (भविष्य के लिए)
-        self.sthana = None
-        self.prayatna = None
+        # २. उच्चारण स्थान (Sthana) अपडेट करें - (अकुहविसर्जनीयानां कण्ठः आदि)
+        apply_sthana_to_varna(self)
 
     def _calculate_matra(self, char):
         """
@@ -64,12 +70,12 @@ class Varna:
         return 0
 
     def __repr__(self):
-        # क्लीन रिप्रजेंटेशन: अ(१)[ह्रस्व][उदात्त][निरनुनासिक]
+        # क्लीन रिप्रजेंटेशन: अ(१)[ह्रस्व][उदात्त][निरनुनासिक][कण्ठ]
         kala = f"[{self.kala_sanjna}]" if self.kala_sanjna else ""
         svara = f"[{self.svara}]" if self.is_vowel else ""
         anu = "[अनुनासिक]" if self.is_anunasika else "[निरनुनासिक]"
-        return f"{self.char}({self.matra}){kala}{svara}{anu}"
-
+        sth = f"[{self.sthana}]" if self.sthana else ""
+        return f"{self.char}({self.matra}){kala}{svara}{anu}{sth}"
 
 # --- २. विच्छेद इंजन (16 Rules + Svara & Anunasika Patch) ---
 def sanskrit_varna_vichhed(text, return_objects=True):
