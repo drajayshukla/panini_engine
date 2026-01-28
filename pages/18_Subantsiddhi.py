@@ -95,49 +95,55 @@ if word_input:
             prev_str = add_history("Initial (Post-Cleaning)", current_varnas, prev_str)
 
             # --- BRANCH A: SPECIAL STEM (Kroṣṭu Case) ---
+            # --- BRANCH A: SPECIAL STEM (Kroṣṭu Case) ---
             if "क्रोष्टु" in word_input:
-                # 1. 7.1.95 (तृज्वत्क्रोष्टुः)
+                # 1. 7.1.95
                 current_varnas, s95 = apply_trijvadbhava_7_1_95(current_varnas)
                 prev_str = add_history(s95, current_varnas, prev_str)
 
-                # 2. 7.1.94 (अनङ्-आदेशः)
+                # 2. 7.1.94
                 current_varnas, s94 = apply_anang_7_1_94(current_varnas)
                 prev_str = add_history(s94, current_varnas, prev_str)
 
-                # 3. 1.3.3 (ङ्-इत्-लोपः) - Surgical removal
-                for i, v in enumerate(current_varnas):
+                # 3. 1.3.3 Surgical Removal of ङ्
+                temp_list = list(current_varnas)
+                for i, v in enumerate(temp_list):
                     if v.char == 'ङ्':
-                        current_varnas.pop(i)
+                        temp_list.pop(i)
                         break
+                current_varnas = temp_list
                 prev_str = add_history("१.३.३ (हलन्त्यम् - ङ् लोपः)", current_varnas, prev_str)
 
-                # 4. 6.4.11 (उपधा दीर्घ)
+                # 4. 6.4.11 (Create the 'आ')
                 current_varnas, s11 = apply_upadha_dirgha_6_4_11(current_varnas)
                 prev_str = add_history(s11, current_varnas, prev_str)
 
-                # 5. 6.1.68 (अपृक्त-सकार-लोप)
-                current_varnas, s68 = apply_hal_nyab_6_1_68(current_varnas)
-                prev_str = add_history(s68, current_varnas, prev_str)
-
-                # 6. 8.2.7 (नलोपः)
-                current_varnas, s7 = apply_nalopa_8_2_7(current_varnas)
-                prev_str = add_history(s7, current_varnas, prev_str)
-
-            # --- BRANCH B: APRUKTA LOPA (Bahuśreyasī Case) ---
-            else:
-                # Check for Hal-nyab-bhyo first
-                lopa_varnas, s68 = apply_hal_nyab_6_1_68(list(current_varnas))
+                # 5. 6.1.68 (Remove 'स्')
+                res_v5, s68 = apply_hal_nyab_6_1_68(current_varnas)
                 if s68:
-                    current_varnas = lopa_varnas
+                    current_varnas = res_v5
+                prev_str = add_history(s68 if s68 else "६.१.६८ (Failed)", current_varnas, prev_str)
+
+                # 6. 8.2.7 (Remove 'न्')
+                res_v6, s7 = apply_nalopa_8_2_7(current_varnas)
+                if s7:
+                    current_varnas = res_v6
+                prev_str = add_history(s7 if s7 else "८.२.७ (Failed)", current_varnas, prev_str)
+            ## --- BRANCH B/C: APRUKTA LOPA or RUTVA-VISARGA ---
+            else:
+                # Try Branch B: Apṛkta Lopa (e.g. बहुश्रेयसी)
+                res_v5, s68 = apply_hal_nyab_6_1_68(list(current_varnas))
+                if s68:
+                    current_varnas = res_v5
                     prev_str = add_history(s68, current_varnas, prev_str)
 
-                # --- BRANCH C: RUTVA & VISARGA (Standard Case) ---
+                # Try Branch C: Rutva & Visarga (e.g. राम)
                 elif intermediate_word.endswith('स्'):
                     # 5g. Rutva (8.2.66)
                     current_varnas, s66 = apply_rutva_8_2_66(current_varnas)
                     prev_str = add_history(s66, current_varnas, prev_str)
 
-                    # 5h. ruँ-Lopa
+                    # 5h. ruँ-Lopa (It-cleaning)
                     current_varnas, _ = ItSanjnaEngine.run_it_sanjna_prakaran(
                         current_varnas, "रुँ", UpadeshaType.VIBHAKTI
                     )
