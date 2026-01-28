@@ -5,18 +5,17 @@ from core.phonology import Varna
 
 def apply_hal_nyab_6_1_68(varna_list):
     """
-    ६.१.६८ हल्ङ्याब्भ्यो दीर्घात् सुतिस्यपृक्तं हल्
-    नियम: दीर्घ 'ई' (ङी), 'आ' (आप्) या हल् के बाद सु-ति-सि के अपृक्त 'स्' का लोप।
+    ६.१.६८ हल्ङ्याब्भ्यो...
+    Strictly targets the 'स्' if preceded by 'आ' or 'ई'.
     """
-    if varna_list and varna_list[-1].char == 'स्':
-        if len(varna_list) >= 2:
-            prev_varna = varna_list[-2].char
-            # क्रोष्टा (आ) और बहुश्रेयसी (ई) जैसे उदाहरणों के लिए
-            if prev_varna in ['ई', 'आ']:
-                varna_list.pop()
-                return varna_list, "६.१.६८ (हल्ङ्याब्भ्यो दीर्घात् सुतिस्यपृक्तं हल्)"
+    # Create a local copy to avoid reference issues
+    v_list = list(varna_list)
+    if len(v_list) >= 2 and v_list[-1].char == 'स्':
+        # Check penultimate character
+        if v_list[-2].char in ['आ', 'ई']:
+            v_list.pop() # Remove 'स्'
+            return v_list, "६.१.६८ (हल्ङ्याब्भ्यो... अपृक्त-लोप)"
     return varna_list, None
-
 
 def apply_upadha_dirgha_6_4_11(varna_list):
     """
@@ -65,13 +64,13 @@ def apply_trijvadbhava_7_1_95(varna_list):
 def apply_nalopa_8_2_7(varna_list):
     """
     ८.२.७ नलोपः प्रातिपदिकान्तस्य
-    नियम: प्रातिपदिक के अन्त में स्थित 'न्' का लोप (पद संज्ञा होने पर)।
+    Target 'न्' only if it is the absolute final character.
     """
-    if varna_list and varna_list[-1].char == 'न्':
-        varna_list.pop()
-        return varna_list, "८.२.७ (नलोपः प्रातिपदिकान्तस्य)"
+    v_list = list(varna_list)
+    if v_list and v_list[-1].char == 'न्':
+        v_list.pop() # Remove 'न्'
+        return v_list, "८.२.७ (नलोपः प्रातिपदिकान्तस्य)"
     return varna_list, None
-
 
 def apply_rutva_8_2_66(varna_list):
     """
