@@ -87,21 +87,23 @@ def apply_upadha_dirgha_6_4_11(varna_list):
             return v_list, "६.४.११ (अप्तृन्तृच्... उपधा दीर्घ)"
     return varna_list, None
 
+
 def apply_ti_lopa_6_4_143(varna_list):
     """
     ६.४.१४३ टेः
-    Logic: Delete the 'Ti' (final vowel and following consonants)
-    of the stem before a 'Dit' suffix (Adḍ).
-    Example: अन्य (अ-न्-य्-अ) -> अन्य् (अ-न्-य्)
+    Correct Logic: Only the final 'अ' of the stem (अन्य) is removed.
+    The 'य्' is preserved.
     """
     v_list = list(varna_list)
-    # The 'Ti' of 'अन्य' is the final 'अ'.
-    # Since 'अद्ड्' is Dit (has 'ḍ' as it), we drop the stem's final 'अ'.
-    # In our varna list: [अ, न्, य्, अ, अ, द्, ड्] -> drop the 'अ' at index 3.
-    # Logic: Find the boundary between stem and suffix.
-    if len(v_list) > 3:
-        # For 'anya', the stem vowel is at index -4 relative to [अ, द्, ड्]
-        v_list.pop(-4)
+
+    # In the list: ['अ', 'न्', 'य्', 'अ', 'अ', 'द्']
+    # Indices:       0    1    2    3    4    5
+    # We need to remove index 3 (the stem's final vowel)
+
+    if len(v_list) >= 6:
+        # Assuming the suffix 'ad' starts at index -2
+        # The stem's Ti is at index -3 relative to the end of the list
+        v_list.pop(-3)
         return v_list, "६.४.१४३ (टेः - टि-लोपः)"
     return varna_list, None
 
