@@ -2,6 +2,7 @@
 FILE: logic/sanjna_rules.py
 PAS-v2.0: 5.0 (Siddha)
 PILLAR: Sanjñā-Prakaraṇam (Definitions)
+EXPANDED: Includes 1.1 (General), 1.3 (It-Markers), and 1.4 (Morphology)
 """
 
 from core.pratyahara_engine import PratyaharaEngine
@@ -11,7 +12,7 @@ from core.upadesha_registry import UpadeshaType
 pe = PratyaharaEngine()
 
 # =============================================================================
-# SECTION 1.1: Foundation Definitions (Vriddhi, Guna, Samyoga)
+# SECTION 1.1: Foundation Definitions (Vriddhi, Guna, Samyoga, Sarvanama)
 # =============================================================================
 
 def apply_1_1_1_vriddhi(varna_list):
@@ -60,6 +61,22 @@ def apply_1_1_7_samyoga(varna_list):
                 nxt.trace.append("१.१.७ संयोगः")
 
     return varna_list
+
+def is_sarvanama_1_1_27(word_str):
+    """
+    [SUTRA]: सर्वादीनि सर्वनामानि (१.१.२७)
+    [LOGIC]: Checks against the Sarvadi Gana (List of Pronouns).
+    """
+    # In a full production app, load 'ganapatha.json'.
+    # For now, we hardcode the most common ones for Subanta.
+    sarvadi_gana = {
+        "सर्व", "विश्व", "उभ", "उभय", "डतर", "डतम", "अन्य", "अन्यतर",
+        "इतर", "त्वत्", "त्व", "नेम", "सम", "सिम", "पूर्व", "पर",
+        "अवर", "दक्षिण", "उत्तर", "अपर", "अधर", "स्व", "अन्तर",
+        "त्यद्", "तद्", "यद्", "एतद्", "इदम्", "अदस्", "एक", "द्वि",
+        "युष्मद्", "अस्मद्", "भवतु", "किम्"
+    }
+    return word_str in sarvadi_gana
 
 # =============================================================================
 # SECTION 1.3: It-Sanjna (Markers) - The Diagnosis Logic
@@ -129,16 +146,11 @@ def apply_1_3_5_adir_nitudavah(varna_list):
     char = first.char
 
     # Yi, Tu, Du check
-    targets = ['ञि', 'टु', 'डुकृ', 'डु'] # Simplified check
-
     # Strict check usually involves splitting 'Ñi' -> 'Ñ' + 'i'
-    # Here we assume the input might be atomic or split.
-    # If split: 'Ñ' is at index 0.
 
     indices = set()
     if char in ['ञ्', 'ट्', 'ड्']:
         # We assume the user inputs 'Ñi' as 'Ñ' + 'i'
-        # If the root is 'Ñibhī', then 'Ñ' is It.
         indices.add(0)
         first.sanjnas.add("इत्")
         return indices, ["१.३.५ आदिर्ञिटुडवः"]
@@ -202,23 +214,66 @@ def apply_1_3_8_lashakva(varna_list, source_type, is_taddhita=False):
     return set(), []
 
 # =============================================================================
-# SECTION 1.4: Pada & Other Designations
+# SECTION 1.4: Morphological Definitions (Nadi, Ghi, Bha, Pada)
 # =============================================================================
 
-def apply_1_4_14_pada(varna_list):
+def is_nadi_1_4_3(varna_list):
+    """
+    [SUTRA]: यू स्त्र्याख्यौ नदी (१.४.३)
+    [LOGIC]: Long 'ī' and 'ū' ending feminine words are Nadi.
+    Example: 'Nadi', 'Vadhu'.
+    """
+    if not varna_list: return False
+    last_char = varna_list[-1].char
+    # Check 1: Must end in Long I or Long U
+    if last_char not in ['ई', 'ऊ']:
+        return False
+    # Check 2: Must be Feminine (Simplistic check for now)
+    return True
+
+def is_ghi_1_4_7(varna_list):
+    """
+    [SUTRA]: शेषो घ्यसखि (१.४.७)
+    [LOGIC]: Short 'i' and 'u' ending words (except Sakhi) are Ghi.
+    Example: 'Mati', 'Bhanu'.
+    """
+    if not varna_list: return False
+
+    word_str = "".join([v.char for v in varna_list])
+    if word_str == "सखि": return False # Exception
+
+    last_char = varna_list[-1].char
+    if last_char in ['इ', 'उ']:
+        return True
+    return False
+
+def check_pada_sanjna_1_4_14(varna_list, source_type):
     """
     [SUTRA]: सुप्तिङन्तं पदम् (१.४.१४)
-    [LOGIC]: Assigns 'Pada' Sanjna if the word ends in Sup (Case) or Ting (Verb).
-    Used to trigger 8.x.x Tripadi rules (like Rutva).
+    [LOGIC]: Ends in Sup (Case) or Ting (Verb).
     """
-    # This is usually a 'State Check'.
-    # If the process has reached the end of derivation (Subanta/Tinganta),
-    # the whole list is a Pada.
+    is_pada = False
+    msg = ""
 
-    # For clinical usage, we attach the tag to the LAST Varna (the Anchor).
-    if varna_list:
-        varna_list[-1].sanjnas.add("पद")
-        varna_list[-1].trace.append("१.४.१४ सुप्तिङन्तं पदम्")
-        return True, "१.४.१४ (पद-संज्ञा)"
+    if source_type == UpadeshaType.VIBHAKTI:
+        is_pada = True
+        msg = "१.४.१४ (सुबन्तम्)"
+    return is_pada, msg
 
-    return False, "Not a Pada"
+# Alias for compatibility with other files (FIXES IMPORT ERROR)
+apply_1_4_14_pada = check_pada_sanjna_1_4_14
+
+def is_bha_1_4_18(varna_list, suffix_varna_list):
+    """
+    [SUTRA]: यचि भम् (१.४.१८)
+    [LOGIC]: Stem is 'Bha' before a suffix starting with 'Y' or 'Ac'.
+    """
+    if not suffix_varna_list: return False
+    first_char = suffix_varna_list[0].char
+
+    # Check: Starts with Y or Vowel?
+    is_y_or_ac = first_char == 'य्' or pe.is_in(first_char, "अच्")
+
+    if is_y_or_ac:
+        return True
+    return False

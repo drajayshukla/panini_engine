@@ -329,3 +329,10 @@ class VidhiEngine:
             varna_list.append(Upadesha('ः', "8.3.15"))
             return varna_list, "८.३.१५ (विसर्गः)"
         return varna_list, None
+
+    from logic.sanjna_rules import is_ghi_1_4_7
+
+    # Inside a Vidhi rule for 7.3.111 (Gherhiti)
+    if is_ghi_1_4_7(anga_varnas):
+        # Apply Guna to the Ghi stem
+        pass
