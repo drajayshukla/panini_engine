@@ -9,7 +9,6 @@ st.set_page_config(
 )
 
 # --- 2. PAS-5.0 IMPORTS ---
-# [FIX]: Added sanskrit_varna_samyoga for final merging
 from core.phonology import ad, sanskrit_varna_samyoga
 from core.upadesha_registry import UpadeshaType
 from logic.pratipadika_engine import PratipadikaEngine
@@ -20,9 +19,12 @@ from logic.sanjna_rules import apply_1_4_14_pada
 
 
 # --- 3. HELPER FUNCTIONS ---
-def join_varnas(varna_list):
-    """Reconstructs string from Varna objects (Raw View)."""
-    return "".join([v.char for v in varna_list])
+def get_readable_form(varna_list):
+    """
+    Uses the Samyoga Engine to create a readable Devanagari string
+    (Ligatures applied) instead of raw concatenation.
+    """
+    return sanskrit_varna_samyoga(varna_list)
 
 
 def get_diff_highlight(old_str, new_str):
@@ -89,17 +91,21 @@ if word_input:
 
         # History Tracking
         history = []
-        # Initial display uses raw join for clarity in Vichhed
-        prev_str = join_varnas(varna_list)
+        # [VISUAL FIX]: Initialize with Readable Form (e.g. रामसुँ)
+        prev_str = get_readable_form(varna_list)
 
 
         def add_trace(sutra, varnas, prev_s, change_desc):
-            # For trace, we use raw join to show internal changes clearly
-            curr_s = join_varnas(varnas)
+            # [VISUAL FIX]: Use Samyoga for the 'Form' column so it looks like 'रामस्' not 'र्आम्अस्'
+            curr_s = get_readable_form(varnas)
+
+            # Create a clean visual split for the Vichhed column
+            vichhed_display = " + ".join([f"{v.char}" for v in varnas])
+
             history.append({
                 "step": len(history) + 1,
                 "sutra": sutra,
-                "vichhed": " + ".join([f"`{v.char}`" for v in varnas]),
+                "vichhed": vichhed_display,
                 "form": curr_s,
                 "highlighted": get_diff_highlight(prev_s, curr_s),
                 "change": change_desc
@@ -137,8 +143,11 @@ if word_input:
         suffix_part = current_varnas[user_indices[1]:]
 
         with c_vis:
-            st.markdown(f"**Aṅga:** `:blue[{join_varnas(anga_part)}]`")
-            st.markdown(f"**Suffix:** `:orange[{join_varnas(suffix_part)}]`")
+            # Join parts for display
+            anga_str = get_readable_form(anga_part)
+            suffix_str = get_readable_form(suffix_part)
+            st.markdown(f"**Aṅga:** `:blue[{anga_str}]`")
+            st.markdown(f"**Suffix:** `:orange[{suffix_str}]`")
 
         # E. PADA SANJNA (1.4.14)
         is_pada, pada_msg = apply_1_4_14_pada(current_varnas, UpadeshaType.VIBHAKTI)
@@ -168,7 +177,6 @@ if word_input:
                     if s8: prev_str = add_trace("६.४.८", process_list, prev_str, "उपधा-दीर्घः")
 
             # --- RULE 4: 6.1.68 Hal-Nyab-Lopa ---
-            # Strict Halanta Check
             stem_ends_in_consonant = not anga_part[-1].is_vowel if anga_part else False
             stem_ends_in_fem = anga_part[-1].char in ['आ', 'ई', 'ऊ'] if anga_part else False
 
@@ -197,17 +205,28 @@ if word_input:
             df_history = pd.DataFrame(history)
 
             if not df_history.empty:
+                # [Visual Tweak]: Use Styler or simpler Column layout
+                # Here we use Streamlit columns for a clean look
+
+                # Header
+                h_cols = st.columns([0.5, 1, 3, 1.5, 2])
+                h_cols[0].markdown("**#**")
+                h_cols[1].markdown("**Sutra**")
+                h_cols[2].markdown("**Vichhed (Split)**")
+                h_cols[3].markdown("**Form (Joined)**")
+                h_cols[4].markdown("**Change**")
+                st.divider()
+
                 for i, row in df_history.iterrows():
                     with st.container():
                         c_step = st.columns([0.5, 1, 3, 1.5, 2])
-                        c_step[0].write(f"**{row['step']}**")
+                        c_step[0].write(f"{row['step']}")
                         c_step[1].info(f"{row['sutra']}")
-                        c_step[2].text(row['vichhed'])
-                        c_step[3].markdown(f"**{row['highlighted']}**")
+                        c_step[2].code(row['vichhed'], language="text")  # Code block for clear separation
+                        c_step[3].markdown(f"### {row['highlighted']}")  # Bigger font for form
                         c_step[4].success(row['change'])
                         st.divider()
 
-            # [CRITICAL FIX]: Use Samyoga for the final polished output
             final_output = sanskrit_varna_samyoga(process_list)
             st.markdown("---")
 
@@ -215,7 +234,6 @@ if word_input:
             with res_col1:
                 st.metric("Input (Pratipadika)", word_input)
             with res_col2:
-                # Displays the merged, beautiful Sanskrit string
                 st.metric("Siddha Output (Subanta)", final_output)
 
             st.balloons()
