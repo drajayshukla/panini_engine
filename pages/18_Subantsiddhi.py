@@ -24,7 +24,7 @@ def get_diff_highlight(old_str, new_str):
     return f":red[{new_str}]"
 
 
-# --- 4. EXTENDED VIDHI (Local Extensions) ---
+# --- 4. EXTENDED VIDHI ---
 class ExtendedVidhi(VidhiEngine):
     @staticmethod
     def apply_ami_purvah_6_1_107(varna_list):
@@ -65,25 +65,18 @@ if word_input:
     if base_info['is_pratipadika']:
         st.success(f"**Step 1: Identity Verified** - {base_info['sutra_applied']}")
 
-        # --- B. ARCHITECTURAL FIX: SPLIT PROCESSING ---
-        # 1. Base: Raw Phonology ONLY (No It-Sanjna)
-        # [CRITICAL]: This protects 'Geeta' from 1.3.8 Lashakvataddhite
+        # B. SPLIT PROCESSING (Safeguard 1.3.8)
         base_varnas = ad(word_input)
-
-        # 2. Suffix: Phonology + It-Sanjna (Cleaning)
-        # [CRITICAL]: 1.3.8 applies HERE
         suffix_raw_varnas = ad(selected_suffix)
+
         clean_suffix, it_tags = ItEngine.run_it_prakaran(
             suffix_raw_varnas, source_type=UpadeshaType.VIBHAKTI
         )
 
-        # 3. Combine Clean Parts
         combined_varnas = base_varnas + clean_suffix
 
-        # --- C. HISTORY & TRACING ---
+        # C. HISTORY & TRACING
         history = []
-
-        # Show Split View
         base_disp = get_readable_form(base_varnas)
         suffix_clean_disp = get_readable_form(clean_suffix)
 
@@ -136,15 +129,17 @@ if word_input:
         if is_pada:
             process_list = list(current_varnas)
 
-            # 1. 7.1.24 Ato Am (Neut)
+            # 1. 7.1.24 Ato Am (Neuter Check)
             if word_input in ["फल", "ज्ञान", "वन", "गीत"] and selected_suffix in ["सुँ", "अम्"]:
-                process_list, s24 = VidhiEngine.ato_am_7_1_24(process_list)
+                # [FIX]: Corrected method name to 'apply_ato_am_7_1_24'
+                process_list, s24 = VidhiEngine.apply_ato_am_7_1_24(process_list)
                 if s24: prev_str = add_trace("७.१.२४", process_list, prev_str, "अतोऽम्")
+
                 process_list, s107 = ExtendedVidhi.apply_ami_purvah_6_1_107(process_list)
                 if s107: prev_str = add_trace("६.१.१०७", process_list, prev_str, "पूर्वरूपम्")
 
             # 2. 6.1.107 Ami Purvah (Masc Acc)
-            if selected_suffix == "अम्" and not s24:  # Avoid double fire
+            if selected_suffix == "अम्" and not s24:
                 process_list, s107 = ExtendedVidhi.apply_ami_purvah_6_1_107(process_list)
                 if s107: prev_str = add_trace("६.१.१०७", process_list, prev_str, "अमि पूर्वः")
 
