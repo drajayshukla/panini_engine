@@ -4,6 +4,16 @@ PAS-v2.0: 5.0 (Siddha)
 PILLAR: Sanjñā-Prakaraṇam (Definitions)
 UPDATED: 1.3.5 now correctly removes both parts of split markers (e.g., T+u).
 """
+"""
+FILE: logic/sanjna_rules.py
+PAS-v2.0: 5.0 (Siddha)
+PILLAR: Sanjñā-Prakaraṇam (Definitions)
+UPDATED: Strict Scope Enforcement for 1.3.8
+"""
+
+from core.pratyahara_engine import PratyaharaEngine
+from core.upadesha_registry import UpadeshaType
+
 
 from core.pratyahara_engine import PratyaharaEngine
 from core.upadesha_registry import UpadeshaType
@@ -192,18 +202,41 @@ def apply_1_3_7_chutu(varna_list, source_type):
     return set(), []
 
 
+
+# ... (Previous imports and setup remain the same) ...
+
 def apply_1_3_8_lashakva(varna_list, source_type, is_taddhita=False):
-    """[SUTRA]: लशक्वतद्धिते (१.३.८)"""
-    if source_type not in [UpadeshaType.PRATYAYA, UpadeshaType.VIBHAKTI]: return set(), []
-    if is_taddhita: return set(), []
+    """
+    [SUTRA]: लशक्वतद्धिते (१.३.८)
+    [SCOPE]: Applies ONLY to Pratyayas (Suffixes).
+    [BLOCK]: NEVER apply to Pratipadika (Stem) or Dhatu (Root).
+    """
+    # --- STRICT GATEKEEPER ---
+    # If the source is a Base (Stem) or Root, ABORT immediately.
+    if source_type in [UpadeshaType.DHATU, UpadeshaType.PRATIPADIKA, UpadeshaType.AGAMA]:
+        return set(), []
+
+    # If explicitly not a Pratyaya context, ABORT.
+    if source_type not in [UpadeshaType.PRATYAYA, UpadeshaType.VIBHAKTI]:
+        return set(), []
+
+    # Taddhita Exclusion (Ataddhite)
+    if is_taddhita:
+        return set(), []
+
     if not varna_list: return set(), []
+
+    # [LOGIC]: Check Initial Letter (Adi)
     char = varna_list[0].char
+
+    # Targets: L, Sh, K-Varga (k, kh, g, gh, ng)
     targets = ['ल्', 'श्', 'क्', 'ख्', 'ग्', 'घ्', 'ङ्']
+
     if char in targets:
         varna_list[0].sanjnas.add("इत्")
         return {0}, ["१.३.8 लशक्वतद्धिते"]
-    return set(), []
 
+    return set(), []
 
 # =============================================================================
 # SECTION 1.4: Morphology Helpers
