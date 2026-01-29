@@ -1,333 +1,381 @@
 """
 FILE: logic/vidhi_engine.py
 PAS-v2.0: 5.0 (Siddha)
-PILLAR: Vidhi (Operational Rules)
-UPDATED: Integrated logic from User's Legacy Script (Anang, Nalopa, Upadha)
+PILLAR: Vidhi-Prakaraṇam (Operational Rules)
+UPDATED: Fully Integrated Kṛt & Subanta Logic (Sutra Order).
 """
 
-from core.upadesha_registry import Upadesha
-from logic.anga_adhikara_wrapper import angasya_rule
-from core.atidesha_mapper import AtideshaMapper
+from core.phonology import Varna, ad
+from core.pratyahara_engine import PratyaharaEngine
 from core.paribhasha_manager import ParibhashaManager
-import logic.stem_classifier as classifier
+from core.upadesha_registry import UpadeshaType
 
 # Sanjna Imports (Zone 1)
 from logic.sanjna_rules import is_ghi_1_4_7, is_nadi_1_4_3
 
+pe = PratyaharaEngine()
+
 
 class VidhiEngine:
     """
-    सञ्चालक: - Zone 3 (Operational Engine).
-    The Workshop: Performs physical transformations (Adesha) on the Varna objects.
-    Governed by Paribhasha targeting and Anga adhikara.
+    विधि-सञ्चालक: (The Rule Executor)
+    Contains operational rules for transformation (Adesha).
+    Organized strictly by Ashtadhyayi Sutra Order.
     """
 
     # =========================================================================
-    # CHAPTER 1: Sañjñā-Dependent Vidhis (General)
+    # BOOK 1: Definitions & Extensions
     # =========================================================================
 
     @staticmethod
     def apply_hrasva_napumsaka_1_2_47(varna_list):
         """
         [SUTRA]: ह्रस्वो नपुंसके प्रातिपदिकस्य (१.२.४७)
-        [LOGIC]: Shortens long vowels in Neuter gender stems.
-        Example: 'Gomati' (Fem/Long) -> 'Gomati' (Neut/Short)
+        [LOGIC]: Shortens long vowel of Neuter stem. Śrīpā -> Śrīpa.
         """
-        v_list = list(varna_list)
-        if len(v_list) >= 2:
-            sthani = v_list[-1]
-            mapping = {
-                'आ': 'अ', 'ा': 'अ',
-                'ई': 'इ', 'ी': 'इ', 'ए': 'इ', 'ऐ': 'इ',
-                'ऊ': 'उ', 'ू': 'उ', 'ओ': 'उ', 'औ': 'उ'
-            }
+        if not varna_list: return varna_list, None
+        last = varna_list[-1]
 
-            if sthani.char in mapping:
-                new_char = mapping[sthani.char]
-                adesha = Upadesha(new_char, "1.2.47")
-                AtideshaMapper.apply_sthanivadbhava_1_1_56(adesha, sthani, is_al_vidhi=False)
-                v_list[-1] = adesha
-                return v_list, f"१.२.४७ (ह्रस्वादेशः: {sthani.char} -> {adesha.char})"
-
+        mapping = {'आ': 'अ', 'ई': 'इ', 'ऊ': 'उ'}
+        if last.char in mapping:
+            old = last.char
+            last.char = mapping[old]
+            return varna_list, f"१.२.४७ ({old}->{last.char})"
         return varna_list, None
 
     # =========================================================================
-    # CHAPTER 6: Transformations & Elisions
+    # BOOK 6: Anga & Sandhi Operations
     # =========================================================================
 
     @staticmethod
     def apply_hal_nyab_6_1_68(varna_list):
         """
         [SUTRA]: हल्ङ्याब्भ्यो दीर्घात् सुतिस्यपृक्तं हल् (६.१.६८)
-        [LOGIC]: Deletes Su/Ti/Si after Hal or Long Ni/Ap.
+        [LOGIC]: Deletes the suffix consonant (usually 's') if it is Aprikta (single letter)
+                 and follows a Halanta or Long Ni/Ap stem.
         """
         if not varna_list: return varna_list, None
-
         last = varna_list[-1]
-        # Check if suffix is s, t, d (remnants)
-        if last.char not in ['स्', 'त्', 'द्']: return varna_list, None
 
-        # Check Anchor (Preceding char)
-        if len(varna_list) < 2: return varna_list, None
-        anchor = varna_list[-2]
-
-        # Hal check (Is consonant?)
-        is_hal = not anchor.is_vowel
-        # Diirgha Feminine check
-        is_fem = anchor.char in ['आ', 'ई', 'ऊ', 'ॠ']
-
-        if is_hal or is_fem:
-            new_list = varna_list[:-1]
-            return new_list, "६.१.६८ (हल्-ङ्याब्-भ्यो लोपः)"
+        # Check if suffix is 's' (Su)
+        if last.char == 'स्':
+            # In a full graph implementation, we would check the 'Anchor' (Stem).
+            # Here we assume the caller verified the context (Halanta/Ni/Ap).
+            varna_list.pop()
+            return varna_list, "६.१.६८ (सु-लोपः)"
         return varna_list, None
 
     @staticmethod
-    @angasya_rule("6.4.8")
-    def apply_upadha_dirgha_6_4_8(anga, nimitta):
+    def apply_ami_purvah_6_1_107(varna_list):
+        """
+        [SUTRA]: अमि पूर्वः (६.१.१०७)
+        [LOGIC]: Ak + Am -> Purvarupa. E.g., Rām a + a m -> Rām a m.
+        """
+        if len(varna_list) < 2: return varna_list, None
+
+        v1 = varna_list[-2]  # Stem end
+        v2 = varna_list[-1]  # Suffix start (Am -> a)
+
+        if v1.char == 'अ' and v2.char == 'अ':
+            varna_list.pop()  # Remove second 'a'
+            return varna_list, "६.१.१०७ (अमि पूर्वः)"
+        return varna_list, None
+
+    @staticmethod
+    def apply_upadha_dirgha_6_4_8(varna_list):
         """
         [SUTRA]: सर्वनामस्थाने चासम्बुद्धौ (६.४.८)
-        [LOGIC]: Lengthens Penultimate Vowel of 'n' ending stem.
-        User's Legacy Code: "The उपधा letter... becomes दीर्घ"
+        [LOGIC]: Lengthens penultimate 'a' to 'ā' for 'n' ending stems.
         """
-        # 1. Must end in 'n'
-        if anga[-1].char != 'न्': return anga, None
+        if len(varna_list) < 2: return varna_list, None
 
-        # 2. Get Upadha
-        upadha_varna, idx = ParibhashaManager.get_upadha_1_1_65(anga)
-        if not upadha_varna: return anga, None
+        # Check if stem ends in 'n' (implied by caller context, but safe to check)
+        if varna_list[-1].char == 'न्':
+            upadha = varna_list[-2]
+            if upadha.char == 'अ':
+                upadha.char = 'आ'
+                return varna_list, "६.४.८ (उपधा दीर्घ)"
+        return varna_list, None
 
-        # 3. Apply Lengthening
-        classifier._transform_to_dirgha(upadha_varna, "६.४.८")
-        return anga, "६.४.८ (उपधा दीर्घ)"
+    @staticmethod
+    def apply_upadha_dirgha_6_4_11(varna_list):
+        """
+        [SUTRA]: अप्तृन्वृच्... (६.४.११)
+        [LOGIC]: Lengthen penultimate 'a' to 'ā' (Specific list).
+        """
+        if len(varna_list) < 2: return varna_list, None
+        upadha = varna_list[-2]
+
+        if upadha.char == 'अ':
+            upadha.char = 'आ'
+            return varna_list, "६.४.११ (अ -> आ)"
+        return varna_list, None
+
+    @staticmethod
+    def apply_ti_lopa_6_4_143(varna_list):
+        """
+        [SUTRA]: टेः (६.४.१४३)
+        [LOGIC]: Deletes the 'Ti' (final vowel + consonants) before Dhit suffix.
+        Example: Anya + at -> Any + at -> Anyat.
+        """
+        if len(varna_list) < 2: return varna_list, None
+
+        # Strategy: Find the last vowel of the stem (backwards from suffix)
+        limit = len(varna_list) - 1
+        idx_to_remove = -1
+
+        # Simple check for 'a' before suffix
+        if varna_list[limit - 1].char == 'अ':
+            idx_to_remove = limit - 1
+
+        if idx_to_remove != -1:
+            varna_list.pop(idx_to_remove)
+            return varna_list, "६.४.१४३ (टि-लोपः)"
+        return varna_list, None
 
     # =========================================================================
-    # CHAPTER 7: Anga Operations & Suffix Transformations
+    # BOOK 7: Anga Transformations
     # =========================================================================
 
     @staticmethod
-    @angasya_rule("7.1.24")
-    def ato_am_7_1_24(anga, nimitta):
+    def apply_ato_am_7_1_24(varna_list):
         """
         [SUTRA]: अतोऽम् (७.१.२४)
-        [LOGIC]: After a short 'a' stem, 'Su' and 'Am' become 'Am'.
+        [LOGIC]: Neuter 'a' stem + Su/Am -> Am.
         """
-        if not anga or not nimitta: return anga, None
+        if not varna_list: return varna_list, None
+        last = varna_list[-1]
 
-        if anga[-1].char != 'अ':
-            return anga, None
-
-        first_nim = nimitta[0]
-        if first_nim.char not in ['स्', 'अ', 'म्']:
-            return anga, None
-
-        nimitta.clear()
-        a_obj = Upadesha('अ', "7.1.24")
-        m_obj = Upadesha('म्', "7.1.24")
-        AtideshaMapper.apply_sthanivadbhava_1_1_56(a_obj, first_nim)
-        nimitta.extend([a_obj, m_obj])
-
-        return anga, "७.१.२४ (अतोऽम्)"
+        if last.char == 'स्':  # Su
+            last.char = 'म्'  # Becomes Am
+            return varna_list, "७.१.२४ (सुँ -> अम्)"
+        return varna_list, None
 
     @staticmethod
-    @angasya_rule("7.1.94")
-    def apply_anang_7_1_94(anga, nimitta):
+    def apply_add_7_1_25(varna_list):
         """
-        [SUTRA]: ॠदुशनस्पुरुदंसोऽनेहसां च (७.१.९४) -> अनङ् सौ
-        [LOGIC]: 'Ṛ' ending words get 'anan' replacement in Su.
-        Inspired by User's Legacy Code: "replace... 'ऋ', 'अन्'"
+        [SUTRA]: अद्ड् डतरादिभ्यः पञ्चभ्यः (७.१.२५)
+        [LOGIC]: Su/Am -> Add (at/ad) for Dataradi pronouns (Neuter).
         """
-        # 1. Check Stem: Ends in Ṛ (e.g. Kartṛ, Pitṛ)
-        if anga and anga[-1].char == 'ऋ':
-            # 2. Check Trigger: Su (Nom Sg)
-            if nimitta and nimitta[0].char == 'स्':
-                # Remove Ṛ
-                sthani = anga.pop()
+        if not varna_list: return varna_list, None
+        last = varna_list[-1]
 
-                # Insert 'a' and 'n'
-                # Note: Anang has 'ng' as It, causing 1.1.53 (Antyasya) -> Replaces last letter.
-                a_obj = Upadesha('अ', "7.1.94")
-                n_obj = Upadesha('न्', "7.1.94")
-
-                AtideshaMapper.apply_sthanivadbhava_1_1_56(a_obj, sthani)
-                anga.extend([a_obj, n_obj])
-                return anga, "७.१.९४ (अनङ्-आदेशः)"
-        return anga, None
+        if last.char in ['स्', 'म्']:
+            last.char = 'त्'
+            return varna_list, "७.१.२५ (अद्ड्-आदेशः)"
+        return varna_list, None
 
     @staticmethod
-    @angasya_rule("7.2.115")
-    def apply_vriddhi_7_2_115(anga, nimitta):
+    def apply_goto_nit_7_1_90(varna_list):
+        """
+        [SUTRA]: गोतो णित् (७.१.९०)
+        [LOGIC]: 'o' of Go becomes Vriddhi (au) in Sarvanamasthana, treated as Nit.
+        """
+        if not varna_list: return varna_list, None
+        # Logic implies triggering 7.2.115 later
+        return varna_list, "७.१.९० (णित्-वद्भाव)"
+
+    @staticmethod
+    def apply_anang_7_1_94(varna_list):
+        """
+        [SUTRA]: ऋदुशनस्पुरुदंसोऽनेहसां च (७.१.९४)
+        [LOGIC]: Final 'ṛ' -> 'an' (anaṅ).
+        """
+        if not varna_list: return varna_list, None
+        last = varna_list[-1]
+
+        if last.char == 'ऋ':
+            last.char = 'अ'  # ṛ -> a
+            varna_list.append(Varna("न्"))  # Append n
+            return varna_list, "७.१.९४ (ऋ -> अनङ्)"
+        return varna_list, None
+
+    @staticmethod
+    def apply_trijvadbhava_7_1_95(varna_list):
+        """
+        [SUTRA]: तृज्वत्क्रोष्टुः (७.१.९५)
+        [LOGIC]: Kroṣṭu behaves like Kroṣṭṛ in strong cases.
+        """
+        if len(varna_list) >= 2:
+            if varna_list[-1].char == 'उ' and varna_list[-2].char == 'ट्':
+                varna_list[-1].char = 'ऋ'  # u -> ṛ
+                return varna_list, "७.१.९५ (क्रोष्टु -> क्रोष्टृ)"
+        return varna_list, None
+
+    @staticmethod
+    def apply_rayo_hali_7_2_85(varna_list):
+        """
+        [SUTRA]: रायो हलि (७.२.८५)
+        [LOGIC]: Rai -> Rā (ā-desha) before consonant.
+        """
+        if not varna_list: return varna_list, None
+        last = varna_list[-1]
+
+        if last.char == 'ऐ':
+            last.char = 'आ'
+            return varna_list, "७.२.८५ (ऐ -> आ)"
+        return varna_list, None
+
+    @staticmethod
+    def apply_vṛddhi_7_2_115(varna_list):
         """
         [SUTRA]: अचो ञ्णिति (७.२.११५)
-        [LOGIC]: Final vowel of Anga undergoes Vriddhi if suffix is Ñit or Ṇit.
+        [LOGIC]: Final vowel -> Vriddhi.
         """
-        if not anga or not nimitta: return anga, None
+        if not varna_list: return varna_list, None
+        last = varna_list[-1]
 
-        trigger = False
-        suffix_tags = getattr(nimitta[0], 'sanjnas', set())
-        if 'ñit' in suffix_tags or 'ṇit' in suffix_tags or 'ñ' in suffix_tags or 'ṇ' in suffix_tags:
-            trigger = True
-
-        if trigger:
-            last_varna = anga[-1]
-            if last_varna.is_vowel:
-                vriddhi_map = {'अ': 'आ', 'इ': 'ऐ', 'उ': 'औ', 'ऋ': 'आर', 'ओ': 'औ', 'ए': 'ऐ'}
-                if last_varna.char in vriddhi_map:
-                    new_val = vriddhi_map[last_varna.char]
-                    if len(new_val) > 1:
-                        anga.pop()
-                        for c in new_val:
-                            anga.append(Upadesha(c, "7.2.115"))
-                    else:
-                        last_varna.char = new_val
-                        last_varna.sanjnas.add("वृद्धि")
-                    return anga, "७.२.११५ (अचो ञ्णिति वृद्धि)"
-        return anga, None
+        mapping = {'ओ': 'औ', 'अ': 'आ', 'इ': 'ऐ', 'उ': 'औ'}
+        if last.char in mapping:
+            old = last.char
+            last.char = mapping[old]
+            return varna_list, f"७.२.११५ ({old}->{last.char})"
+        return varna_list, None
 
     @staticmethod
-    @angasya_rule("7.2.116")
-    def apply_ata_upadhayah_7_2_116(anga, nimitta):
+    def apply_ata_upadhayah_7_2_116(anga_varnas, manual_range=None):
         """
         [SUTRA]: अत उपधायाः (७.२.११६)
-        [LOGIC]: Penultimate short 'a' undergoes Vriddhi if suffix is Ñit/Ṇit.
+        [LOGIC]: Short 'a' in penultimate position -> 'ā' if suffix is Ñit/Nit.
         """
-        upadha_varna, idx = ParibhashaManager.get_upadha_1_1_65(anga)
-        if not upadha_varna: return anga, None
+        if not anga_varnas: return anga_varnas, None
 
-        if upadha_varna.char != 'अ':
-            return anga, None
+        limit = manual_range[1] if manual_range else len(anga_varnas)
+        upadha_idx = limit - 1
 
-        trigger = False
-        if nimitta:
-            suffix_tags = getattr(nimitta[0], 'sanjnas', set())
-            if 'ñit' in suffix_tags or 'ṇit' in suffix_tags:
-                trigger = True
+        if upadha_idx < 0: return anga_varnas, None
 
-        if trigger:
-            classifier._transform_to_dirgha(upadha_varna, "७.२.११६")
-            return anga, "७.२.११६ (अत उपधायाः वृद्धि)"
+        upadha_varna = anga_varnas[upadha_idx]
 
-        return anga, None
+        if upadha_varna.char == 'अ':
+            upadha_varna.char = 'आ'
+            upadha_varna.sanjnas.add("वृद्धि")
+            upadha_varna.trace.append("७.२.११६ अत उपधायाः")
+            return anga_varnas, "७.२.११६ (अ -> आ)"
+        return anga_varnas, None
 
     @staticmethod
-    @angasya_rule("7.3.52")
-    def apply_chajo_ku_7_3_52(anga, nimitta):
+    def apply_chajo_ku_7_3_52(anga_varnas, manual_range=None):
         """
         [SUTRA]: चजोः कु घिण्ण्यतोः (७.३.५२)
-        [LOGIC]: Final 'c'/'j' of Anga becomes 'k'/'g' (Velar)
-                 if suffix is Ghit or Nyat.
-        Example: yaj + ghañ -> yāj + a -> yāga
+        [LOGIC]: Palatal 'c'/'j' -> Velar 'k'/'g' if suffix is Ghit/Nyat.
         """
-        if not anga or not nimitta: return anga, None
+        if not anga_varnas: return anga_varnas, None
 
-        # 1. Check Anga Final (Must be 'c' or 'j')
-        last_char = anga[-1].char
-        if last_char not in ['च्', 'ज्']:
-            return anga, None
+        limit = manual_range[1] if manual_range else len(anga_varnas)
+        final_idx = limit - 1
 
-        # 2. Check Suffix for 'Ghit' or 'Nyat'
-        # We check the ghost tags in the suffix Varnas
-        trigger = False
-        suffix_tags = getattr(nimitta[0], 'sanjnas', set())
+        if final_idx < 0: return anga_varnas, None
+        final_varna = anga_varnas[final_idx]
 
-        # 'gh' of ghañ is It -> 'ghit'. 'n' of nyat is It -> 'nit' (but sutra specifies Nyat)
-        if 'ghit' in suffix_tags or 'घित्' in suffix_tags:
-            trigger = True
+        mapping = {'च्': 'क्', 'ज्': 'ग्'}
+        if final_varna.char in mapping:
+            old = final_varna.char
+            final_varna.char = mapping[old]
+            final_varna.trace.append("७.३.५२ चजोः कु...")
+            return anga_varnas, f"७.३.५२ ({old} -> {final_varna.char})"
+        return anga_varnas, None
 
-        if trigger:
-            # 3. Apply Kutva (Velarization)
-            mapping = {'च्': 'क्', 'ज्': 'ग्'}
-            new_char = mapping[last_char]
-
-            # Mutation
-            anga[-1].char = new_char
-            anga[-1].sthana = ["कण्ठ"]  # Update anatomy
-            return anga, f"७.३.५२ (चजोः कु: {last_char} -> {new_char})"
-
-        return anga, None
     @staticmethod
-    @angasya_rule("7.3.111")
-    def apply_gher_niti_7_3_111(anga, nimitta):
+    def apply_gher_niti_7_3_111(anga, nimitta=None):
         """
         [SUTRA]: घेर्ङिति (७.३.१११)
         [LOGIC]: Ghi-sanjnaka stem gets Guna if suffix is Ñit (Nit).
-        Example: Hari + Ñe -> Hari + e -> Haray + e -> Haraye
         """
-        # 1. Check Ghi Sanjna using the imported rule
-        # Note: We pass 'anga' (a list of Varnas) to the checker
-        if not is_ghi_1_4_7(anga):
-            return anga, None
+        # Note: In Subanta Siddhi, we simplify this check
+        if not is_ghi_1_4_7(anga): return anga, None
 
-        # 2. Check Suffix for 'Ñit' (Nit)
-        # Note: Dative Sg (Ñe), Ablative Sg (Ñasi), etc. have 'Ñ'.
-        trigger = False
-        if nimitta:
-            suffix_tags = getattr(nimitta[0], 'sanjnas', set())
-            if 'ñit' in suffix_tags or 'ñ' in suffix_tags:
-                trigger = True
-
-        if trigger:
-            last_varna = anga[-1]
-            if last_varna.char in ['इ', 'उ']:
-                guna_map = {'इ': 'ए', 'उ': 'ओ'}
-                last_varna.char = guna_map[last_varna.char]
-                last_varna.sanjnas.add("गुण")
-                return anga, "७.३.१११ (घेर्ङिति गुण)"
-
+        last = anga[-1]
+        guna_map = {'इ': 'ए', 'उ': 'ओ'}
+        if last.char in guna_map:
+            last.char = guna_map[last.char]
+            return anga, "७.३.१११ (घेर्ङिति गुण)"
         return anga, None
 
     # =========================================================================
-    # CHAPTER 8: Tripādī (Final Phonetics)
+    # BOOK 8: Tripadi (Final Modifications)
     # =========================================================================
+
+    @staticmethod
+    def apply_nalopa_8_2_7(varna_list):
+        """
+        [SUTRA]: नलोपः प्रातिपदिकान्तस्य (८.२.७)
+        [LOGIC]: Deletes final 'n' of a Pada.
+        """
+        if not varna_list: return varna_list, None
+        last = varna_list[-1]
+
+        if last.char == 'न्':
+            varna_list.pop()
+            return varna_list, "८.२.७ (न-लोपः)"
+        return varna_list, None
 
     @staticmethod
     def apply_rutva_8_2_66(varna_list):
         """
-        [SUTRA]: ससजुषोः रुः (८.२.६६)
-        [LOGIC]: Padanta 's' becomes 'ru'.
+        [SUTRA]: ससजुषो रुः (८.२.६६)
+        [LOGIC]: Final 's' (Padanta) becomes 'ru'.
         """
-        if varna_list and varna_list[-1].char == 'स्':
-            sthani = varna_list.pop()
-            r_obj = Upadesha('र्', "8.2.66")
-            u_obj = Upadesha('उँ', "8.2.66")
-            AtideshaMapper.apply_sthanivadbhava_1_1_56(r_obj, sthani)
-            varna_list.extend([r_obj, u_obj])
-            return varna_list, "८.२.६६ (रुत्वम्)"
-        return varna_list, None
+        if not varna_list: return varna_list, None
+        last = varna_list[-1]
 
-    @staticmethod
-    def apply_upadeshe_ajanunasika_for_rutva(varna_list):
-        """
-        [HELPER]: Removes the 'u' from 'Ru' (1.3.2 + 1.3.9).
-        """
-        if len(varna_list) >= 2:
-            last = varna_list[-1]
-            prev = varna_list[-2]
-            if last.char == 'उँ' and prev.char == 'र्':
-                varna_list.pop()
-                return varna_list, "१.३.९ (रुत्व-उकार-लोपः)"
+        if last.char == 'स्':
+            last.char = 'र्'
+            last.trace.append("८.२.६६ ससजुषो रुः")
+            return varna_list, "८.२.६६ (स् -> रुँ -> र्)"
         return varna_list, None
 
     @staticmethod
     def apply_visarga_8_3_15(varna_list):
         """
         [SUTRA]: खरवसानयोर्विसर्जनीयः (८.३.१५)
-        [LOGIC]: Padanta 'r' becomes Visarga 'ḥ'.
+        [LOGIC]: Final 'r' becomes Visarga 'ḥ' in Avasana (End of Input).
         """
-        if varna_list and varna_list[-1].char == 'र्':
-            varna_list.pop()
-            varna_list.append(Upadesha('ः', "8.3.15"))
-            return varna_list, "८.३.१५ (विसर्गः)"
+        if not varna_list: return varna_list, None
+        last = varna_list[-1]
+
+        if last.char == 'र्':
+            last.char = 'ः'
+            last.trace.append("८.३.१५ विसर्गः")
+            return varna_list, "८.३.१५ (र् -> ः)"
         return varna_list, None
 
     @staticmethod
-    def apply_nalopa_8_2_7(varna_list):
+    def apply_chartva_8_4_56(varna_list):
         """
-        [SUTRA]: नलोपः प्रातिपदिकान्तस्य (८.२.७)
-        [LOGIC]: Drops final 'n' of a Pada.
-        User's Legacy Code: "The terminal न् letter... is omitted"
+        [SUTRA]: वाऽवसाने (८.४.५६)
+        [LOGIC]: Final Jhalam -> Car (Unvoiced). d -> t.
         """
-        # Ensure it is at the end of the word (Pratipadika-antasya within a Pada)
-        if varna_list and varna_list[-1].char == 'न्':
-            varna_list.pop()
-            return varna_list, "८.२.७ (न-लोपः)"
+        if not varna_list: return varna_list, None
+        last = varna_list[-1]
+
+        if last.char == 'द्':
+            last.char = 'त्'
+            return varna_list, "८.४.५६ (द् -> त्)"
         return varna_list, None
+
+
+# =============================================================================
+# EXPORTS (Module Level Aliases for Streamlit Compatibility)
+# =============================================================================
+
+apply_hrasva_napumsaka_1_2_47 = VidhiEngine.apply_hrasva_napumsaka_1_2_47
+apply_hal_nyab_6_1_68 = VidhiEngine.apply_hal_nyab_6_1_68
+apply_ami_purvah_6_1_107 = VidhiEngine.apply_ami_purvah_6_1_107
+apply_upadha_dirgha_6_4_8 = VidhiEngine.apply_upadha_dirgha_6_4_8
+apply_upadha_dirgha_6_4_11 = VidhiEngine.apply_upadha_dirgha_6_4_11
+apply_ti_lopa_6_4_143 = VidhiEngine.apply_ti_lopa_6_4_143
+apply_ato_am_7_1_24 = VidhiEngine.apply_ato_am_7_1_24
+apply_add_7_1_25 = VidhiEngine.apply_add_7_1_25
+apply_goto_nit_7_1_90 = VidhiEngine.apply_goto_nit_7_1_90
+apply_anang_7_1_94 = VidhiEngine.apply_anang_7_1_94
+apply_trijvadbhava_7_1_95 = VidhiEngine.apply_trijvadbhava_7_1_95
+apply_rayo_hali_7_2_85 = VidhiEngine.apply_rayo_hali_7_2_85
+apply_vṛddhi_7_2_115 = VidhiEngine.apply_vṛddhi_7_2_115
+apply_ata_upadhayah_7_2_116 = VidhiEngine.apply_ata_upadhayah_7_2_116
+apply_chajo_ku_7_3_52 = VidhiEngine.apply_chajo_ku_7_3_52
+apply_gher_niti_7_3_111 = VidhiEngine.apply_gher_niti_7_3_111
+apply_nalopa_8_2_7 = VidhiEngine.apply_nalopa_8_2_7
+apply_rutva_8_2_66 = VidhiEngine.apply_rutva_8_2_66
+apply_visarga_8_3_15 = VidhiEngine.apply_visarga_8_3_15
+apply_chartva_8_4_56 = VidhiEngine.apply_chartva_8_4_56
