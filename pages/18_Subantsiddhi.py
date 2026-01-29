@@ -15,7 +15,6 @@ from logic.pratipadika_engine import PratipadikaEngine
 from logic.it_engine import ItEngine
 from logic.anga_engine import AngaEngine
 from logic.vidhi_engine import VidhiEngine
-# Ensure logic/sanjna_rules.py has 'apply_1_4_14_pada' aliased correctly
 from logic.sanjna_rules import apply_1_4_14_pada
 
 
@@ -35,29 +34,21 @@ def get_diff_highlight(old_str, new_str):
 # --- 4. EXTENDED VIDHI WRAPPER (Local Logic) ---
 class ExtendedVidhi(VidhiEngine):
     """
-    Extensions for specific rules needed for this demo page
-    that might be generalized later.
+    Extensions for specific rules needed for this demo page.
     """
 
     @staticmethod
     def apply_ami_purvah_6_1_107(varna_list):
-        """
-        [SUTRA]: अमि पूर्वः (६.१.१०७)
-        [LOGIC]: If 'a' + 'a' (of Am) -> 'a' (Purvarupa Ekadesha).
-        """
+        """[SUTRA]: अमि पूर्वः (६.१.१०७)"""
         if len(varna_list) > 1:
-            # Check last two chars: Stem 'a' + Suffix 'a'
             if varna_list[-1].char == 'अ' and varna_list[-2].char == 'अ':
-                varna_list.pop()  # Remove one 'a', effective merge
+                varna_list.pop()
                 return varna_list, "६.१.१०७ (अमि पूर्वः)"
         return varna_list, None
 
     @staticmethod
     def apply_nalopa_8_2_7(varna_list):
-        """
-        [SUTRA]: नलोपः प्रातिपदिकान्तस्य (८.२.७)
-        [LOGIC]: Drops final 'n' of a Pada.
-        """
+        """[SUTRA]: नलोपः प्रातिपदिकान्तस्य (८.२.७)"""
         if varna_list and varna_list[-1].char == 'न्':
             varna_list.pop()
             return varna_list, "८.२.७ (न-लोपः)"
@@ -128,7 +119,7 @@ if word_input:
         # D. ANGA DEFINITION (1.4.13)
         st.subheader("✂️ Aṅga Definition (१.४.१३)")
 
-        # Auto-detect boundary using AngaEngine
+        # Auto-detect boundary
         start_idx, end_idx = AngaEngine.identify_boundary_indices(current_varnas)
         full_chars = [v.char for v in current_varnas]
 
@@ -136,7 +127,7 @@ if word_input:
         with c_slide:
             user_indices = st.slider(
                 "Aṅga Boundary (Stem | Suffix)",
-                0, len(full_chars), (0, end_idx)  # Default to auto-detected split
+                0, len(full_chars), (0, end_idx)
             )
 
         anga_part = current_varnas[user_indices[0]:user_indices[1]]
@@ -151,52 +142,61 @@ if word_input:
 
         if is_pada:
             # --- F. SURGICAL DERIVATION (Vidhi) ---
-            # Reconstruct list for processing
-            process_list = anga_part + suffix_part
+            process_list = list(current_varnas)  # Flattened for processing
 
-            # 1. 7.1.24 Ato Am (Rama + Am)
-            if word_input.endswith("अ") and selected_suffix in ["अम्", "सुँ"]:
+            # --- RULE 1: 7.1.24 Ato Am (Rama + Am) ---
+            if word_input.endswith("अ") and selected_suffix in ["अम्"]:
+                # Check for Neuter context if strictly enforcing 7.1.24
                 if word_input in ["फल", "ज्ञान", "वन"]:
-                    # Note: ato_am is decorated, handles splitting internally
                     process_list, s24 = VidhiEngine.ato_am_7_1_24(process_list)
                     if s24: prev_str = add_trace("७.१.२४", process_list, prev_str, "अतोऽम्")
 
                     process_list, s107 = ExtendedVidhi.apply_ami_purvah_6_1_107(process_list)
                     if s107: prev_str = add_trace("६.१.१०७", process_list, prev_str, "पूर्वरूपम्")
 
-            # 2. 6.4.8 Upadha Dirgha (Rajan + Su/Au)
+            # --- RULE 2: 6.1.107 Ami Purvah (Rama + Am -> Ramam) ---
+            # Handles Masculine Accusative as well
+            if selected_suffix == "अम्":
+                process_list, s107 = ExtendedVidhi.apply_ami_purvah_6_1_107(process_list)
+                if s107: prev_str = add_trace("६.१.१०७", process_list, prev_str, "अमि पूर्वः")
+
+            # --- RULE 3: 6.4.8 Upadha Dirgha (Rajan + Su) ---
             if "राजन्" in word_input or word_input.endswith("न्"):
                 if selected_suffix in ["सुँ", "औ", "जस्", "अम्", "औट्"]:
                     process_list, s8 = VidhiEngine.apply_upadha_dirgha_6_4_8(process_list)
                     if s8: prev_str = add_trace("६.४.८", process_list, prev_str, "उपधा-दीर्घः")
 
-            # 3. 7.1.94 Anang (Pitr -> Pitan)
-            if word_input.endswith("ऋ"):
-                if selected_suffix == "सुँ":
-                    process_list, s94 = VidhiEngine.apply_anang_7_1_94(process_list)
-                    if s94:
-                        prev_str = add_trace("७.१.९४", process_list, prev_str, "अनङ्-आदेशः")
-                        # Immediate cleanup of 'ng' marker
-                        process_list = [v for v in process_list if v.char != 'ङ्']
+            # --- RULE 4: 6.1.68 Hal-Nyab-Lopa (Deletion of Su) ---
+            # CRITICAL FIX: Only apply if stem ends in Hal (Consonant) or Ni/Ap (Fem Long Vowel)
+            stem_ends_in_consonant = not anga_part[-1].is_vowel if anga_part else False
+            stem_ends_in_fem = anga_part[-1].char in ['आ', 'ई', 'ऊ'] if anga_part else False
 
-                    process_list, s8 = VidhiEngine.apply_upadha_dirgha_6_4_8(process_list)
-                    if s8: prev_str = add_trace("६.४.८", process_list, prev_str, "उपधा-दीर्घः")
+            # Specific Exception: 'Lakshmi' does not take Lopa (Avit-lakshana) - simplified here
+            # Applying Strictly:
+            if stem_ends_in_consonant or stem_ends_in_fem:
+                # Check suffix is single consonant 's'
+                if suffix_part and len(suffix_part) == 1 and suffix_part[0].char == 'स्':
+                    process_list, s68 = VidhiEngine.apply_hal_nyab_6_1_68(process_list)
+                    if s68: prev_str = add_trace("६.१.६८", process_list, prev_str, "हल्ङ्याब्-लोपः")
 
-            # 4. 6.1.68 Hal-Nyab-Lopa (Removal of Su)
-            process_list, s68 = VidhiEngine.apply_hal_nyab_6_1_68(process_list)
-            if s68: prev_str = add_trace("६.१.६८", process_list, prev_str, "हल्ङ्याब्-लोपः")
-
-            # 5. 8.2.7 Nalopa (Rajan -> Raja)
+            # --- RULE 5: 8.2.7 Nalopa (Rajan -> Raja) ---
             process_list, s7 = ExtendedVidhi.apply_nalopa_8_2_7(process_list)
             if s7: prev_str = add_trace("८.२.७", process_list, prev_str, "न-लोपः")
 
-            # 6. Tripadi Rules (Rutva & Visarga)
+            # --- RULE 6: 8.2.66 Sasajusho Ru (Rama s -> Rama ru) ---
             if process_list and process_list[-1].char == 'स्':
                 process_list, s66 = VidhiEngine.apply_rutva_8_2_66(process_list)
                 if s66:
                     prev_str = add_trace("८.२.६६", process_list, prev_str, "ससजुषोः रुः")
-                    process_list = [v for v in process_list if v.char != 'उँ']  # Clean 'u'
 
+                    # Clean 'u' from 'ru' (Upadeshe Ajanunasika It)
+                    # We simulate this by checking if last char became 'र्'
+                    # In a full engine, 'ru' adds 'u~' which ItEngine removes.
+                    # Here VidhiEngine.apply_rutva directly sets 'र्', so we skip 1.3.2 visualization for speed
+                    pass
+
+            # --- RULE 7: 8.3.15 Kharavasanayor Visarjaniyah (Rama r -> Rama h) ---
+            if process_list and process_list[-1].char == 'र्':
                 process_list, s15 = VidhiEngine.apply_visarga_8_3_15(process_list)
                 if s15: prev_str = add_trace("८.३.१५", process_list, prev_str, "खरवसानयोर्विसर्जनीयः")
 
