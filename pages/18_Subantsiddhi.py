@@ -9,7 +9,8 @@ st.set_page_config(
 )
 
 # --- 2. PAS-5.0 IMPORTS ---
-from core.phonology import ad
+# [FIX]: Added sanskrit_varna_samyoga for final merging
+from core.phonology import ad, sanskrit_varna_samyoga
 from core.upadesha_registry import UpadeshaType
 from logic.pratipadika_engine import PratipadikaEngine
 from logic.it_engine import ItEngine
@@ -20,7 +21,7 @@ from logic.sanjna_rules import apply_1_4_14_pada
 
 # --- 3. HELPER FUNCTIONS ---
 def join_varnas(varna_list):
-    """Reconstructs string from Varna objects."""
+    """Reconstructs string from Varna objects (Raw View)."""
     return "".join([v.char for v in varna_list])
 
 
@@ -88,10 +89,12 @@ if word_input:
 
         # History Tracking
         history = []
+        # Initial display uses raw join for clarity in Vichhed
         prev_str = join_varnas(varna_list)
 
 
         def add_trace(sutra, varnas, prev_s, change_desc):
+            # For trace, we use raw join to show internal changes clearly
             curr_s = join_varnas(varnas)
             history.append({
                 "step": len(history) + 1,
@@ -142,11 +145,10 @@ if word_input:
 
         if is_pada:
             # --- F. SURGICAL DERIVATION (Vidhi) ---
-            process_list = list(current_varnas)  # Flattened for processing
+            process_list = list(current_varnas)
 
-            # --- RULE 1: 7.1.24 Ato Am (Rama + Am) ---
+            # --- RULE 1: 7.1.24 Ato Am ---
             if word_input.endswith("अ") and selected_suffix in ["अम्"]:
-                # Check for Neuter context if strictly enforcing 7.1.24
                 if word_input in ["फल", "ज्ञान", "वन"]:
                     process_list, s24 = VidhiEngine.ato_am_7_1_24(process_list)
                     if s24: prev_str = add_trace("७.१.२४", process_list, prev_str, "अतोऽम्")
@@ -154,48 +156,38 @@ if word_input:
                     process_list, s107 = ExtendedVidhi.apply_ami_purvah_6_1_107(process_list)
                     if s107: prev_str = add_trace("६.१.१०७", process_list, prev_str, "पूर्वरूपम्")
 
-            # --- RULE 2: 6.1.107 Ami Purvah (Rama + Am -> Ramam) ---
-            # Handles Masculine Accusative as well
+            # --- RULE 2: 6.1.107 Ami Purvah ---
             if selected_suffix == "अम्":
                 process_list, s107 = ExtendedVidhi.apply_ami_purvah_6_1_107(process_list)
                 if s107: prev_str = add_trace("६.१.१०७", process_list, prev_str, "अमि पूर्वः")
 
-            # --- RULE 3: 6.4.8 Upadha Dirgha (Rajan + Su) ---
+            # --- RULE 3: 6.4.8 Upadha Dirgha ---
             if "राजन्" in word_input or word_input.endswith("न्"):
                 if selected_suffix in ["सुँ", "औ", "जस्", "अम्", "औट्"]:
                     process_list, s8 = VidhiEngine.apply_upadha_dirgha_6_4_8(process_list)
                     if s8: prev_str = add_trace("६.४.८", process_list, prev_str, "उपधा-दीर्घः")
 
-            # --- RULE 4: 6.1.68 Hal-Nyab-Lopa (Deletion of Su) ---
-            # CRITICAL FIX: Only apply if stem ends in Hal (Consonant) or Ni/Ap (Fem Long Vowel)
+            # --- RULE 4: 6.1.68 Hal-Nyab-Lopa ---
+            # Strict Halanta Check
             stem_ends_in_consonant = not anga_part[-1].is_vowel if anga_part else False
             stem_ends_in_fem = anga_part[-1].char in ['आ', 'ई', 'ऊ'] if anga_part else False
 
-            # Specific Exception: 'Lakshmi' does not take Lopa (Avit-lakshana) - simplified here
-            # Applying Strictly:
             if stem_ends_in_consonant or stem_ends_in_fem:
-                # Check suffix is single consonant 's'
                 if suffix_part and len(suffix_part) == 1 and suffix_part[0].char == 'स्':
                     process_list, s68 = VidhiEngine.apply_hal_nyab_6_1_68(process_list)
                     if s68: prev_str = add_trace("६.१.६८", process_list, prev_str, "हल्ङ्याब्-लोपः")
 
-            # --- RULE 5: 8.2.7 Nalopa (Rajan -> Raja) ---
+            # --- RULE 5: 8.2.7 Nalopa ---
             process_list, s7 = ExtendedVidhi.apply_nalopa_8_2_7(process_list)
             if s7: prev_str = add_trace("८.२.७", process_list, prev_str, "न-लोपः")
 
-            # --- RULE 6: 8.2.66 Sasajusho Ru (Rama s -> Rama ru) ---
+            # --- RULE 6: 8.2.66 Sasajusho Ru ---
             if process_list and process_list[-1].char == 'स्':
                 process_list, s66 = VidhiEngine.apply_rutva_8_2_66(process_list)
                 if s66:
                     prev_str = add_trace("८.२.६६", process_list, prev_str, "ससजुषोः रुः")
 
-                    # Clean 'u' from 'ru' (Upadeshe Ajanunasika It)
-                    # We simulate this by checking if last char became 'र्'
-                    # In a full engine, 'ru' adds 'u~' which ItEngine removes.
-                    # Here VidhiEngine.apply_rutva directly sets 'र्', so we skip 1.3.2 visualization for speed
-                    pass
-
-            # --- RULE 7: 8.3.15 Kharavasanayor Visarjaniyah (Rama r -> Rama h) ---
+            # --- RULE 7: 8.3.15 Kharavasanayor Visarjaniyah ---
             if process_list and process_list[-1].char == 'र्':
                 process_list, s15 = VidhiEngine.apply_visarga_8_3_15(process_list)
                 if s15: prev_str = add_trace("८.३.१५", process_list, prev_str, "खरवसानयोर्विसर्जनीयः")
@@ -215,13 +207,15 @@ if word_input:
                         c_step[4].success(row['change'])
                         st.divider()
 
-            final_output = join_varnas(process_list)
+            # [CRITICAL FIX]: Use Samyoga for the final polished output
+            final_output = sanskrit_varna_samyoga(process_list)
             st.markdown("---")
 
             res_col1, res_col2 = st.columns(2)
             with res_col1:
                 st.metric("Input (Pratipadika)", word_input)
             with res_col2:
+                # Displays the merged, beautiful Sanskrit string
                 st.metric("Siddha Output (Subanta)", final_output)
 
             st.balloons()
