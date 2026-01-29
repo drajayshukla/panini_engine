@@ -171,3 +171,7 @@ def sanskrit_varna_samyoga(varna_list):
             res += char
 
     return res
+# --- ५. Global Foundation Alias ---
+
+# Surgical Alias for global use across all Engines (Zone 1-8)
+ad = sanskrit_varna_vichhed

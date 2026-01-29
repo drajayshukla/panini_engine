@@ -1,6 +1,7 @@
+#pages/18_Subantsiddhi.py
 import streamlit as st
 from core.phonology import sanskrit_varna_vichhed, sanskrit_varna_samyoga
-from core.it_sanjna_engine import ItSanjnaEngine
+from logic.it_engine import ItSanjnaEngine
 from core.upadesha_registry import UpadeshaType
 from logic.pratipadika_engine import PratipadikaEngine
 from logic.vidhi_engine import (

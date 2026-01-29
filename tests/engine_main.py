@@ -6,7 +6,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from core.phonology import sanskrit_varna_vichhed
-from core.it_sanjna_engine import ItSanjnaEngine
+from logic.it_engine import ItSanjnaEngine
 from core.upadesha_registry import UpadeshaType
 
 

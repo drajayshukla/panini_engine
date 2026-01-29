@@ -1,3 +1,4 @@
+#pages/19_Sutra_Lab.py
 import streamlit as st
 import json
 import os
@@ -30,21 +31,47 @@ sutra_master = load_sutra_master()
 # ==========================================
 # ZONE 3: EXECUTION ENGINE (The logic mapping)
 # ==========================================
-def run_sutra_logic(sutra_id, test_input):
-    """
-    Surgically maps JSON IDs to Python Functions in SanjnaEngine.
-    This is where we link Shastra to Code.
-    """
-    # Sanjna Logic Mapping
-    if sutra_id == "1.1.1":
-        return SanjnaEngine.is_vriddhi_1_1_1(test_input)
-    if sutra_id == "1.1.2":
-        # Assuming we add is_guna_1_1_2 to SanjnaEngine
-        return getattr(SanjnaEngine, "is_guna_1_1_2", lambda x: False)(test_input)
+# ==========================================
+# ZONE 3: EXECUTION ENGINE (The logic mapping)
+# ==========================================
+from logic.vidhi_engine import VidhiEngine
+from core.sanjna_engine import SanjnaEngine
 
-    # Placeholder for non-implemented logic
-    return None
 
+def run_sutra_logic(sutra_id, test_input_list):
+    """
+    Surgically routes Sutra IDs to the correct Engine Methods.
+    Handles both Sanjna (Definitions) and Vidhi (Operations).
+    """
+    # Mapping for Zone 1: Sanjna Rules (Returns Boolean)
+    sanjna_map = {
+        "1.1.1": SanjnaEngine.is_vriddhi_1_1_1,
+        "1.1.2": getattr(SanjnaEngine, "is_guna_1_1_2", None),
+    }
+
+    # Mapping for Zone 3: Vidhi Rules (Returns Modified List + Label)
+    vidhi_map = {
+        "1.2.47": VidhiEngine.apply_hrasva_napumsaka_1_2_47,
+        "6.1.68": VidhiEngine.apply_hal_nyab_6_1_68,
+        "6.1.107": VidhiEngine.apply_ami_purvah_6_1_107,
+        "6.4.8": VidhiEngine.apply_upadha_dirgha_6_4_8,
+        "6.4.143": VidhiEngine.apply_ti_lopa_6_4_143,
+        "7.1.24": VidhiEngine.ato_am_7_1_24,
+        "8.2.7": VidhiEngine.apply_nalopa_8_2_7,
+        "8.2.66": VidhiEngine.apply_rutva_8_2_66,
+        "8.3.15": VidhiEngine.apply_visarga_8_3_15,
+    }
+
+    # EXECUTION STEP
+    if sutra_id in sanjna_map and sanjna_map[sutra_id]:
+        # Sanjna rules take a single char/varna
+        return sanjna_map[sutra_id](test_input_list[0].char), "Sanjna"
+
+    if sutra_id in vidhi_map:
+        # Vidhi rules take the full list and return (new_list, label)
+        return vidhi_map[sutra_id](test_input_list), "Vidhi"
+
+    return None, None
 
 # ==========================================
 # ZONE 4: SEARCH & SELECTION UI

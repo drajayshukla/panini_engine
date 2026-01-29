@@ -1,31 +1,41 @@
 # panini_engine/core/controller.py
 
-from core.phonology import sanskrit_varna_vichhed, sanskrit_varna_samyoga
+from core.phonology import ad, sanskrit_varna_samyoga
 from core.analyzer import analyze_sanjna
-from core.it_sanjna_engine import ItSanjnaEngine
-from core import UpadeshaType
+from logic.it_engine import ItEngine
+from core.upadesha_registry import UpadeshaType, Upadesha
 
 
-def process_word_full_cycle(text, source_type=UpadeshaType.DHATU, is_vibhakti=False, is_taddhita=False):
+def process_word_full_cycle(text, sutra_origin="0.0.0", source_type=UpadeshaType.DHATU, is_taddhita=False):
     """
-    पूरे पाणिनीय चक्र को नियंत्रित करने वाला फंक्शन:
-    Vichhed -> Sanjna Analysis -> It-Sanjna -> Samyoga
+    सञ्चालक: - The Master Controller.
+    Physiology (ad) -> DNA (Upadesha) -> Diagnosis (Sanjna) -> Scrub (It-Engine) -> Synthesis
     """
+
     # १. वर्ण विच्छेद (Physiology)
-    varna_list = sanskrit_varna_vichhed(text)
+    # Using the master foundation 'ad' to analyze the raw string.
+    # Returns a list of Varna objects.
+    base_varnas = ad(text)
 
-    # २. संज्ञा विश्लेषण (Diagnosis)
+    # २. DNA Birth (Upadesha Wrapping)
+    # Every character is promoted to an Upadesha object to carry its Shastric GPS.
+    # We use v.char to extract the pure phonetic unit for the Upadesha constructor.
+    varna_list = [Upadesha(v.char, sutra_origin) for v in base_varnas]
+
+    # ३. संज्ञा विश्लेषण (Diagnosis - Zone 1)
+    # Labels technical identities like Vṛddhi, Guṇa, and Saṃyoga.
     analysis = analyze_sanjna(varna_list)
 
-    # ३. इत्-संज्ञा प्रकरण (Surgical Identification)
-    remaining_varnas, it_tags = ItSanjnaEngine.run_it_sanjna_prakaran(
-        varna_list.copy(),
+    # ४. इत्-संज्ञा प्रकरण (The Surgical Scrub - logic/it_engine.py)
+    # Identifies markers and performs तस्य लोपः (1.3.9) with specific source logic.
+    remaining_varnas, it_tags = ItEngine.run_it_prakaran(
+        varna_list,
         source_type=source_type,
-        is_vibhakti=is_vibhakti,
         is_taddhita=is_taddhita
     )
 
-    # ४. तस्य लोपः (१.३.९) और अंतिम संयोग
+    # ५. वर्ण संयोग (Final Synthesis)
+    # Joins the remaining surgical units back into a readable Sanskrit string.
     final_text = sanskrit_varna_samyoga(remaining_varnas)
 
     return {

@@ -4,26 +4,40 @@ import re
 
 def normalize_sanskrit_text(text):
     """
-    इनपुट टेक्स्ट को क्लीन करता है ताकि 'पठ ' और 'पठ्' में अंतर न रहे।
+    Sutra: परः संनिकर्षः संहिता (१.४.१०९)
+    Logic: Establishes phonetic proximity (Saṃhitā) by removing
+    artificial whitespace or non-phonemic markers.
     """
     if not text:
         return ""
-    # १. सफेद जगह (Whitespaces) हटाना
+    # Removing 'Vivrtti' (gaps) to allow Sandhi and It-rules to see neighbors
     text = text.strip()
-    # २. यदि अंत में व्यंजन है और हलन्त नहीं है, तो उसे मानक रूप देना (Optional logic)
     return text
 
 def is_vowel(char):
-    """चेक करता है कि क्या वर्ण स्वर है (बिना Varna Object बनाए त्वरित जाँच)।"""
+    """
+    Sutra: अचश्च (१.२.२८) / 'अच्' प्रत्याहार
+    Clinical Check: Identifies if a character belongs to the 'Ac' range.
+    """
+    # The 'Ac' pratyahara represents the universal set of vowels
     vowels = 'अआइईउऊऋॠऌॡएऐओऔ'
     return char in vowels
 
 def strip_halant(char):
-    """वर्ण से हलन्त हटाता है (उदा. 'प्' -> 'प')।"""
+    """
+    Concept: उच्चारणार्थः अकारः (Standard Paribhāṣā)
+    Logic: Removes the indicator of a pure consonant (Hal) to
+    reveal the base phonetic unit for lookup or display.
+    """
     return char.replace('्', '')
 
 def add_halant(char):
-    """यदि व्यंजन है और हलन्त नहीं है, तो जोड़ता है।"""
+    """
+    Sutra: हलन्त्यम् (१.३.३) / हल्-लक्षणम्
+    Logic: Marks a varna as a pure 'Hal' (consonant) by ensuring
+    it is not associated with an inherent 'a' (अकार).
+    """
+    # Exclude markers and vowels
     vowels = 'अआइईउऊऋॠऌॡएऐओऔँ'
     if char not in vowels and not char.endswith('्'):
         return char + '्'
@@ -31,8 +45,10 @@ def add_halant(char):
 
 def get_varna_count(text):
     """
-    सटीक वर्ण गणना (संयोजकता को ध्यान में रखते हुए)।
-    उदा. 'राम' में २ वर्ण (र्+आ, म्+अ) या ४ इकाइयाँ।
+    Sutra: अलोऽन्त्यात् पूर्व उपधा (१.१.६५) context.
+    Logic: Performs a full 'Vichheda' to count individual 'Al' units
+    (phonemes), which is essential for identifying Upadhā or Ti boundaries.
     """
-    from core.phonology import sanskrit_varna_vichhed
-    return len(sanskrit_varna_vichhed(text))
+    from core.phonology import ad
+    # Uses the 'ad' physiological basis to count real phonemes, not characters
+    return len(ad(text))

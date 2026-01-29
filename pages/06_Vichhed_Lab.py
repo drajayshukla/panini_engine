@@ -1,3 +1,4 @@
+#pages/06_Vichhed_Lab.py
 import streamlit as st
 from utils.sanskrit_utils import sanskrit_varna_vichhed, sanskrit_varna_samyoga
 

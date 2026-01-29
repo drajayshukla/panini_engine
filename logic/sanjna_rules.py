@@ -44,7 +44,7 @@ def apply_upadeshe_ajanunasika_1_3_2(varna_list):
     return list(set(it_indices)), list(set(it_tags))
 
 
-def apply_halantyam_1_3_3(varna_list, blocked_indices):
+'''def apply_halantyam_1_3_3(varna_list, blocked_indices):
     """सूत्र: हलन्त्यम् (१.३.३)"""
     if not varna_list: return [], []
     last_idx = len(varna_list) - 1
@@ -55,8 +55,23 @@ def apply_halantyam_1_3_3(varna_list, blocked_indices):
     if is_hal:
         link = get_sutra_link("1.3.3")
         return [last_idx], [f"[१.३.३ हलन्त्यम्]({link})"]
-    return [], []
+    return [], []'''
 
+
+# Refactored 1.3.3 Hal check
+def apply_halantyam_1_3_3(varna_list, blocked_indices):
+    from core.sanjna_engine import SanjnaEngine  # Use our dynamic engine
+
+    if not varna_list: return [], []
+    last_idx = len(varna_list) - 1
+    if last_idx in blocked_indices: return [], []
+
+    v = varna_list[last_idx]
+    # Use our Pratyahara-based Hal check
+    if SanjnaEngine.is_hal(v.char):
+        link = get_sutra_link("1.3.3")
+        return [last_idx], [f"[१.३.३ हलन्त्यम्]({link})"]
+    return [], []
 
 def apply_na_vibhaktau_1_3_4(varna_list, source_type):
     """

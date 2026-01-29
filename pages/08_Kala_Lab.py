@@ -1,3 +1,4 @@
+#pages/08_Kala_Lab.py
 import streamlit as st
 import pandas as pd
 from core.phonology import sanskrit_varna_vichhed

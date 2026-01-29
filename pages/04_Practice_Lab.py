@@ -1,10 +1,9 @@
+#pages/04_Practice_Lab.py
 import streamlit as st
 import json
 import os
-import re
-import pandas as pd
 from core.phonology import sanskrit_varna_vichhed, sanskrit_varna_samyoga
-from core.it_sanjna_engine import ItSanjnaEngine
+from logic.it_engine import ItSanjnaEngine
 from core.upadesha_registry import UpadeshaType
 
 

@@ -1,9 +1,10 @@
+#pages/05_Bulk_Diagnostics.py
 import streamlit as st
 import pandas as pd
 import json
 import os
 from core.phonology import sanskrit_varna_vichhed, sanskrit_varna_samyoga
-from core.it_sanjna_engine import ItSanjnaEngine
+from logic.it_engine import ItSanjnaEngine
 from core.upadesha_registry import UpadeshaType
 
 # --- १. पेज सेटअप ---

@@ -1,3 +1,4 @@
+#pages/
 import streamlit as st
 import pandas as pd
 import os
@@ -5,7 +6,7 @@ import json
 
 # 'Gold Standard' Modules
 from core.phonology import sanskrit_varna_vichhed, sanskrit_varna_samyoga
-from core.it_sanjna_engine import ItSanjnaEngine
+from logic.it_engine import ItSanjnaEngine
 from core.upadesha_registry import UpadeshaType
 
 # --- १. पेज कॉन्फ़िगरेशन एवं स्टाइल ---
