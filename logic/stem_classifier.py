@@ -1,31 +1,84 @@
 """
 FILE: logic/stem_classifier.py
 PAS-v2.0: 5.0 (Siddha)
-PILLAR: Aṅga-Kārya (Stem Modification)
-REFERENCE: ६.४.१ अङ्गस्य अधिकार
+PILLAR: Classification (Anga Type)
+UPDATED: Uses Varna properties and Halant-aware checks.
 """
 
-from core.paribhasha_manager import ParibhashaManager
+from core.pratyahara_engine import PratyaharaEngine
+from core.phonology import Varna
+from core.paribhasha_manager import ParibhashaManager  # Added Missing Import
 
-# Mapping for Vidhi (Transformation)
-SHORT_TO_LONG = {
-    'अ': 'आ', 'इ': 'ई', 'उ': 'ऊ', 'ऋ': 'ॠ', 'ऌ': 'ॡ',
-    'ा': 'आ', 'ि': 'ई', 'ु': 'ऊ', 'ृ': 'ॠ'  # Matra forms
-}
+pe = PratyaharaEngine()
 
 
-def _transform_to_dirgha(varna_obj, sutra_ref):
+# --- HELPER FOR VOWEL LENGTHENING ---
+def _transform_to_dirgha(varna_obj, rule_code):
     """
-    [HELPER]: Physically transforms a short vowel to long (Vidhi).
+    Mutates the varna object to its long form.
+    Used by 6.4.8 (Upadha Dirgha) etc.
     """
-    if varna_obj.char in SHORT_TO_LONG:
-        old_char = varna_obj.char
-        varna_obj.char = SHORT_TO_LONG[old_char]
-        varna_obj.matra = 2
+    map_dirgha = {
+        'अ': 'आ',
+        'इ': 'ई',
+        'उ': 'ऊ',
+        'ऋ': 'ॠ',
+        'ऌ': 'ॡ'
+    }
+    if varna_obj.char in map_dirgha:
+        old = varna_obj.char
+        varna_obj.char = map_dirgha[varna_obj.char]
         varna_obj.sanjnas.add("दीर्घ")
-        varna_obj.trace.append(f"{sutra_ref}: {old_char} -> {varna_obj.char}")
-        return True
-    return False
+        varna_obj.trace.append(f"{rule_code} ({old}->{varna_obj.char})")
+
+
+def is_halanta(anga):
+    """
+    Checks if the Anga ends in a Consonant (Hal).
+    """
+    if not anga: return False
+    last = anga[-1]
+
+    # 1. Use the Varna Property (Safest - from user logic)
+    if hasattr(last, 'is_consonant'):
+        return last.is_consonant
+
+    # 2. Fallback: Pratyahara Check
+    return pe.is_in(last.char, "हल्")
+
+
+def is_ajanta(anga):
+    """
+    Checks if the Anga ends in a Vowel (Ac).
+    """
+    if not anga: return False
+    last = anga[-1]
+
+    # 1. Use Varna Property
+    if hasattr(last, 'is_vowel'):
+        return last.is_vowel
+
+    # 2. Fallback
+    return pe.is_in(last.char, "अच्")
+
+
+def ends_in_short_a(anga):
+    """
+    Checks if Anga ends in short 'a' (अ).
+    """
+    if not anga: return False
+    return anga[-1].char == 'अ'
+
+
+def classify_stem(anga):
+    """
+    Returns a descriptor dictionary for the stem.
+    """
+    return {
+        "is_halanta": is_halanta(anga),
+        "is_ajanta": is_ajanta(anga),
+        "last_char": anga[-1].char if anga else None
+    }
 
 
 def apply_6_4_3_nami(anga_varnas, nimitta_text):
@@ -39,7 +92,6 @@ def apply_6_4_3_nami(anga_varnas, nimitta_text):
         return anga_varnas
 
     # Target: Aṅga-Antya (Final Vowel)
-    # Use AngaEngine logic (last element)
     if not anga_varnas: return anga_varnas
 
     antya_varna = anga_varnas[-1]
@@ -86,13 +138,13 @@ def apply_6_4_11_aptunvrich(anga_varnas, is_sarvanamasthana):
     # For now, we reconstruct the string to check against the list
     text_stem = "".join([v.char.replace('्', '') for v in anga_varnas])
 
-    # Target list (simplified)
-    targets = ["स्वसृ", "नप्तृ", "नेष्टृ", "त्वष्टृ", "क्षत्तृ", "होतृ", "पोतृ", "प्रशास्तृ"]
-
+    # Target list (simplified checks for transformed Guna forms)
     # Note: In strict Prakriya, 6.4.11 runs AFTER Guna (7.3.110).
     # So 'swasṛ' becomes 'swasar'. Then 6.4.11 lengthens the 'a' in 'ar'.
 
-    if any(text_stem.endswith(t) for t in ["स्वसर्", "नप्तर्", "नेष्टर्"]):  # Checking Guna form
+    targets = ["स्वसर्", "नप्तर्", "नेष्टर्", "त्वष्टर्", "क्षत्तर्", "होत्र्", "पोत्र्", "प्रशास्तर्"]
+
+    if any(text_stem.endswith(t) for t in targets):
         upadha_varna, _ = ParibhashaManager.get_upadha_1_1_65(anga_varnas)
         if upadha_varna and upadha_varna.char == 'अ':
             _transform_to_dirgha(upadha_varna, "६.४.११ अप्तृन्वृच्...")

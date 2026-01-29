@@ -7,7 +7,6 @@ REFERENCE: १.२.४५ अर्थवदधातुरप्रत्यय
 
 from core.upadesha_registry import UpadeshaType
 
-
 class PratipadikaEngine:
     """
     प्रातिपदिक-सञ्चालक: (The Noun Stem Validator)
@@ -26,11 +25,11 @@ class PratipadikaEngine:
             return {"is_pratipadika": False, "reason": "रिक्त इनपुट (No input)."}
 
         # --- PHASE 1: REGISTRY SCAN (Auto-Detect) ---
-        # FIX: Unpacking 3 values (Type, Is_Taddhita, Origin) as per Core update
+        # Unpacking 3 values as per Core PAS-5.0 update
         detected_type, is_taddhita, origin = UpadeshaType.auto_detect(text)
 
         # A. EXCLUSION CHECK (1.2.45: Adhātuḥ Apratyayaḥ)
-        # If it is a Dhatu or a bare Affix (not Taddhita), it is NOT a Pratipadika.
+        # If it is a Dhatu, it is NOT a Pratipadika.
         if detected_type == UpadeshaType.DHATU:
             return {
                 "is_pratipadika": False,
@@ -39,6 +38,7 @@ class PratipadikaEngine:
                 "sutra_applied": None
             }
 
+        # If it is a bare Pratyaya (and NOT a Taddhita derivative), it is excluded.
         if detected_type == UpadeshaType.PRATYAYA and not is_taddhita:
             return {
                 "is_pratipadika": False,
@@ -61,20 +61,23 @@ class PratipadikaEngine:
 
         # --- PHASE 2: DICTIONARY CHECK (1.2.45: Arthavat) ---
         # Look for established nouns in shabdroop.json
-        # Accessing _load_data via the class method safely
-        shabda_data = UpadeshaType._load_data('shabdroop.json')
-        if shabda_data and isinstance(shabda_data, list):
-            match = next((item for item in shabda_data if item.get('word') == text), None)
-            if match:
-                return {
-                    "is_pratipadika": True,
-                    "text": text,
-                    "type": "Siddha",
-                    "sutra_applied": "१.२.४५ अर्थवदधातुरप्रत्ययः प्रातिपदिकम्",
-                    "description": f"Dictionary Match: {match.get('artha_hin') or match.get('artha')}",
-                    "link": "https://ashtadhyayi.com/sutraani/1/2/45",
-                    "metadata": match
-                }
+        try:
+            shabda_data = UpadeshaType._load_data('shabdroop.json')
+            if shabda_data and isinstance(shabda_data, list):
+                match = next((item for item in shabda_data if item.get('word') == text), None)
+                if match:
+                    return {
+                        "is_pratipadika": True,
+                        "text": text,
+                        "type": "Siddha",
+                        "sutra_applied": "१.२.४५ अर्थवदधातुरप्रत्ययः प्रातिपदिकम्",
+                        "description": f"Dictionary Match: {match.get('artha_hin') or match.get('artha')}",
+                        "link": "https://ashtadhyayi.com/sutraani/1/2/45",
+                        "metadata": match
+                    }
+        except Exception:
+            # Fail gracefully if JSON missing, proceed to default Arthavat assumption
+            pass
 
         # --- PHASE 3: DEFAULT INCLUSION (1.2.45) ---
         # If it passed the Exclusion check (not Dhatu/Pratyaya) and has no specific match,
@@ -95,12 +98,12 @@ class PratipadikaEngine:
         Returns the 21 Sup-Pratyayas for Subanta derivation.
         """
         return {
-            "1. प्रथमा": {"एक": "सुँ", "द्वि": "औ", "बहु": "जस्"},
-            "2. द्वितीया": {"एक": "अम्", "द्विवचन": "औट्", "बहु": "शस्"},
-            "3. तृतीया": {"एक": "टा", "द्वि": "भ्याम्", "बहु": "भिस्"},
-            "4. चतुर्थी": {"एक": "ङे", "द्वि": "भ्याम्", "बहु": "भ्यस्"},
-            "5. पञ्चमी": {"एक": "ङसिँ", "द्वि": "भ्याम्", "बहु": "भ्यस्"},
-            "6. षष्ठी": {"एक": "ङस्", "द्वि": "ओस्", "बहु": "आम्"},
-            "7. सप्तमी": {"एक": "ङि", "द्वि": "ओस्", "बहु": "सुप्"},
-            "8. सम्बोधन": {"एक": "सुँ", "द्वि": "औ", "बहु": "जस्"}
+            "1. प्रथमा":  {"एक": "सुँ",  "द्वि": "औ",     "बहु": "जस्"},
+            "2. द्वितीया": {"एक": "अम्",  "द्वि": "औट्",    "बहु": "शस्"},
+            "3. तृतीया":  {"एक": "टा",   "द्वि": "भ्याम्", "बहु": "भिस्"},
+            "4. चतुर्थी":  {"एक": "ङे",   "द्वि": "भ्याम्", "बहु": "भ्यस्"},
+            "5. पञ्चमी":  {"एक": "ङसिँ", "द्वि": "भ्याम्", "बहु": "भ्यस्"},
+            "6. षष्ठी":   {"एक": "ङस्",  "द्वि": "ओस्",    "बहु": "आम्"},
+            "7. सप्तमी":  {"एक": "ङि",   "द्वि": "ओस्",    "बहु": "सुप्"},
+            "8. सम्बोधन": {"एक": "सुँ",   "द्वि": "औ",     "बहु": "जस्"}
         }
