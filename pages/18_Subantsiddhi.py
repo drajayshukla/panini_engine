@@ -3,7 +3,7 @@ from core.phonology import sanskrit_varna_vichhed, sanskrit_varna_samyoga
 from core.it_sanjna_engine import ItSanjnaEngine
 from core.upadesha_registry import UpadeshaType
 from logic.pratipadika_engine import PratipadikaEngine
-from logic.subanta_operations import (
+from logic.vidhi_engine import (
     apply_rutva_8_2_66,
     apply_visarga_8_3_15,
     apply_hal_nyab_6_1_68,
