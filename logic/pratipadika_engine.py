@@ -1,85 +1,106 @@
-#logic/pratipadika_engine.py
+"""
+FILE: logic/pratipadika_engine.py
+PAS-v2.0: 5.0 (Siddha)
+PILLAR: Prātipadika-Saṃjñā (Noun Stem Definition)
+REFERENCE: १.२.४५ अर्थवदधातुरप्रत्ययः प्रातिपदिकम् & १.२.४६ कृत्तद्धितसमासाश्च
+"""
+
 from core.upadesha_registry import UpadeshaType
+
 
 class PratipadikaEngine:
     """
-    Sutras: 1.2.45 (Arthavadadhaturapratyayah) & 1.2.46 (Krittadhitasamasashcha).
-    उद्देश्य: सुबन्त-प्रक्रिया के लिए आधार की स्वचालित पहचान एवं सत्यापन।
+    प्रातिपदिक-सञ्चालक: (The Noun Stem Validator)
+    Certifies a base word as eligible for Su-au-jas (4.1.2) application.
     """
 
     @staticmethod
     def identify_base(text):
         """
-        Verification Pipeline:
-        1. Direct Inclusion: Search shabdroop.json (Pre-recorded Nouns).
-        2. Derivative Inclusion: Search for Taddhita markers via 1.2.46.
-        3. Exclusion: Filter out Roots (Dhatu) and Suffixes (Pratyaya) via 1.2.45.
-        4. Default: Declare as primary Pratipadika (1.2.45).
+        [VERIFICATION PIPELINE]:
+        1. Registry Scan: Checks if it's a Dhatu/Pratyaya (Conflict Check).
+        2. 1.2.46 Check: Is it a Taddhita (Derived Noun)?
+        3. 1.2.45 Check: Is it a valid dictionary word (Arthavat)?
         """
         if not text:
             return {"is_pratipadika": False, "reason": "रिक्त इनपुट (No input)."}
 
-        # --- PHASE 1: DIRECT INCLUSION (shabdroop.json) ---
-        # Look for established nouns already in the database
+        # --- PHASE 1: REGISTRY SCAN (Auto-Detect) ---
+        # FIX: Unpacking 3 values (Type, Is_Taddhita, Origin) as per Core update
+        detected_type, is_taddhita, origin = UpadeshaType.auto_detect(text)
+
+        # A. EXCLUSION CHECK (1.2.45: Adhātuḥ Apratyayaḥ)
+        # If it is a Dhatu or a bare Affix (not Taddhita), it is NOT a Pratipadika.
+        if detected_type == UpadeshaType.DHATU:
+            return {
+                "is_pratipadika": False,
+                "detected_as": "Dhatu",
+                "reason": f"Conflict (1.2.45): '{text}' is a Root ({origin}), hence Adhātu rule blocks it.",
+                "sutra_applied": None
+            }
+
+        if detected_type == UpadeshaType.PRATYAYA and not is_taddhita:
+            return {
+                "is_pratipadika": False,
+                "detected_as": "Pratyaya",
+                "reason": f"Conflict (1.2.45): '{text}' is a Suffix ({origin}), hence Apratyaya rule blocks it.",
+                "sutra_applied": None
+            }
+
+        # B. INCLUSION CHECK (1.2.46: Kṛt-Taddhita-Samāsāśca)
+        # If it is a Taddhita (Secondary Derivative), it IS a Pratipadika.
+        if is_taddhita:
+            return {
+                "is_pratipadika": True,
+                "text": text,
+                "type": "Taddhita",
+                "sutra_applied": "१.२.४६ कृत्तद्धितसमासाश्च",
+                "description": f"Derived Noun (Taddhita) validated via {origin}.",
+                "link": "https://ashtadhyayi.com/sutraani/1/2/46"
+            }
+
+        # --- PHASE 2: DICTIONARY CHECK (1.2.45: Arthavat) ---
+        # Look for established nouns in shabdroop.json
+        # Accessing _load_data via the class method safely
         shabda_data = UpadeshaType._load_data('shabdroop.json')
-        if isinstance(shabda_data, list):
+        if shabda_data and isinstance(shabda_data, list):
             match = next((item for item in shabda_data if item.get('word') == text), None)
             if match:
                 return {
                     "is_pratipadika": True,
                     "text": text,
-                    "sutra_applied": "Siddha-Shabda (सिद्ध-प्रातिपदिकम्)",
-                    "description": f"Found in Master Noun List. Artha: {match.get('artha_hin') or match.get('artha')}",
+                    "type": "Siddha",
+                    "sutra_applied": "१.२.४५ अर्थवदधातुरप्रत्ययः प्रातिपदिकम्",
+                    "description": f"Dictionary Match: {match.get('artha_hin') or match.get('artha')}",
                     "link": "https://ashtadhyayi.com/sutraani/1/2/45",
                     "metadata": match
                 }
 
-        # --- PHASE 2: REGISTRY CHECK (Dhatu/Pratyaya/Taddhita) ---
-        # Automatic detection using the centralized registry scanner
-        detected_type, is_taddhita = UpadeshaType.auto_detect(text)
-
-        # 1.2.46 Inclusion (Derived Nouns/Taddhita)
-        if is_taddhita:
-            return {
-                "is_pratipadika": True,
-                "text": text,
-                "sutra_applied": "१.२.४६ (कृत्तद्धितसमासाश्च)",
-                "description": f"चूंकि '{text}' एक तद्धित प्रत्ययान्त रूप है, इसकी प्रातिपदिक संज्ञा होती है।",
-                "link": "https://ashtadhyayi.com/sutraani/1/2/46"
-            }
-
-        # 1.2.45 Exclusion (Adhatur-Apratyayah)
-        # If registered as Dhatu or Vibhakti, it cannot be a primary Pratipadika
-        if detected_type is not None:
-            return {
-                "is_pratipadika": False,
-                "detected_as": detected_type.value,
-                "reason": f"Conflict: यह शब्द डेटाबेस में '{detected_type.value}' के रूप में दर्ज है, अतः १.२.४५ से वर्जित है।",
-                "sutra_applied": None
-            }
-
         # --- PHASE 3: DEFAULT INCLUSION (1.2.45) ---
-        # Meaningful base not found in existing Dhatu/Pratyaya databases
+        # If it passed the Exclusion check (not Dhatu/Pratyaya) and has no specific match,
+        # we assume it is a valid Arthavat word (User input confidence).
         return {
             "is_pratipadika": True,
             "text": text,
-            "sutra_applied": "१.२.४५ (अर्थवदधातुरप्रत्ययः प्रातिपदिकम्)",
-            "description": "Independent meaningful base not found in Dhatu/Pratyaya databases.",
+            "type": "Arthavat",
+            "sutra_applied": "१.२.४५ अर्थवदधातुरप्रत्ययः प्रातिपदिकम्",
+            "description": "User-defined meaningful base (Arthavat).",
             "link": "https://ashtadhyayi.com/sutraani/1/2/45"
         }
 
     @staticmethod
     def get_sup_vibhakti_map():
         """
-        सूत्र: स्वौजसमौट्... (४.१.२)
-        २१ सुप्-प्रत्ययों का पदानुक्रमित मानचित्र।
+        [SUTRA]: स्वौजसमौट्छष्टा... (४.१.२)
+        Returns the 21 Sup-Pratyayas for Subanta derivation.
         """
         return {
-            "प्रथमा": {"एकवचन": "सुँ", "द्विवचन": "औ", "बहुवचन": "जस्"},
-            "द्वितीया": {"एकवचन": "अम्", "द्विवचन": "औट्", "बहुवचन": "शस्"},
-            "तृतीया": {"एकवचन": "टा", "द्विवचन": "भ्याम्", "बहुवचन": "भिस्"},
-            "चतुर्थी": {"एकवचन": "ङे", "द्विवचन": "भ्याम्", "बहुवचन": "भ्यस्"},
-            "पञ्चमी": {"एकवचन": "ङसिँ", "द्विवचन": "भ्याम्", "बहुवचन": "भ्यस्"},
-            "षष्ठी": {"एकवचन": "ङस्", "द्विवचन": "ओस्", "बहुवचन": "आम्"},
-            "सप्तमी": {"एकवचन": "ङि", "द्विवचन": "ओस्", "बहुवचन": "सुप्"}
+            "1. प्रथमा": {"एक": "सुँ", "द्वि": "औ", "बहु": "जस्"},
+            "2. द्वितीया": {"एक": "अम्", "द्विवचन": "औट्", "बहु": "शस्"},
+            "3. तृतीया": {"एक": "टा", "द्वि": "भ्याम्", "बहु": "भिस्"},
+            "4. चतुर्थी": {"एक": "ङे", "द्वि": "भ्याम्", "बहु": "भ्यस्"},
+            "5. पञ्चमी": {"एक": "ङसिँ", "द्वि": "भ्याम्", "बहु": "भ्यस्"},
+            "6. षष्ठी": {"एक": "ङस्", "द्वि": "ओस्", "बहु": "आम्"},
+            "7. सप्तमी": {"एक": "ङि", "द्वि": "ओस्", "बहु": "सुप्"},
+            "8. सम्बोधन": {"एक": "सुँ", "द्वि": "औ", "बहु": "जस्"}
         }

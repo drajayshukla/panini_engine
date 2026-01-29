@@ -1,45 +1,75 @@
-# panini_engine/logic/conflict_resolver.py
+"""
+FILE: logic/conflict_resolver.py
+PAS-v2.0: 5.0 (Siddha)
+PILLAR: Paribhāṣā (Conflict Resolution)
+HIERARCHY: Asiddha > Apavāda > Nitya > Antaraṅga > Para
+"""
 
 from core.adhikara_manager import AdhikaraManager
-
 
 class ConflictResolver:
     """
     विप्रतिषेध-सञ्चालक: (The Conflict Resolution Engine)
-    Governs the priority of rules: Apavāda > Nitya > Antaraṅga > Para.
+    Decides the winner when two rules vie for the same target.
     """
 
     @staticmethod
     def resolve(sutra_a, sutra_b):
         """
-        Main entry point to decide which rule wins in a collision.
+        [JUDGMENT]: Main entry point to decide which rule wins.
+        Input: Two Sutra dictionary objects (must contain 'sutra_num' and optionally 'type').
         """
-        # 1. Check for Apavāda (Exceptions) - Highest Priority
-        # (Assuming sutra objects have a 'type' field from JSON)
-        if sutra_a.get('type') == 'apavada' and sutra_b.get('type') == 'utsarga':
-            return sutra_a, "अपवाद (Exception) उत्सर्ग को रोकता है।"
-        if sutra_b.get('type') == 'apavada' and sutra_a.get('type') == 'utsarga':
-            return sutra_b, "अपवाद (Exception) उत्सर्ग को रोकता है।"
 
-        # 2. Fallback to Vipratiṣedha (1.4.2)
-        return ConflictResolver.resolve_vipratishedha_1_4_2(sutra_a, sutra_b)
-
-    @staticmethod
-    def resolve_vipratishedha_1_4_2(sutra_a, sutra_b):
-        """
-        Sutra: विप्रतिषेधे परं कार्यम् (१.४.२)
-        Logic: In a conflict of equal strength, the later rule prevails.
-        """
-        # Normalize sutra numbers using our foundation GPS
+        # 0. Prep: Parse Geolocation
         num_a = sutra_a.get('sutra_num', '0.0.0')
         num_b = sutra_b.get('sutra_num', '0.0.0')
 
         addr_a = AdhikaraManager.parse_sutra(num_a)
         addr_b = AdhikaraManager.parse_sutra(num_b)
 
-        if addr_b > addr_a:
-            return sutra_b, "१.४.२ विप्रतिषेधे परं कार्यम्: पर-शास्त्र बलवान है।"
-        elif addr_a > addr_b:
-            return sutra_a, "१.४.२ विप्रतिषेधे परं कार्यम्: पर-शास्त्र बलवान है।"
+        # ---------------------------------------------------------
+        # 1. TRIPĀDĪ CHECK (८.२.१ पूर्वत्रासिद्धम्) - The Dimensional Barrier
+        # ---------------------------------------------------------
+        # Logic: If one is Sapta-adhyāyī and other is Tripādī, the Tripādī rule is 'Asiddha'.
+        # Therefore, the Sapta-adhyāyī rule ALWAYS wins (or executes first).
 
-        return sutra_a, "तुल्य-बल (Equal strength) - Defaulting to first."
+        is_a_tripadi = AdhikaraManager.is_tripadi(num_a)
+        is_b_tripadi = AdhikaraManager.is_tripadi(num_b)
+
+        if not is_a_tripadi and is_b_tripadi:
+            return sutra_a, "८.२.१ पूर्वत्रासिद्धम् (Tripādī is invisible to Sapta-adhyāyī)."
+
+        if is_a_tripadi and not is_b_tripadi:
+            return sutra_b, "८.२.१ पूर्वत्रासिद्धम् (Tripādī is invisible to Sapta-adhyāyī)."
+
+        # Note: If BOTH are Tripādī, the 'Purva' (Earlier) is stronger because
+        # the later is Asiddha to the former.
+        if is_a_tripadi and is_b_tripadi:
+            if addr_a < addr_b:
+                return sutra_a, "८.२.१ (Tripādī Internal): पूर्व (Earlier) rule wins."
+            else:
+                return sutra_b, "८.२.१ (Tripādī Internal): पूर्व (Earlier) rule wins."
+
+        # ---------------------------------------------------------
+        # 2. APAVĀDA CHECK (Exception vs General)
+        # ---------------------------------------------------------
+        # Usually flagged in the rule logic itself via metadata.
+        type_a = sutra_a.get('type', 'utsarga')
+        type_b = sutra_b.get('type', 'utsarga')
+
+        if type_a == 'apavada' and type_b != 'apavada':
+            return sutra_a, "अपवादो नित्य-बाधकः (Exception blocks General)."
+        if type_b == 'apavada' and type_a != 'apavada':
+            return sutra_b, "अपवादो नित्य-बाधकः (Exception blocks General)."
+
+        # ---------------------------------------------------------
+        # 3. PARA CHECK (१.४.२ विप्रतिषेधे परं कार्यम्)
+        # ---------------------------------------------------------
+        # Logic: If both are equal strength (Sapta-adhyāyī), later wins.
+        if addr_b > addr_a:
+            return sutra_b, "१.४.२ विप्रतिषेधे परं कार्यम्: पर (Later) rule wins."
+        elif addr_a > addr_b:
+            return sutra_a, "१.४.२ विप्रतिषेधे परं कार्यम्: पर (Later) rule wins."
+
+        # Default (Same rule or unknown)
+        return sutra_a, "Equal strength/Identity."

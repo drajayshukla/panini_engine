@@ -1,197 +1,143 @@
-# panini_engine/logic/sanjna_rules.py
-import os
+"""
+FILE: logic/sanjna_rules.py
+PAS-v2.0: 5.0 (Siddha)
+ORDER: Strictly Aṣṭādhyāyī Order (1.1.x -> 1.3.x -> 1.4.x)
+REFERENCE: Brahmadutt Jigyasu (Prathamavritti) & Ashtadhyayi.com
+"""
+
 from core.upadesha_registry import UpadeshaType
+from core.pratyahara_engine import PratyaharaEngine
+
+# Initialize the Pratyahara Engine (Pillar: Algebra)
+pe = PratyaharaEngine()
 
 
 def get_sutra_link(sutra_num):
-    """Ashtadhyayi.com के लिए सटीक लिंक जेनरेट करता है।"""
-    formatted_num = sutra_num.replace('.', '/')
-    return f"https://ashtadhyayi.com/sutraani/{formatted_num}"
+    """Generates precise documentation links for the UI."""
+    return f"https://ashtadhyayi.com/sutraani/{sutra_num.replace('.', '/')}"
 
 
-# --- १. पद संज्ञा (१.४.१४) ---
+# =============================================================================
+# CHAPTER 1, SECTION 1: Foundational Definitions (संज्ञा प्रकरण)
+# =============================================================================
 
-def check_pada_sanjna_1_4_14(varna_list, source_type):
+def apply_1_1_1_vriddhi(varna_list):
     """
-    संज्ञा सूत्र: सुप्तिङन्तं पदम् (१.४.१४)
-    नियम: सुबन्त और तिङन्त की पद संज्ञा होती है।
+    [SUTRA]: वृद्धिरादैच् (१.१.१)
+    [VRITTI]: आदैच्च वृद्धिसंज्ञः स्यात्।
     """
-    if not varna_list:
-        return False, "रिक्त वर्ण सूची।"
-
-    valid_types = [UpadeshaType.VIBHAKTI, UpadeshaType.PRATYAYA]
-    if source_type in valid_types:
-        link = get_sutra_link("1.4.14")
-        return True, f"[१.४.१४ सुप्तिङन्तं पदम्]({link}): पद संज्ञा स्वीकृत।"
-
-    return False, "अपद: केवल प्रातिपदिक या धातु।"
+    vriddhi_set = {"आ"}.union(set(pe.get_varnas("ऐच्")))
+    for v in varna_list:
+        if v.char in vriddhi_set:
+            v.sanjnas.add("वृद्धि")
+            v.trace.append(f"[१.१.१]({get_sutra_link('1.1.1')})")
+    return varna_list
 
 
-# --- २. इत्-संज्ञा प्रकरण (१.३.२ - १.३.८) ---
+def apply_1_1_2_guna(varna_list):
+    """
+    [SUTRA]: अदेङ्गुणः (१.१.२)
+    [VRITTI]: अत एङ् च गुणसंज्ञः स्यात्।
+    """
+    guna_set = {"अ"}.union(set(pe.get_varnas("एङ्")))
+    for v in varna_list:
+        if v.char in guna_set:
+            v.sanjnas.add("गुण")
+            v.trace.append(f"[१.१.२]({get_sutra_link('1.1.2')})")
+    return varna_list
 
-def apply_upadeshe_ajanunasika_1_3_2(varna_list):
-    """सूत्र: उपदेशेऽजनुनासिक इत् (१.३.२)"""
-    it_indices, it_tags = [], []
-    link = get_sutra_link("1.3.2")
-    tag = f"[१.३.२ उपदेशेऽजनुनासिक इत्]({link})"
 
+def apply_1_1_7_samyoga(varna_list):
+    """
+    [SUTRA]: हलोऽनन्तराः संयोगः (१.१.७)
+    [VRITTI]: अज्भिरव्यवहिता हलः संयोगसंज्ञाः स्युः।
+    """
+    for i in range(len(varna_list)):
+        if not varna_list[i].is_vowel:
+            prev_hal = i > 0 and not varna_list[i - 1].is_vowel
+            next_hal = i < len(varna_list) - 1 and not varna_list[i + 1].is_vowel
+            if prev_hal or next_hal:
+                varna_list[i].sanjnas.add("संयोग")
+                varna_list[i].trace.append(f"[१.१.७]({get_sutra_link('1.1.7')})")
+    return varna_list
+
+
+# =============================================================================
+# CHAPTER 1, SECTION 3: It-Markers (इत्-संज्ञा प्रकरण)
+# =============================================================================
+
+def apply_1_3_2_ajanunasika(varna_list):
+    """[SUTRA]: उपदेशेऽजनुनासिक इत् (१.३.२)"""
+    it_indices = []
     for i, v in enumerate(varna_list):
         if v.is_anunasika:
             it_indices.append(i)
-            it_tags.append(f"{v.char} {tag}")
+            # If the nasal marker is on a vowel, both are marked (Anuvritti logic)
             if i > 0 and varna_list[i - 1].is_vowel:
                 it_indices.append(i - 1)
-    return list(set(it_indices)), list(set(it_tags))
+    return list(set(it_indices))
 
 
-'''def apply_halantyam_1_3_3(varna_list, blocked_indices):
-    """सूत्र: हलन्त्यम् (१.३.३)"""
-    if not varna_list: return [], []
-    last_idx = len(varna_list) - 1
-    if last_idx in blocked_indices: return [], []
-
-    v = varna_list[last_idx]
-    is_hal = not v.is_vowel and v.char[0] not in 'ंःँ' and '्' in v.char
-    if is_hal:
-        link = get_sutra_link("1.3.3")
-        return [last_idx], [f"[१.३.३ हलन्त्यम्]({link})"]
-    return [], []'''
-
-
-# Refactored 1.3.3 Hal check
-def apply_halantyam_1_3_3(varna_list, blocked_indices):
-    from core.sanjna_engine import SanjnaEngine  # Use our dynamic engine
-
-    if not varna_list: return [], []
-    last_idx = len(varna_list) - 1
-    if last_idx in blocked_indices: return [], []
-
-    v = varna_list[last_idx]
-    # Use our Pratyahara-based Hal check
-    if SanjnaEngine.is_hal(v.char):
-        link = get_sutra_link("1.3.3")
-        return [last_idx], [f"[१.३.३ हलन्त्यम्]({link})"]
-    return [], []
-
-def apply_na_vibhaktau_1_3_4(varna_list, source_type):
+def apply_1_3_3_halantyam(varna_list, blocked_indices=None):
     """
-    सूत्र: १.३.४ न विभक्तौ तुस्माः
-    Clinical Fix: अब सीधे source_type का उपयोग करता है।
+    [SUTRA]: हलन्त्यम् (१.३.३)
+    Logic: Final consonant in Upadesha is 'It'. 
     """
-    if not varna_list or source_type != UpadeshaType.VIBHAKTI:
-        return []
-
-    tu_s_m = ['त्', 'थ्', 'द्', 'ध्', 'न्', 'स्', 'म्']
+    if not varna_list: return []
+    blocked = blocked_indices or []
     last_idx = len(varna_list) - 1
-    if varna_list[last_idx].char in tu_s_m:
+
+    if last_idx in blocked: return []
+
+    # Pillar: Pratyahara (Checking if it's a 'Hal')
+    if varna_list[last_idx].char in pe.get_varnas("हल्"):
         return [last_idx]
     return []
 
 
+def apply_1_3_4_na_vibhaktau(varna_list, source_type):
+    """[SUTRA]: न विभक्तौ तुस्माः (१.३.४) - Exception to 1.3.3"""
+    if source_type != UpadeshaType.VIBHAKTI or not varna_list:
+        return []
+
+    last_char = varna_list[-1].char
+    tu_s_m = pe.get_varnas("तु") + ['स्', 'म्']  # 'tu' = t, th, d, dh, n
+    if last_char in tu_s_m:
+        return [len(varna_list) - 1]
+    return []
 
 
+def apply_1_3_5_adir_nitudavah(varna_list):
+    """[SUTRA]: आदिर्ञिटुडवः (१.३.५) - Initial markers in Dhatu"""
+    if len(varna_list) < 2: return []
+
+    # Logic: Joining chars to match Upadesha patterns like 'ञि', 'टु', 'डु'
+    start = varna_list[0].char + varna_list[1].char
+    if start in ['ञ्इ', 'ट्उ', 'ड्उ']:
+        return [0, 1]
+    return []
 
 
+def apply_1_3_8_lashakva(varna_list, source_type, is_taddhita=False):
+    """[SUTRA]: लशक्वतद्धिते (१.३.८)"""
+    if source_type != UpadeshaType.PRATYAYA or is_taddhita:
+        return []
 
-def apply_adir_nitudavah_1_3_5(varna_list):
-    """
-    सूत्र: १.३.५ आदिर्ञिटुडवः
-    नियम: धातु के आदि (शुरुआत) में स्थित 'ञि', 'टु', 'डु' की इत्-संज्ञा होती है।
-    """
-    # कम से कम २ वर्ण होने चाहिए (व्यंजन + स्वर)
-    if len(varna_list) < 2:
-        return [], []
-
-    link = get_sutra_link("1.3.5")
-
-    # पहले दो वर्णों के .char को मिलाकर पैटर्न बनाएं
-    # उदा: 'ञ्' + 'इ' = 'ञ्इ'
-    first_char = varna_list[0].char
-    second_char = varna_list[1].char
-    starting_pattern = first_char + second_char
-
-    # मिलान के लिए मैप (धातु पाठ के उपदेशानुसार)
-    mapping = {
-        'ञ्इ': 'ञि',
-        'ट्उ': 'टु',
-        'ड्उ': 'डु'
-    }
-
-    if starting_pattern in mapping:
-        tag = f"[१.३.५ आदिर्ञिटुडवः ({mapping[starting_pattern]})]({link})"
-        # प्रथम दोनों वर्णों (व्यंजन और स्वर) की इत्-संज्ञा होगी
-        return [0, 1], [tag]
-
-    return [], []
+    first = varna_list[0].char
+    # 'ku' = k, kh, g, gh, n
+    targets = ['ल्', 'श्'] + pe.get_varnas("कु")
+    if first in targets:
+        return [0]
+    return []
 
 
-def apply_shah_pratyayasya_1_3_6(varna_list, source_type):
-    """
-    सूत्र: १.३.६ षः प्रत्ययस्य
-    नियम: प्रत्यय के आदि (शुरुआत) में स्थित 'ष्' की इत्-संज्ञा होती है।
-    उदाहरण: 'ष्वुन्' प्रत्यय का 'ष्'।
-    """
-    from core.upadesha_registry import UpadeshaType
+# =============================================================================
+# CHAPTER 1, SECTION 4: Pada Definitions
+# =============================================================================
 
-    # यह नियम केवल प्रत्यय (PRATYAYA) पर लागू होता है
-    if not varna_list or source_type != UpadeshaType.PRATYAYA:
-        return [], []
-
-    # varna_list[0].char का उपयोग TypeError से बचाता है
-    if varna_list[0].char == 'ष्':
-        link = get_sutra_link("1.3.6")
-        return [0], [f"[१.३.६ षः प्रत्ययस्य]({link})"]
-
-    return [], []
-
-
-def apply_chuttu_1_3_7(varna_list, source_type):
-    """
-    सूत्र: १.३.७ चुटू
-    नियम: प्रत्यय के आदि में स्थित च-वर्ग (च, छ, ज, झ, ञ) और
-          ट-वर्ग (ट, ठ, ड, ढ, ण) की इत्-संज्ञा होती है।
-    """
-    from core.upadesha_registry import UpadeshaType
-
-    if not varna_list or source_type != UpadeshaType.PRATYAYA:
-        return [], []
-
-    # च-वर्ग और ट-वर्ग की शुद्ध व्यंजन सूची
-    chuvarga = ['च्', 'छ्', 'ज्', 'झ्', 'ञ्']
-    tuvarga = ['ट्', 'ठ्', 'ड्', 'ढ्', 'ण्']
-    target_varnas = chuvarga + tuvarga
-
-    # varna_list[0].char का उपयोग करें (TypeError Fix)
-    if varna_list[0].char in target_varnas:
-        link = get_sutra_link("1.3.7")
-        return [0], [f"[१.३.७ चुटू]({link})"]
-
-    return [], []
-
-
-def apply_lashakvataddhite_1_3_8(varna_list, source_type, is_taddhita=False):
-    """
-    सूत्र: १.३.८ लशक्वतद्धिते
-    नियम: प्रत्यय के आदि में स्थित 'ल्', 'श्' और 'कु' (क-वर्ग) की इत्-संज्ञा होती है,
-          परन्तु 'तद्धित' प्रत्ययों को छोड़कर।
-    """
-    from core.upadesha_registry import UpadeshaType
-
-    # १.३.८ केवल प्रत्ययों (PRATYAYA) पर लागू होता है (तद्धित वर्जित)
-    if not varna_list or source_type != UpadeshaType.PRATYAYA or is_taddhita:
-        return [], []
-
-    # 'कु' (क-वर्ग), 'ल्' और 'श्' की शुद्ध व्यंजन सूची
-    target = ['ल्', 'श्', 'क्', 'ख्', 'ग्', 'घ्', 'ङ्']
-
-    # Clinical Fix: varna_list[0].char का उपयोग करें (TypeError से बचाव)
-    first_varna_obj = varna_list[0]
-
-    if first_varna_obj.char in target:
-        # सूत्र लिंक और टैग
-        link = get_sutra_link("1.3.8")
-        tag = f"[१.३.८ लशक्वतद्धिते (आदि {first_varna_obj.char} की इत्-संज्ञा)]({link})"
-
-        return [0], [tag]
-
-    return [], []
+def apply_1_4_14_pada(varna_list, source_type):
+    """[SUTRA]: सुप्तिङन्तं पदम् (१.४.१४)"""
+    # Logic: If derivation has reached a final Vibhakti/Pratyaya stage
+    if source_type in [UpadeshaType.VIBHAKTI, UpadeshaType.PRATYAYA]:
+        return True
+    return False

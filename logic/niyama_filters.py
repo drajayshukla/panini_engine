@@ -1,59 +1,87 @@
-#logic/niyama_filters.py
-# logic/niyama_filters.py
+"""
+FILE: logic/niyama_filters.py
+PAS-v2.0: 5.0 (Siddha)
+PILLAR: Niyama & Nishedha (The Restrictive Logic)
+REFERENCE: १.१.५, १.३.४, १.३.८
+"""
 
-from core.adhikara_manager import AdhikaraManager
+from core.upadesha_registry import UpadeshaType
 
 
 class NiyamaFilters:
     """
     नियम-फिल्टर: (Restrictive Logic Engine)
-    Rule: 'Siddhe sati yatra niyamah' (When a rule is already applicable,
-    a Niyama restricts its scope).
+    Implements 'Siddhe sati yatra niyamah' & 'Nishedha'.
+    Acts as the 'Gatekeeper' for Vidhi rules.
     """
 
     @staticmethod
-    def apply_vibhakti_niyama_1_3_4(varna_obj, source_type):
+    def is_it_sanjna_blocked_1_3_4(varna_obj, source_type):
         """
-        Sutra: न विभक्तौ तुस्माः (१.३.४)
-        Logic: In a 'Vibhakti' (Suffix), 't-varga', 's', and 'm' are NOT It.
-        This is a restrictive filter on 1.3.3 (Halantyam).
+        [SUTRA]: न विभक्तौ तुस्माः (१.३.४)
+        [LOGIC]: Blocking Antibody for 1.3.3 (Halantyam).
+        In a 'Vibhakti' (Suffix), 't-varga', 's', and 'm' cannot be 'It'.
         """
-        if source_type != "Vibhakti":
-            return True, "Not a Vibhakti context"
+        # 1. Scope Check: Must be Vibhakti
+        if source_type != UpadeshaType.VIBHAKTI:
+            return False, "Not a Vibhakti context"
 
+        # 2. Phonetic Check
+        # Tu (Dental Class) + s + m
+        # We check simply against the char since we are in the surgical phase
         char = varna_obj.char
-        # T-Varga (त्, थ्, द्, ध्, न्), स्, म्
         restricted_chars = ['त्', 'थ्', 'द्', 'ध्', 'न्', 'स्', 'म्']
 
-        if any(char.startswith(r) for r in restricted_chars):
-            return False, "१.३.४ न विभक्तौ तुस्माः: विभक्ति में 'तु-स्-म्' की इत्-संज्ञा वर्जित है।"
+        if char in restricted_chars:
+            return True, "१.३.४ न विभक्तौ तुस्माः: विभक्ति में 'तु-स्-म्' की इत्-संज्ञा वर्जित है।"
 
-        return True, "Valid"
-
-    @staticmethod
-    def apply_taddhita_niyama_1_3_7(varna_obj, is_taddhita):
-        """
-        Sutra: चुटू (१.३.७) - Restrictive aspect via 1.3.8 context.
-        Note: Rules like 1.3.8 (Lashakvat) apply only to non-taddhita suffixes.
-        """
-        if is_taddhita and varna_obj.char in ['ल्', 'श्', 'क्', 'ख्', 'ग्', 'घ्', 'ङ्']:
-            return False, "१.३.८ लशक्वतद्धिते: तद्धित प्रत्ययों में ल-श-कु की इत्-संज्ञा वर्जित है।"
-
-        return True, "Valid"
+        return False, "Valid"
 
     @staticmethod
-    def apply_guna_vriddhi_niyama_1_1_5(varna_obj, nimitta_obj):
+    def is_it_sanjna_blocked_1_3_8(varna_obj, source_type, is_taddhita):
         """
-        Sutra: क्ङ्िति च (१.१.५)
-        Logic: Guna and Vriddhi are prohibited if the trigger (Nimitta) is 'Kit' or 'Njit'.
+        [SUTRA]: लशक्वतद्धिते (१.३.८)
+        [LOGIC]: Blocking Antibody for 1.3.3/General It-rules.
+        'L', 'Sh', and 'Ku' (K-varga) are It markers, BUT NOT in Taddhitas.
+        This function checks if the It-Sanjna should be BLOCKED (i.e. is it a Taddhita?)
+        """
+        # The Sutra says: [In Non-Taddhita], L-Sh-Ku are It.
+        # Therefore, Niyama/Nishedha applies if it IS a Taddhita.
+
+        if not is_taddhita:
+            return False, "Not a Taddhita, restriction doesn't apply."
+
+        char = varna_obj.char
+        # L, Sh, K-Varga
+        targets = ['ल्', 'श्', 'क्', 'ख्', 'ग्', 'घ्', 'ङ्']
+
+        if char in targets:
+            return True, "१.३.८ (Context): तद्धित प्रत्ययों में 'ल-श-कु' की इत्-संज्ञा वर्जित है।"
+
+        return False, "Valid"
+
+    @staticmethod
+    def is_guna_vriddhi_blocked_1_1_5(nimitta_obj):
+        """
+        [SUTRA]: क्ङ्िति च (१.१.५)
+        [LOGIC]: Major Nishedha for 7.3.84/7.2.115 etc.
+        Guna and Vriddhi are PROHIBITED if the following suffix (Nimitta) 
+        is marked as 'Kit' (k) or 'Ngit' (ng).
         """
         if not nimitta_obj:
-            return True, "No trigger"
+            return False, "No trigger to block operation."
 
-        # Check for technical markers (K or Nj) on the following suffix
-        is_prohibited = any(tag in nimitta_obj.sanjnas for tag in ["kit", "ñit"])
+        # Access the 'Ghost Tags' (Sanjnas) preserved by the ItEngine/Atidesha
+        # The Nimitta (Suffix) might have lost the 'k' char, but must have the 'kit' tag.
 
-        if is_prohibited:
-            return False, "१.१.५ क्ङ्िति च: 'क्' या 'ङ्' इत् वाले प्रत्यय के परे होने पर गुण-वृद्धि निषेध।"
+        # We allow checking against a Varna object or a rich Suffix object
+        current_tags = getattr(nimitta_obj, 'sanjnas', set())
 
-        return True, "Valid"
+        # Check for the prohibitive markers
+        if "क" in current_tags or "kit" in current_tags or "कित्" in current_tags:
+            return True, "१.१.५ क्ङ्िति च: 'कित्' प्रत्यय परे होने से गुण/वृद्धि निषेध।"
+
+        if "ङ" in current_tags or "ngit" in current_tags or "ङित्" in current_tags:
+            return True, "१.१.५ क्ङ्िति च: 'ङित्' प्रत्यय परे होने से गुण/वृद्धि निषेध।"
+
+        return False, "Valid"

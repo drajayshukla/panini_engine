@@ -1,67 +1,93 @@
-# logic/it_engine.py
+"""
+FILE: logic/it_engine.py
+PAS-v2.0: 5.0 (Siddha)
+PILLAR: It-Saṃjñā & Lopa (The Surgical Scrubber)
+REFERENCE: १.३.२ to १.३.९
+"""
 
 from core.upadesha_registry import UpadeshaType
-from logic.sanjna_rules import (
-    apply_upadeshe_ajanunasika_1_3_2,
-    apply_na_vibhaktau_1_3_4,
-    apply_halantyam_1_3_3,
-    apply_adir_nitudavah_1_3_5,
-    apply_shah_pratyayasya_1_3_6,
-    apply_chuttu_1_3_7,
-    apply_lashakvataddhite_1_3_8
-)
+import logic.sanjna_rules as rules
 
 
 class ItEngine:
     """
-    पाणिनीय इत्-संज्ञा मास्टर इंजन (इत्-प्रकरणम्)
-    Surgical Scrub: Identifies markers and performs Tasya Lopah (1.3.9).
+    इत्-सञ्चालक: The Marker Removal Engine.
+    Executes the 'It' identification (Diagnosis) and 'Lopa' (Removal) cycle.
     """
 
     @staticmethod
-    def run_it_prakaran(varna_list, source_type, is_taddhita=False):
+    def run_it_prakaran(varna_list, source_type=UpadeshaType.DHATU, is_taddhita=False):
         """
-        Orchestrates the 1.3.2 -> 1.3.8 sequence and executes 1.3.9.
+        [CYCLE]: Diagnosis (1.3.2-8) -> Prescription (1.3.9).
+        Returns: (Cleaned Varna List, List of Tags applied)
         """
-        if not varna_list or not isinstance(source_type, UpadeshaType):
-            return varna_list, []
+        if not varna_list:
+            return [], []
 
+        # 1. DIAGNOSIS PHASE (Identify the markers)
+        # We collect indices of all chars that get the 'It' label.
         it_indices = set()
-        sutra_tags = []
+        trace_log = []
 
-        # 1. Nasal Vowels (1.3.2)
-        idx2, tags2 = apply_upadeshe_ajanunasika_1_3_2(varna_list)
-        it_indices.update(idx2)
-        sutra_tags.extend(tags2)
+        # A. 1.3.2 Upadeshe'janunasika It (Vowels)
+        # Check specific nasal vowels (e.g., 'ँ' in 'गाधृँ')
+        nasal_indices = rules.apply_1_3_2_ajanunasika(varna_list)
+        if nasal_indices:
+            it_indices.update(nasal_indices)
+            trace_log.append(f"1.3.2 Applied on indices: {nasal_indices}")
 
-        # 2. Shield: Na Vibhaktau (1.3.4)
-        blocked_indices = apply_na_vibhaktau_1_3_4(varna_list, source_type)
+        # B. 1.3.3 Halantyam (Final Consonant)
+        # CRITICAL: 1.3.4 (Na Vibhaktau) acts as a blocking antibody.
+        blocked_indices = rules.apply_1_3_4_na_vibhaktau(varna_list, source_type)
+        if blocked_indices:
+            trace_log.append(f"1.3.4 Blocked Halantyam on indices: {blocked_indices}")
 
-        # 3. Final Consonants: Halantyam (1.3.3)
-        idx3, tags3 = apply_halantyam_1_3_3(varna_list, blocked_indices)
-        it_indices.update(idx3)
-        sutra_tags.extend(tags3)
+        hal_indices = rules.apply_1_3_3_halantyam(varna_list, blocked_indices)
+        if hal_indices:
+            it_indices.update(hal_indices)
+            trace_log.append(f"1.3.3 Applied on indices: {hal_indices}")
 
-        # 4. Initial Markers (Adi-It)
+        # C. Initial Markers (1.3.5 - 1.3.8)
+        # 1.3.5 Adir Ñitudavah (Dhatu only)
         if source_type == UpadeshaType.DHATU:
-            idx5, tags5 = apply_adir_nitudavah_1_3_5(varna_list)
-            it_indices.update(idx5)
-            sutra_tags.extend(tags5)
-        elif source_type in [UpadeshaType.PRATYAYA, UpadeshaType.VIBHAKTI]:
-            # 1.3.6 (Sha), 1.3.7 (Chu-Tu), 1.3.8 (L-Sh-Ku)
-            for func in [apply_shah_pratyayasya_1_3_6, apply_chuttu_1_3_7]:
-                idx, tags = func(varna_list, source_type)
-                it_indices.update(idx)
-                sutra_tags.extend(tags)
+            indices_135 = rules.apply_1_3_5_adir_nitudavah(varna_list)
+            if indices_135:
+                it_indices.update(indices_135)
+                trace_log.append("1.3.5 Applied (Ñi/Tu/Du)")
 
-            idx8, tags8 = apply_lashakvataddhite_1_3_8(varna_list, source_type, is_taddhita)
-            it_indices.update(idx8)
-            sutra_tags.extend(tags8)
+        # 1.3.6 - 1.3.8 (Pratyayas only)
+        if source_type in [UpadeshaType.PRATYAYA, UpadeshaType.VIBHAKTI]:
+            # 1.3.6 Shah Pratyayasya
+            # Note: Ensure these functions exist in your logic/sanjna_rules.py
+            if hasattr(rules, 'apply_1_3_6_shah'):
+                indices_136 = rules.apply_1_3_6_shah(varna_list, source_type)
+                if indices_136:
+                    it_indices.update(indices_136)
+                    trace_log.append("1.3.6 Applied (Ṣah)")
 
-        # --- ५. तस्य लोपः (१.३.९) ---
-        # The execution of the deletion mandate
-        remaining_varnas = [
-            v for idx, v in enumerate(varna_list) if idx not in it_indices
-        ]
+            # 1.3.7 Chutu
+            if hasattr(rules, 'apply_1_3_7_chutu'):
+                indices_137 = rules.apply_1_3_7_chutu(varna_list, source_type)
+                if indices_137:
+                    it_indices.update(indices_137)
+                    trace_log.append("1.3.7 Applied (Cu/Tu)")
 
-        return remaining_varnas, list(set(sutra_tags))
+            # 1.3.8 Lashakvataddhite (Not for Taddhitas)
+            indices_138 = rules.apply_1_3_8_lashakva(varna_list, source_type, is_taddhita)
+            if indices_138:
+                it_indices.update(indices_138)
+                trace_log.append("1.3.8 Applied (L/Ś/Ku)")
+
+        # 2. SURGICAL PHASE (1.3.9 Tasya Lopah)
+        # We rebuild the list excluding the identified 'It' markers.
+        cleaned_list = []
+        for i, v in enumerate(varna_list):
+            if i in it_indices:
+                # MARKER FOUND: We do not add it to cleaned_list.
+                # But we MUST preserve its 'Ghost' properties (1.1.56 idea)
+                v.sanjnas.add("इत्")
+                v.trace.append("१.३.९ तस्य लोपः (Removed)")
+            else:
+                cleaned_list.append(v)
+
+        return cleaned_list, trace_log

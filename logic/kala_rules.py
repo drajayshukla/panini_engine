@@ -1,93 +1,104 @@
-# logic/kala_rules.py
-from core.phonology import Varna
+"""
+FILE: logic/kala_rules.py
+PAS-v2.0: 5.0 (Siddha)
+PILLAR: Kāla-Saṃjñā (Temporal Definitions)
+REFERENCE: १.२.२७ to १.२.२८
+"""
+
+# --- Static Data: Intrinsic Duration Mapping ---
+HRASVA_SET = {'अ', 'इ', 'उ', 'ऋ', 'ऌ'}
+DIRGHA_SET = {
+    'आ', 'ई', 'ऊ', 'ॠ',
+    'ए', 'ऐ', 'ो', 'औ',  # Diphthongs are inherently long
+    'े', 'ै', 'ो', 'ौ',  # Matra forms
+    'ा', 'ी', 'ू', 'ॄ'  # Matra forms
+}
 
 
-def apply_1_2_28_filter(varna_obj, action_type):
+def apply_1_2_28_acashca(varna_obj, action_name="Kala-Sanjna"):
     """
-    परिभाषा सूत्र: अचश्च (१.२.२८)
-    उद्देश्य: यह सुनिश्चित करना कि ह्रस्व/दीर्घ/प्लुत केवल अच् (Vowels) पर लागू हों।
+    [SUTRA]: अचश्च (१.२.२८)
+    [LOGIC]: The definitions Hrasva, Dirgha, and Pluta apply ONLY to Ac (Vowels).
+    Returns: (Boolean Is_Valid, String Message)
     """
     if not varna_obj.is_vowel:
-        return False, f"अचश्च (१.२.२८): '{varna_obj.char}' व्यञ्जन है, अतः {action_type} कार्य वर्जित है।"
+        msg = f"१.२.२८ अचश्च: '{varna_obj.char}' is a Consonant. {action_name} blocked."
+        # We assume the caller might want to log this blockage in the trace
+        return False, msg
     return True, "Valid"
 
 
-def apply_ukalo_aj_1_2_27(varna_obj):
+def apply_1_2_27_ukalo(varna_obj):
     """
-    संज्ञा सूत्र: ऊकालोऽज्झ्रस्वदीर्घप्लुतः (१.२.२७)
-    यह फ़ंक्शन वर्ण की मात्रा के आधार पर उसे अंतिम संज्ञा प्रदान करता है।
+    [SUTRA]: ऊकालोऽज्झ्रस्वदीर्घप्लुतः (१.२.२७)
+    [VRITTI]: वां-काल इव कालो यस्य सोऽच् क्रमात् ह्रस्वदीर्घप्लुतसंज्ञः स्यात्।
+    [LOGIC]: Assigns 'Hrasva' (1), 'Dirgha' (2), or 'Pluta' (3) labels.
     """
-    # १.२.२८ का फ़िल्टर सबसे पहले (Safety First)
-    is_valid, _ = apply_1_2_28_filter(varna_obj, "काल-संज्ञा")
-
+    # 1. The Gatekeeper (1.2.28)
+    is_valid, msg = apply_1_2_28_acashca(varna_obj, "१.२.२७ ऊकालो...")
     if not is_valid:
-        varna_obj.kala_sanjna = "व्यञ्जन"
+        # If it's a consonant, we define duration as 0.5 (Ardha-matra) per tradition
+        varna_obj.matra = 0.5
+        varna_obj.trace.append(msg)
         return varna_obj
 
-    # १.२.२७ के अनुसार संज्ञा आवंटन
-    if varna_obj.matra == 1:
-        varna_obj.kala_sanjna = "ह्रस्व"
-    elif varna_obj.matra == 2:
-        varna_obj.kala_sanjna = "दीर्घ"
-    elif varna_obj.matra >= 3:
+    # 2. Determine Duration (Physiological Assessment)
+    char = varna_obj.char
+
+    # Check for Pluta mark (Explicit 3)
+    if '३' in char:
+        varna_obj.matra = 3
+        varna_obj.sanjnas.add("प्लुत")
         varna_obj.kala_sanjna = "प्लुत"
+        varna_obj.trace.append("१.२.२७: Pluta assigned (3 Matras)")
+
+    # Check for Long (Dirgha)
+    elif char in DIRGHA_SET or any(x in char for x in DIRGHA_SET):
+        varna_obj.matra = 2
+        varna_obj.sanjnas.add("दीर्घ")
+        varna_obj.kala_sanjna = "दीर्घ"
+        varna_obj.trace.append("१.२.२७: Dirgha assigned (2 Matras)")
+
+    # Default to Short (Hrasva)
     else:
-        varna_obj.kala_sanjna = "अज्ञात"
+        varna_obj.matra = 1
+        varna_obj.sanjnas.add("ह्रस्व")
+        varna_obj.kala_sanjna = "ह्रस्व"
+        varna_obj.trace.append("१.२.२७: Hrasva assigned (1 Matra)")
 
     return varna_obj
 
 
-def apply_specific_kala_action(varna_obj, target_matra):
+def get_savarna_variants_18_bheda(varna_obj):
     """
-    यह फंक्शन किसी सूत्र द्वारा दिए गए 'आदेश' (Action) को प्रोसेस करता है।
-    जैसे: 'ह्रस्वः' (१.२.२७) आदेश आने पर।
-    """
-    action_name = "ह्रस्व" if target_matra == 1 else "दीर्घ" if target_matra == 2 else "प्लुत"
-
-    # १.२.२८ का कड़ा पहरा
-    is_valid, error_msg = apply_1_2_28_filter(varna_obj, action_name)
-
-    if is_valid:
-        varna_obj.matra = target_matra
-        varna_obj.kala_sanjna = action_name
-    else:
-        # यदि व्यञ्जन पर कार्य करने की कोशिश की जाए तो लॉग करें (Clinical Log)
-        print(f"DEBUG: {error_msg}")
-
-    return varna_obj
-
-
-def generate_18_bheda_matrix(varna_obj):
-    """
-    पाणिनीय अष्टाध्यायी के आधार पर स्वर के १८ भेदों का निर्माण।
-    ह्रस्व/दीर्घ/प्लुत (३) * उदात्त/अनुदात्त/स्वरित (३) * अनुनासिक/निरनुनासिक (२)
+    Generates the 18 varieties (Bhedas) for a vowel.
+    Used for 1.1.69 (Savarna-grahana) expansion.
     """
     if not varna_obj.is_vowel:
         return []
 
-    # आधार वर्ण (चिह्न हटाकर)
-    base_char = varna_obj.char[0]
+    # Identify the base sound (removing Pluta/Nasal markers for classification)
+    raw_char = varna_obj.char[0]
 
-    # नियमों के आधार पर काल-सीमा (नियम २ और ३)
+    # --- Dimensions ---
     kalas = ["ह्रस्व", "दीर्घ", "प्लुत"]
-
-    # २. ऌकारस्य दीर्घाभावात् (ऌ का दीर्घ नहीं होता)
-    if base_char == 'ऌ':
-        kalas = ["ह्रस्व", "प्लुत"]
-        # ३. एचां ह्रस्वाभावात् (ए, ओ, ऐ, औ का ह्रस्व नहीं होता)
-    elif base_char in ['ए', 'ओ', 'ऐ', 'औ']:
-        kalas = ["दीर्घ", "प्लुत"]
-
     svaras = ["उदात्त", "अनुदात्त", "स्वरित"]
     nasals = ["अनुनासिक", "निरनुनासिक"]
 
+    # --- Constraints ---
+    # 1. ऌकारस्य दीर्घाभावात् (Lri has no Dirgha) -> 12 Bhedas
+    if raw_char in ['ऌ', 'ॢ', 'ॡ']:
+        kalas = ["ह्रस्व", "प्लुत"]
+
+    # 2. एचां ह्रस्वाभावात् (Diphthongs have no Hrasva) -> 12 Bhedas
+    elif raw_char in ['ए', 'ऐ', 'ओ', 'औ', 'े', 'ै', 'ो', 'ौ']:
+        kalas = ["दीर्घ", "प्लुत"]
+
+    # --- Matrix Generation ---
     matrix = []
     for k in kalas:
         for s in svaras:
             for n in nasals:
-                matrix.append({
-                    "काल": k,
-                    "सवर": s,
-                    "नासिका": n
-                })
+                matrix.append(f"{raw_char} ({k}-{s}-{n})")
+
     return matrix

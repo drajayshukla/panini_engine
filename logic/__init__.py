@@ -1,19 +1,33 @@
-# panini_engine/logic/__init__.py
+"""
+FILE: logic/__init__.py
+PAS-v2.0: 5.0 (Siddha)
+ROLE: The Legal Interface (Exposing the Shastric Laws)
+"""
 
-# १. संज्ञा नियम (Sanjna Rules)
+# --- १. संज्ञा-प्रकरणम् (Definitions & Technical Labels) ---
+# Sourced from the consolidated PAS-5 'logic/sanjna_rules.py'
+
 from .sanjna_rules import (
-    apply_upadeshe_ajanunasika_1_3_2,
-    apply_halantyam_1_3_3,
-    apply_na_vibhaktau_1_3_4,
-    apply_adir_nitudavah_1_3_5,
-    apply_shah_pratyayasya_1_3_6,
-    apply_chuttu_1_3_7,
-    apply_lashakvataddhite_1_3_8
+    # Section 1.1: Foundations
+    apply_1_1_1_vriddhi,  # वृद्धिरादैच्
+    apply_1_1_2_guna,  # अदेङ्गुणः
+    apply_1_1_7_samyoga,  # हलोऽनन्तराः संयोगः
+
+    # Section 1.3: It-Sanjna (Markers)
+    apply_1_3_2_ajanunasika,  # उपदेशेऽजनुनासिक इत्
+    apply_1_3_3_halantyam,  # हलन्त्यम्
+    apply_1_3_4_na_vibhaktau,  # न विभक्तौ तुस्माः
+    apply_1_3_5_adir_nitudavah,  # आदिर्ञिटुडवः
+    apply_1_3_8_lashakva,  # लशक्वतद्धिते
+
+    # Section 1.4: Pada
+    apply_1_4_14_pada  # सुप्तिङन्तं पदम्
 )
 
-# २. स्थान और स्वर नियम (Phonetic Rules)
-from .sthana_rules import apply_sthana_to_varna
-from .svara_rules import apply_svara_sanjna
+# --- २. अतिदेश (Extension Logic) ---
+# Used for 1.1.56 Stahnivadbhava
+# (Ensure core/atidesha_mapper.py is accessible via core, 
+# but if specific logic rules exist here, expose them.)
 
-# ३. अङ्ग कार्य (Morphology - भविष्य के लिए)
-# from .morph_rules import apply_ata_upadhayah_7_2_116
+# --- ३. सन्धि (Sandhi - Future Zone 2) ---
+# from .sandhi_rules import ...

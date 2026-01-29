@@ -1,4 +1,9 @@
-# panini_engine/logic/anuvritti_handler.py
+"""
+FILE: logic/anuvritti_handler.py
+PAS-v2.0: 5.0 (Siddha)
+PILLAR: Anuvṛtti (Hereditary Context)
+REFERENCE: Ashtadhyayi.com & Jigyasu Prathamavritti
+"""
 
 from core.adhikara_manager import AdhikaraManager
 
@@ -6,58 +11,76 @@ from core.adhikara_manager import AdhikaraManager
 class AnuvrittiHandler:
     """
     पाणिनीय अनुवृत्ति इंजन (The Hereditary Logic).
-    उद्देश्य: पिछले सूत्रों से पदों (Keywords) को वर्तमान सूत्र में लाना।
-    Zone 1: Core Sanjna & It-Prakarana Support.
+    Mechanizes the flow of keywords from previous Sutras to the current one.
     """
 
     @staticmethod
     def get_inherited_terms(current_sutra_num):
         """
-        वर्तमान सूत्र संख्या के आधार पर अनुवृत्त पदों की पहचान करना।
-        Uses Range-based logic to mirror the Shastric flow.
+        [LOGIC]: Determines which keywords apply to the current sūtra based on its location.
+        Uses the 'AdhikaraManager' as the single source of truth for boundaries.
         """
-        # Surgical Parse: '1.3.3' -> (1, 3, 3)
         target = AdhikaraManager.parse_sutra(current_sutra_num)
         terms = []
 
-        # --- १. उपदेशे / इत् (It-Sanjna Flow: 1.3.2 - 1.3.10) ---
-        # Note: 1.3.2 provides the base keywords for the entire marker section.
-        if (1, 3, 2) <= target <= (1, 3, 10):
-            # 1.3.9 is 'Tasya Lopah', it only needs 'It' (from 1.3.2)
-            if target == (1, 3, 9):
-                terms.append("इतः")
+        # --- 1. THE IT-PRAKARANA FLOW (1.3.2 - 1.3.9) ---
+        # Context: "Upadeshe" (from 1.3.2) and "It" (from 1.3.2)
+        # Note: 1.3.9 (Tasya Lopah) needs 'It' to know what to delete.
+        start_it = (1, 3, 2)
+        end_it = (1, 3, 9)
+
+        if start_it <= target <= end_it:
+            if target == (1, 3, 2):
+                # The source itself doesn't inherit, it declares.
+                pass
             else:
-                terms.extend(["उपदेशे", "इत्"])
+                terms.append("उपदेशे")
+                terms.append("इत्")
 
-        # --- २. प्रत्ययस्य (Pratyaya Constraint: 1.3.6 - 1.3.8) ---
-        # Specific markers found only in suffixes.
+        # --- 2. PRATYAYA CONSTRAINT (1.3.6 - 1.3.8) ---
+        # Context: "Pratyayasya" (Of the suffix) - specifically for Adi-It rules.
         if (1, 3, 6) <= target <= (1, 3, 8):
-            terms.append("प्रत्ययस्य")
+            terms.append("प्रत्ययस्य (आदिः)")
 
-        # --- ३. अङ्गस्य (Aṅga Adhikāra: 6.4.1 - 7.4.120) ---
-        # Critical for Zone 3 Vidhi operations.
-        if (6, 4, 1) <= target <= (7, 4, 120):
+        # --- 3. PRATYAYA ADHIKARA (3.1.1 - 5.4.160) ---
+        # Context: "Pratyayah", "Parashcha"
+        # Using AdhikaraManager constants to maintain S.S.O.T.
+        if AdhikaraManager.is_in_pratyaya_adhikara(current_sutra_num):
+            terms.extend(["प्रत्ययः", "परश्च"])
+
+        # --- 4. ANGASYA ADHIKARA (6.4.1 - 7.4.120) ---
+        # Context: "Angasya" (Of the Stem)
+        if AdhikaraManager.is_in_angasya_adhikara(current_sutra_num):
             terms.append("अङ्गस्य")
+
+        # --- 5. BHASYA ADHIKARA (1.4.18 - 6.4.175 approx) ---
+        # (Simplified for PAS-5: Only checking standard range if needed later)
+        # if (1,4,18) <= target <= (6,4,175): terms.append("भस्य")
 
         return terms
 
     @staticmethod
     def apply_anuvritti_context(sutra_obj):
         """
-        सम्बद्ध पद: Contextualizes a Sutra object with its inherited terms.
-        Used for UI display and Clinical Logic validation.
+        [UI HELPER]: Injects context into a Sutra object for display.
+        Example: Transforms "Halantyam" -> "Upadeshe It Halantyam"
         """
-        # Safety check for input format
+        # 1. Safe Extraction of Sutra Number
         sutra_num = sutra_obj.get('sutra_num', sutra_obj.get('number', '0.0.0'))
 
+        # 2. Retrieve Hereditary Terms
         terms = AnuvrittiHandler.get_inherited_terms(sutra_num)
+
+        # 3. Construct Clinical Meaning
+        # We prepend the inherited terms to the native name/meaning
+        native_name = sutra_obj.get('name', '')
 
         if terms:
             sutra_obj['context_terms'] = terms
-            # Builds the full "Clinical Meaning" (e.g., "उपदेशे इत् हलन्त्यम्")
-            sutra_obj['full_meaning'] = f"{' '.join(terms)} {sutra_obj.get('name', '')}"
+            # E.g. [उपदेशे, इत्] + [हलन्त्यम्]
+            sutra_obj['full_meaning'] = f"[{' '.join(terms)}] {native_name}"
         else:
             sutra_obj['context_terms'] = []
-            sutra_obj['full_meaning'] = sutra_obj.get('name', '')
+            sutra_obj['full_meaning'] = native_name
 
         return sutra_obj
