@@ -2,28 +2,29 @@
 FILE: core/upadesha_registry.py
 PAS-v2.0: 5.0 (Siddha)
 PILLAR: Upadeśa (Instructional Source Registry)
-UPDATED: Integrated 3.1.1 Pratyaya Classification + Robust Type Checking.
+UPDATED: Solved Circular Import via Lazy Loading.
 """
 
 import json
 import os
 from core.phonology import Varna
-from logic.pratyaya_classifier import PratyayaClassifier
+
+# [FIX]: Removed top-level import of PratyayaClassifier to break cycle
+# from logic.pratyaya_classifier import PratyayaClassifier
 
 class UpadeshaType:
     """
     Registry of Source Types (Yoni) in Paninian Grammar.
-    Acts as the central authority for identifying input types.
     """
     # --- CONSTANTS ---
-    DHATU = "dhatu"             # Root (e.g. Bhaj, Pac)
-    PRATYAYA = "pratyaya"       # Suffix (e.g. Ghanj, Shap)
-    VIBHAKTI = "vibhakti"       # Case Ending (Subset of Pratyaya: Su, Au, Jas)
-    AGAMA = "agama"             # Augment
-    ADESHA = "adesha"           # Substitute
-    PRATIPADIKA = "pratipadika" # Nominal Stem
-    UNADI = "unadi"             # Irregular affix
-    NIPATA = "nipata"           # Particle
+    DHATU = "dhatu"
+    PRATYAYA = "pratyaya"
+    VIBHAKTI = "vibhakti"
+    AGAMA = "agama"
+    ADESHA = "adesha"
+    PRATIPADIKA = "pratipadika"
+    UNADI = "unadi"
+    NIPATA = "nipata"
 
     @classmethod
     def _load_data(cls, filename):
@@ -45,17 +46,17 @@ class UpadeshaType:
         Scans all databases to guess the type of the input string.
         Returns: (UpadeshaType, SubCategory, Origin_Sutra)
         """
+        # [FIX]: Lazy Import here to prevent circular dependency at startup
+        from logic.pratyaya_classifier import PratyayaClassifier
+
         if not text:
             return cls.PRATIPADIKA, None, "Empty Input"
 
         # --- 1. DHATU CHECK (Robust) ---
         dhatus = cls._load_data("dhatupatha.json")
-
-        # Ensure list structure
         dhatu_list = dhatus.get('dhatus', []) if isinstance(dhatus, dict) else dhatus
         if not isinstance(dhatu_list, list): dhatu_list = []
 
-        # Robust Scan: Handles both Dicts and Strings
         for d in dhatu_list:
             if isinstance(d, dict):
                 if d.get("dhatu") == text or d.get("mula_dhatu") == text:
@@ -64,21 +65,16 @@ class UpadeshaType:
                 if d == text:
                     return cls.DHATU, None, "Dhatupatha (String)"
 
-        # --- 2. PRATYAYA CHECK (Enhanced with 3.1.1 Logic) ---
-        # Step A: Use the Classifier first for high-precision identification
-        # This handles Sup, Ting, Vikarana, Sanadi, etc.
+        # --- 2. PRATYAYA CHECK (Enhanced) ---
+        # Use Lazy-Loaded Classifier
         category, sutra_hint = PratyayaClassifier.classify(text)
 
         if category != "Generic Pratyaya":
-            # [CRITICAL]: Map 'sup' category to VIBHAKTI type for the engine
             if category == "sup":
                 return cls.VIBHAKTI, "Sup", sutra_hint
-
-            # All others (Ting, Krt, Taddhita) return as PRATYAYA with sub-cat
             return cls.PRATYAYA, category, sutra_hint
 
-        # Step B: Fallback to JSON check (Pratyaya Kosha)
-        # Only needed if PratyayaClassifier returned "Generic"
+        # Fallback to JSON check
         pratyayas = cls._load_data("pratyaya_defs.json")
         is_pratyaya_db = False
 
@@ -94,7 +90,7 @@ class UpadeshaType:
         if is_pratyaya_db:
             return cls.PRATYAYA, "General", "Pratyaya Kosha"
 
-        # --- 3. SHABDA CHECK (Robust) ---
+        # --- 3. SHABDA CHECK ---
         shabdas = cls._load_data("shabdroop.json")
         if isinstance(shabdas, list):
             for s in shabdas:
@@ -104,7 +100,6 @@ class UpadeshaType:
                     return cls.PRATIPADIKA, None, "Shabda List"
 
         # --- 4. DEFAULT ---
-        # Treat unknown inputs as user-defined Pratipadikas
         return cls.PRATIPADIKA, None, "User Input"
 
 
@@ -112,7 +107,6 @@ class Upadesha(Varna):
     """
     [PAS-5.0] The Siddha Upadesha Object.
     Wraps the phoneme with its Legal Identity (Adhikara).
-    Inherits from Varna to prevent 'AttributeError: is_vowel'.
     """
     def __init__(self, char, source_rule=None):
         super().__init__(char)
