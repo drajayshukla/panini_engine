@@ -1,9 +1,11 @@
+
 """
 FILE: logic/vidhi_engine.py
 PAS-v2.0: 5.0 (Siddha)
-PILLAR: Vidhi-Prakaraṇam (Operational Rules)
-UPDATED: Fixed Upadha Index Calculation (limit - 2).
+PILLAR: Vidhi-Prakaraṇam
+UPDATED: Added 6.1.78 (Ayadi) and Refined 7.2.115 (Vriddhi)
 """
+
 
 from core.phonology import Varna, ad
 from core.pratyahara_engine import PratyaharaEngine
@@ -51,6 +53,49 @@ class VidhiEngine:
         return varna_list, None
 
     @staticmethod
+    def apply_ayadi_6_1_78(anga_varnas, suffix_varnas):
+        """
+        [SUTRA]: एचोऽयवायावः (६.१.७८)
+        [LOGIC]: Ec (e, o, ai, au) + Ac (Vowel) -> ay, av, āy, āv.
+        [EXAMPLE]: Nai + i -> Nāy + i
+        """
+        if not anga_varnas or not suffix_varnas:
+            return anga_varnas, None
+
+        # 1. Check Sthani (End of Anga): Must be Ec
+        last_varna = anga_varnas[-1]
+
+        # 2. Check Nimitta (Start of Suffix): Must be Ac (Vowel)
+        first_suffix_char = suffix_varnas[0]
+        if not first_suffix_char.is_vowel:
+            return anga_varnas, None
+
+        # 3. Mapping
+        # e -> ay, o -> av, ai -> āy, au -> āv
+        mapping = {
+            'ए': ['अ', 'य्'],
+            'ओ': ['अ', 'व्'],
+            'ऐ': ['आ', 'य्'],
+            'औ': ['आ', 'व्']
+        }
+
+        if last_varna.char in mapping:
+            old_char = last_varna.char
+            substitutes = mapping[old_char]  # e.g. ['आ', 'य्']
+
+            # Remove the Ec vowel
+            anga_varnas.pop()
+
+            # Append the substitutes
+            for char in substitutes:
+                v = Varna(char)
+                v.trace.append("६.१.७८")
+                anga_varnas.append(v)
+
+            return anga_varnas, f"६.१.७८ ({old_char} -> {''.join(substitutes)})"
+
+        return anga_varnas, None
+    @staticmethod
     def apply_ami_purvah_6_1_107(varna_list):
         """[SUTRA]: अमि पूर्वः (६.१.१०७)"""
         if len(varna_list) < 2: return varna_list, None
@@ -94,6 +139,24 @@ class VidhiEngine:
             varna_list.pop(idx_to_remove)
             return varna_list, "६.४.१४३ (टि-लोपः)"
         return varna_list, None
+
+    @staticmethod
+    def apply_orgunah_6_4_146(anga_varnas, suffix_varnas):
+        """
+        [SUTRA]: ओर्गुणः (६.४.१४६)
+        [LOGIC]: Final u/ū of a Bha stem becomes Guna (o) before Taddhita.
+        [EXAMPLE]: Aupagu -> Aupago
+        """
+        if not anga_varnas: return anga_varnas, None
+
+        last_varna = anga_varnas[-1]
+
+        # Check if ending in u/ū
+        if last_varna.char in ['उ', 'ऊ']:
+            last_varna.char = 'ओ'
+            return anga_varnas, "६.४.१४६ (उ -> ओ)"
+
+        return anga_varnas, None
 
     # =========================================================================
     # BOOK 7: Anga Transformations
@@ -154,17 +217,57 @@ class VidhiEngine:
             return varna_list, "७.२.८५ (ऐ -> आ)"
         return varna_list, None
 
+
     @staticmethod
-    def apply_vṛddhi_7_2_115(varna_list):
-        """[SUTRA]: अचो ञ्णिति (७.२.११५)"""
-        if not varna_list: return varna_list, None
-        last = varna_list[-1]
-        mapping = {'ओ': 'औ', 'अ': 'आ', 'इ': 'ऐ', 'उ': 'औ'}
-        if last.char in mapping:
-            old = last.char
-            last.char = mapping[old]
-            return varna_list, f"७.२.११५ ({old}->{last.char})"
-        return varna_list, None
+    def apply_vṛddhi_7_2_115(anga_varnas, suffix_varnas):
+        """
+        [SUTRA]: अचो ञ्णिति (७.२.११५)
+        [LOGIC]: Final vowel of Anga becomes Vriddhi if suffix is Ñit or Ṇit.
+        [EXAMPLE]: Nī + i (Ṇit) -> Nai + i
+        """
+        if not anga_varnas or not suffix_varnas:
+            return anga_varnas, None
+
+        # 1. Check Trigger (Nimitta): Is Suffix Ñit or Ṇit?
+        # We check the tags on the first letter of the suffix
+        suffix_tags = getattr(suffix_varnas[0], 'sanjnas', set())
+
+        # Note: In 'Ni' + 'Nic', 'Nic' is Nit.
+        if not ({'ñit', 'ṇit', 'ñ', 'ṇ'} & suffix_tags):
+            return anga_varnas, None
+
+        # 2. Check Target (Sthani): Final Vowel
+        last_varna = anga_varnas[-1]
+        if not last_varna.is_vowel:
+            return anga_varnas, None
+
+        # 3. Apply Vriddhi Map (1.1.1 Vriddhiradaic)
+        # i/ī -> ai
+        vriddhi_map = {
+            'अ': 'आ',
+            'इ': 'ऐ', 'ई': 'ऐ', 'ए': 'ऐ', 'ऐ': 'ऐ',
+            'उ': 'औ', 'ऊ': 'औ', 'ओ': 'औ', 'औ': 'औ',
+            'ऋ': 'आर', 'ॠ': 'आर'
+        }
+
+        if last_varna.char in vriddhi_map:
+            old = last_varna.char
+            new_val = vriddhi_map[old]
+
+            # If replacement is multi-char (like 'ar'), handle list expansion
+            # For 'ai' (ऐ), it is single char.
+            if len(new_val) == 1:
+                last_varna.char = new_val
+                last_varna.sanjnas.add("वृद्धि")
+                last_varna.trace.append("७.२.११५")
+            else:
+                # Handle 'ar', 'al' etc. if needed (not needed for Nī)
+                pass
+
+            return anga_varnas, f"७.२.११५ ({old} -> {new_val})"
+
+        return anga_varnas, None
+
 
     @staticmethod
     def apply_ata_upadhayah_7_2_116(anga_varnas, manual_range=None):
@@ -189,6 +292,70 @@ class VidhiEngine:
             return anga_varnas, "७.२.११६ (अ -> आ)"
         return anga_varnas, None
 
+
+    @staticmethod
+    def apply_taddhiteshu_acam_ade_7_2_117(anga_varnas, suffix_varnas):
+        """
+        [SUTRA]: तद्धितेष्वचामादेः (७.२.११७)
+        [LOGIC]: First vowel (Adi Ac) -> Vriddhi.
+        [UPDATED]: Supports ऋ -> आर (Bhṛgu -> Bhārgu).
+        """
+        if not anga_varnas or not suffix_varnas:
+            return anga_varnas, None
+
+        # 1. Nimitta Check: Suffix must be Nit/Ñit
+        first_suffix = suffix_varnas[0]
+        if not ({'ñit', 'ṇit'} & first_suffix.sanjnas):
+            return anga_varnas, None
+
+        # 2. Find Adi Ac (First Vowel) and its Index
+        target_idx = -1
+        for i, v in enumerate(anga_varnas):
+            if v.is_vowel:
+                target_idx = i
+                break
+
+        if target_idx == -1:
+            return anga_varnas, None
+
+        target_vowel = anga_varnas[target_idx]
+        old_char = target_vowel.char
+
+        # 3. Apply Vriddhi Map
+        # Note: 'ऋ' becomes 'आर' (List of chars) per 1.1.51 Uran Raper
+        vriddhi_map = {
+            'अ': 'आ',
+            'इ': 'ऐ', 'ई': 'ऐ', 'ए': 'ऐ',
+            'उ': 'औ', 'ऊ': 'औ', 'ओ': 'औ',
+            'ऋ': ['आ', 'र्'], 'ॠ': ['आ', 'र्']
+        }
+
+        if old_char in vriddhi_map:
+            new_val = vriddhi_map[old_char]
+
+            # CASE A: Single Character Replacement (a -> ā, i -> ai)
+            if isinstance(new_val, str):
+                target_vowel.char = new_val
+                target_vowel.sanjnas.add("वृद्धि")
+                return anga_varnas, f"७.२.११७ ({old_char} -> {new_val})"
+
+            # CASE B: Multi-Character Replacement (ṛ -> ār)
+            elif isinstance(new_val, list):
+                # We need to splice the list: replace 1 item with 2 items
+                # Create new Varna objects
+                new_varnas = []
+                for char in new_val:
+                    v = Varna(char)
+                    v.sanjnas.add("वृद्धि")
+                    v.trace.append("७.२.११७ + १.१.५१")
+                    new_varnas.append(v)
+
+                # Perform List Splicing [idx : idx+1] = [new1, new2]
+                anga_varnas[target_idx: target_idx + 1] = new_varnas
+
+                return anga_varnas, f"७.२.११७ ({old_char} -> {''.join(new_val)})"
+
+        return anga_varnas, None
     @staticmethod
     def apply_chajo_ku_7_3_52(anga_varnas, manual_range=None):
         """[SUTRA]: चजोः कु घिण्ण्यतोः (७.३.५२)"""
