@@ -145,13 +145,11 @@ class VidhiEngine:
         """
         [SUTRA]: ओर्गुणः (६.४.१४६)
         [LOGIC]: Final u/ū of a Bha stem becomes Guna (o) before Taddhita.
-        [EXAMPLE]: Aupagu -> Aupago
         """
         if not anga_varnas: return anga_varnas, None
 
         last_varna = anga_varnas[-1]
 
-        # Check if ending in u/ū
         if last_varna.char in ['उ', 'ऊ']:
             last_varna.char = 'ओ'
             return anga_varnas, "६.४.१४६ (उ -> ओ)"
@@ -292,7 +290,6 @@ class VidhiEngine:
             return anga_varnas, "७.२.११६ (अ -> आ)"
         return anga_varnas, None
 
-
     @staticmethod
     def apply_taddhiteshu_acam_ade_7_2_117(anga_varnas, suffix_varnas):
         """
@@ -308,7 +305,7 @@ class VidhiEngine:
         if not ({'ñit', 'ṇit'} & first_suffix.sanjnas):
             return anga_varnas, None
 
-        # 2. Find Adi Ac (First Vowel) and its Index
+        # 2. Find Adi Ac (First Vowel)
         target_idx = -1
         for i, v in enumerate(anga_varnas):
             if v.is_vowel:
@@ -322,7 +319,6 @@ class VidhiEngine:
         old_char = target_vowel.char
 
         # 3. Apply Vriddhi Map
-        # Note: 'ऋ' becomes 'आर' (List of chars) per 1.1.51 Uran Raper
         vriddhi_map = {
             'अ': 'आ',
             'इ': 'ऐ', 'ई': 'ऐ', 'ए': 'ऐ',
@@ -333,16 +329,15 @@ class VidhiEngine:
         if old_char in vriddhi_map:
             new_val = vriddhi_map[old_char]
 
-            # CASE A: Single Character Replacement (a -> ā, i -> ai)
+            # CASE A: Single Char
             if isinstance(new_val, str):
                 target_vowel.char = new_val
                 target_vowel.sanjnas.add("वृद्धि")
                 return anga_varnas, f"७.२.११७ ({old_char} -> {new_val})"
 
-            # CASE B: Multi-Character Replacement (ṛ -> ār)
+            # CASE B: Multi Char (ṛ -> ār)
             elif isinstance(new_val, list):
-                # We need to splice the list: replace 1 item with 2 items
-                # Create new Varna objects
+                from core.phonology import Varna  # Ensure Varna is available
                 new_varnas = []
                 for char in new_val:
                     v = Varna(char)
@@ -350,9 +345,8 @@ class VidhiEngine:
                     v.trace.append("७.२.११७ + १.१.५१")
                     new_varnas.append(v)
 
-                # Perform List Splicing [idx : idx+1] = [new1, new2]
+                # List Splicing
                 anga_varnas[target_idx: target_idx + 1] = new_varnas
-
                 return anga_varnas, f"७.२.११७ ({old_char} -> {''.join(new_val)})"
 
         return anga_varnas, None
