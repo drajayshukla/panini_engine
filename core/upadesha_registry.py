@@ -2,12 +2,13 @@
 FILE: core/upadesha_registry.py
 PAS-v2.0: 5.0 (Siddha)
 PILLAR: Upadeśa (Instructional Source Registry)
-UPDATED: Added robust type-checking to prevent AttributeErrors on dirty JSON data.
+UPDATED: Integrated 3.1.1 Pratyaya Classification + Robust Type Checking.
 """
 
 import json
 import os
 from core.phonology import Varna
+from logic.pratyaya_classifier import PratyayaClassifier
 
 class UpadeshaType:
     """
@@ -17,7 +18,7 @@ class UpadeshaType:
     # --- CONSTANTS ---
     DHATU = "dhatu"             # Root (e.g. Bhaj, Pac)
     PRATYAYA = "pratyaya"       # Suffix (e.g. Ghanj, Shap)
-    VIBHAKTI = "vibhakti"       # Case Ending
+    VIBHAKTI = "vibhakti"       # Case Ending (Subset of Pratyaya: Su, Au, Jas)
     AGAMA = "agama"             # Augment
     ADESHA = "adesha"           # Substitute
     PRATIPADIKA = "pratipadika" # Nominal Stem
@@ -42,40 +43,42 @@ class UpadeshaType:
     def auto_detect(cls, text):
         """
         Scans all databases to guess the type of the input string.
-        Returns: (UpadeshaType, Is_Taddhita, Origin_Sutra/Source)
+        Returns: (UpadeshaType, SubCategory, Origin_Sutra)
         """
         if not text:
-            return cls.PRATIPADIKA, False, "Empty Input"
+            return cls.PRATIPADIKA, None, "Empty Input"
 
-        # --- 1. CHECK DHATUPATHA (Roots) ---
+        # --- 1. DHATU CHECK (Robust) ---
         dhatus = cls._load_data("dhatupatha.json")
 
-        # Normalization: Ensure we have a list to iterate over
-        dhatu_list = []
-        if isinstance(dhatus, dict):
-            dhatu_list = dhatus.get('dhatus', [])
-        elif isinstance(dhatus, list):
-            dhatu_list = dhatus
+        # Ensure list structure
+        dhatu_list = dhatus.get('dhatus', []) if isinstance(dhatus, dict) else dhatus
+        if not isinstance(dhatu_list, list): dhatu_list = []
 
         # Robust Scan: Handles both Dicts and Strings
         for d in dhatu_list:
-            # Case A: Dictionary Object (Standard)
             if isinstance(d, dict):
                 if d.get("dhatu") == text or d.get("mula_dhatu") == text:
-                    return cls.DHATU, False, "Dhatupatha"
-            # Case B: Simple String (Legacy/Simple JSON)
+                    return cls.DHATU, None, "Dhatupatha"
             elif isinstance(d, str):
                 if d == text:
-                    return cls.DHATU, False, "Dhatupatha (String)"
+                    return cls.DHATU, None, "Dhatupatha (String)"
 
-        # --- 2. CHECK PRATYAYAS (Suffixes) ---
-        fallback_pratyayas = {
-            "घञ्", "अण्", "यत्", "ण्वुल्", "तृच्", "शप्", "स्य", "सिच्",
-            "सुँ", "औ", "जस्", "अम्", "औट्", "शस्", "टा", "भ्याम्", "भिस्",
-            "ङे", "भ्यस्", "ङसिँ", "ङस्", "ओस्", "आम्", "ङि", "सुप्",
-            "तिप्", "तस्", "झि", "सिप्", "थस्", "थ", "मिप्", "वस्", "मस्"
-        }
+        # --- 2. PRATYAYA CHECK (Enhanced with 3.1.1 Logic) ---
+        # Step A: Use the Classifier first for high-precision identification
+        # This handles Sup, Ting, Vikarana, Sanadi, etc.
+        category, sutra_hint = PratyayaClassifier.classify(text)
 
+        if category != "Generic Pratyaya":
+            # [CRITICAL]: Map 'sup' category to VIBHAKTI type for the engine
+            if category == "sup":
+                return cls.VIBHAKTI, "Sup", sutra_hint
+
+            # All others (Ting, Krt, Taddhita) return as PRATYAYA with sub-cat
+            return cls.PRATYAYA, category, sutra_hint
+
+        # Step B: Fallback to JSON check (Pratyaya Kosha)
+        # Only needed if PratyayaClassifier returned "Generic"
         pratyayas = cls._load_data("pratyaya_defs.json")
         is_pratyaya_db = False
 
@@ -88,20 +91,22 @@ class UpadeshaType:
                     is_pratyaya_db = True
                     break
 
-        if text in fallback_pratyayas or is_pratyaya_db:
-            return cls.PRATYAYA, False, "Pratyaya Kosha"
+        if is_pratyaya_db:
+            return cls.PRATYAYA, "General", "Pratyaya Kosha"
 
-        # --- 3. CHECK SHABDA (Pratipadika) ---
+        # --- 3. SHABDA CHECK (Robust) ---
         shabdas = cls._load_data("shabdroop.json")
         if isinstance(shabdas, list):
             for s in shabdas:
                 if isinstance(s, dict) and s.get("word") == text:
-                    return cls.PRATIPADIKA, False, "Shabda Kosha"
+                    return cls.PRATIPADIKA, None, "Shabda Kosha"
                 elif isinstance(s, str) and s == text:
-                    return cls.PRATIPADIKA, False, "Shabda List"
+                    return cls.PRATIPADIKA, None, "Shabda List"
 
-        # Default: Treat unknown as Pratipadika
-        return cls.PRATIPADIKA, False, "User Input"
+        # --- 4. DEFAULT ---
+        # Treat unknown inputs as user-defined Pratipadikas
+        return cls.PRATIPADIKA, None, "User Input"
+
 
 class Upadesha(Varna):
     """
