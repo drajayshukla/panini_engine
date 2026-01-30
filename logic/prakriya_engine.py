@@ -66,7 +66,7 @@ class PrakriyaEngine:
     def derive_ghanj(self, dhatu_input):
         """
         Derives Root + Ghañ (घञ्).
-        Logic imported from tests/test_ghanj_random.py
+        Logic imported from tests/all_extracode.py
         """
         self.history = []
 

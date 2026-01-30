@@ -1,8 +1,8 @@
 """
 FILE: logic/it_engine.py
 PAS-v2.0: 5.0 (Siddha)
-PILLAR: It-Saṃjñā (Meta-Tag Scrubbing)
-REFERENCE: १.३.२ to १.३.९
+PILLAR: It-Prakaraṇam (Meta-Data & Cleaning)
+UPDATED: Added Tag Inheritance (Kit/Nit/Shit properties transfer to survivors).
 """
 
 from core.upadesha_registry import UpadeshaType
@@ -21,89 +21,108 @@ from logic.sanjna_rules import (
 class ItEngine:
     """
     इत्-संज्ञा सञ्चालक: (The Marker Removal Engine)
-    Diagnoses 'It' markers and performs 'Tasya Lopah' (1.3.9).
+    Diagnoses 'It' markers, preserves their grammatical tags, and performs 'Tasya Lopah'.
     """
 
     @staticmethod
     def run_it_prakaran(varna_list, source_type=UpadeshaType.DHATU):
         """
-        Executes the 1.3.x diagnostic pipeline.
-        Returns: (cleaned_varna_list, list_of_trace_msgs)
+        Executes the entire It-Sanjna pipeline (1.3.2 to 1.3.9).
+        RETURNS: (cleaned_varna_list, log_of_rules_applied)
         """
         if not varna_list:
             return [], []
 
-        # 1. Initialize Set correctly (CRITICAL FIX: set() not {})
         it_indices = set()
         trace_log = []
 
         # =====================================================================
-        # PHASE 1: BLOCKING RULES (Niyama) - Check what CANNOT be It
+        # PHASE 1: IDENTIFICATION (Diagnose Markers)
         # =====================================================================
 
-        # 1.3.4 Na Vibhaktau Tusmah (Protects T-varga, s, m in Vibhakti)
-        blocked_indices = apply_1_3_4_na_vibhaktau(varna_list, source_type)
-
-        # =====================================================================
-        # PHASE 2: DIAGNOSTIC RULES (Vidhi) - Identify markers
-        # =====================================================================
+        # 1.3.2 Upadeshe'janunasika It
+        indices, log = apply_1_3_2_ajanunasika(varna_list)
+        if indices:
+            it_indices.update(indices)
+            trace_log.extend(log)
 
         # 1.3.3 Halantyam (Final Consonant)
-        # We pass the blocked indices so it doesn't accidentally mark protected chars
-        hal_idx, hal_trace = apply_1_3_3_halantyam(varna_list, blocked_indices)
-        if hal_idx:
-            it_indices.update(hal_idx)
-            trace_log.extend(hal_trace)
+        # Note: We must check 1.3.4 (Blocking) immediately after.
+        indices, log = apply_1_3_3_halantyam(varna_list, blocked_indices=it_indices)
+        if indices:
+            # Check 1.3.4 Na Vibhaktau (Blocker)
+            blocked = apply_1_3_4_na_vibhaktau(varna_list, source_type)
+            final_indices = indices - blocked
+            if final_indices:
+                it_indices.update(final_indices)
+                trace_log.extend(log)
 
-        # 1.3.2 Upadeshe'janunasika It (Nasal Vowels)
-        aj_idx = apply_1_3_2_ajanunasika(varna_list)
-        if aj_idx:
-            it_indices.update(aj_idx)
-            trace_log.append("१.३.२ उपदेशेऽजनुनासिक इत्")
-
-        # 1.3.5 Adir Ñi-Tu-Davah (Initial Ñi, Tu, Du - Dhatus only)
-        # The function internal logic usually handles the check, but checking source_type here is safer/clearer
+        # 1.3.5 Adir Nitudavah (Initial Ñi, Tu, Du)
         if source_type == UpadeshaType.DHATU:
-            nit_idx, nit_trace = apply_1_3_5_adir_nitudavah(varna_list)
-            if nit_idx:
-                it_indices.update(nit_idx)
-                trace_log.extend(nit_trace)
+            indices, log = apply_1_3_5_adir_nitudavah(varna_list)
+            if indices:
+                it_indices.update(indices)
+                trace_log.extend(log)
 
-        # 1.3.6 Shah Pratyayasya (Initial Sh - Pratyayas only)
-        sh_idx, sh_trace = apply_1_3_6_shah(varna_list, source_type)
-        if sh_idx:
-            it_indices.update(sh_idx)
-            trace_log.extend(sh_trace)
+        # 1.3.6 Shah Pratyayasya (Initial Sh)
+        indices, log = apply_1_3_6_shah(varna_list, source_type)
+        if indices:
+            it_indices.update(indices)
+            trace_log.extend(log)
 
-        # 1.3.7 Chutu (Initial C-varga, T-varga - Pratyayas only)
-        ch_idx, ch_trace = apply_1_3_7_chutu(varna_list, source_type)
-        if ch_idx:
-            it_indices.update(ch_idx)
-            trace_log.extend(ch_trace)
+        # 1.3.7 Chutu (Initial C-varga, T-varga)
+        indices, log = apply_1_3_7_chutu(varna_list, source_type)
+        if indices:
+            it_indices.update(indices)
+            trace_log.extend(log)
 
-        # 1.3.8 Lashakvataddhite (Initial L, S, K-varga - Non-Taddhita Pratyayas)
-        # Need to know if it's Taddhita. For default Vibhakti/Pratyaya, we assume False (it is NOT Taddhita).
+        # 1.3.8 Lashakvataddhite (Initial L, S, K-varga)
+        # Assumption: Not Taddhita by default unless specified
         is_taddhita = False
-        la_idx, la_trace = apply_1_3_8_lashakva(varna_list, source_type, is_taddhita)
-        if la_idx:
-            it_indices.update(la_idx)
-            trace_log.extend(la_trace)
+        indices, log = apply_1_3_8_lashakva(varna_list, source_type, is_taddhita)
+        if indices:
+            it_indices.update(indices)
+            trace_log.extend(log)
+
+        # =====================================================================
+        # PHASE 2: TAG INHERITANCE (CRITICAL FIX)
+        # =====================================================================
+        # Identify the grammatical property of the marker (Kit, Nit, etc.)
+        # and store it to transfer to the survivor.
+
+        inherited_tags = set()
+        for idx in it_indices:
+            char = varna_list[idx].char
+
+            # Map marker char to grammatical tag
+            if 'क्' in char: inherited_tags.add("kit")
+            if 'ग्' in char: inherited_tags.add("gnit")
+            if 'ङ्' in char: inherited_tags.add("ngit")
+            if 'ञ्' in char: inherited_tags.add("ñit")
+            if 'ण्' in char: inherited_tags.add("ṇit")
+            if 'न्' in char: inherited_tags.add("nit")
+            if 'श्' in char: inherited_tags.add("śit")
+            if 'ष्' in char: inherited_tags.add("ṣit")
+            if 'प्' in char: inherited_tags.add("pit")
+            if 'र्' in char: inherited_tags.add("rit")
 
         # =====================================================================
         # PHASE 3: SURGICAL REMOVAL (Tasya Lopah 1.3.9)
         # =====================================================================
 
-        # Filter the list, keeping only indices NOT in it_indices
-        cleaned_list = []
-        for i, varna in enumerate(varna_list):
-            if i in it_indices:
-                # Mark as removed in the object itself for UI visualization (Ghost Tags)
-                varna.sanjnas.add("इत्")
-                varna.sanjnas.add("लोप")
-            else:
-                cleaned_list.append(varna)
-
         if it_indices:
             trace_log.append("१.३.९ तस्य लोपः (Removal of Markers)")
 
-        return cleaned_list, trace_log
+            # Create new list excluding markers
+            cleaned_list = []
+            for i, v in enumerate(varna_list):
+                if i not in it_indices:
+                    cleaned_list.append(v)
+
+            # Apply inherited tags to the first remaining letter (the representative)
+            if cleaned_list:
+                cleaned_list[0].sanjnas.update(inherited_tags)
+
+            return cleaned_list, trace_log
+
+        return varna_list, trace_log

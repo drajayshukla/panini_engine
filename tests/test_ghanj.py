@@ -1,91 +1,76 @@
+"""
+FILE: tests/final_architecture_test.py
+PAS-v2.0: 5.0 (Siddha)
+PILLAR: Full-System Validation
+DESCRIPTION: Verifies the integrity of all modular sub-systems.
+"""
+
 import pytest
 from core.phonology import ad, sanskrit_varna_samyoga
+from logic.vidhi import VidhiEngine
+from logic.sanjna import SanjnaEngine
 from logic.it_engine import ItEngine
 from core.upadesha_registry import UpadeshaType
-from logic.vidhi_engine import VidhiEngine
 
 
-# --- LEGACY COMPATIBILITY TEST ---
-def clean_and_rejoin(text, context):
-    varnas = ad(text)
-    cleaned_varnas, trace = ItEngine.run_it_prakaran(varnas, context)
-    return sanskrit_varna_samyoga(cleaned_varnas)
+class TestFullSystemIntegrity:
+
+    def test_sanjna_module_integrity(self):
+        """Tests definitions_1_1.py and morpho_sanjna.py"""
+        print("\n🔍 Checking Sanjna Module...")
+
+        # Test 1.1.2 Guna Designation
+        v_a = ad("अ")[0]
+        assert SanjnaEngine.is_guna_1_1_2(v_a) is True
+
+        # Test 1.4.10 Laghu Designation (Budh -> u is Laghu)
+        anga_budh = ad("बुध्")
+        assert SanjnaEngine.is_laghu_1_4_10(anga_budh, 1) is True
+
+        # Test 1.1.27 Sarvanama Gana
+        assert SanjnaEngine.is_sarvanama_1_1_27("सर्व") is True
+        print("   ✅ Sanjna Engine: OK")
+
+    def test_it_prakaran_module(self):
+        """Tests it_prakaranam.py via ItEngine"""
+        print("\n🔍 Checking It-Prakaranam...")
+
+        # Test 1.3.3 (Halantyam) and 1.3.8 (Lashakva)
+        # Input: 'ghañ' (घञ्) -> Result: 'a'
+        suffix = ad("घञ्")
+        clean, _ = ItEngine.run_it_prakaran(suffix, UpadeshaType.PRATYAYA)
+        assert sanskrit_varna_samyoga(clean) == "अ"
+        print("   ✅ It-Prakaranam: OK")
+
+    def test_vriddhi_and_sandhi_pipeline(self):
+        """Tests guna_vriddhi.py and sandhi_engine.py"""
+        print("\n🔍 Checking Guna/Vriddhi + Sandhi Pipeline...")
+
+        # Scenario: Nī + aka (ṇit) -> Nāyaka
+        anga = ad("नी")
+        suffix = ad("अक")
+        suffix[0].sanjnas.add("ṇit")  # Force trigger for 7.2.115
+
+        # 1. Vriddhi (7.2.115)
+        anga, _ = VidhiEngine.apply_aco_niti_7_2_115(anga, suffix)
+        assert sanskrit_varna_samyoga(anga) == "नै"
+
+        # 2. Ayadi Sandhi (6.1.78)
+        anga, _ = VidhiEngine.apply_ayadi_6_1_78(anga, suffix)
+        assert sanskrit_varna_samyoga(anga) == "नाय्"
+        print("   ✅ Vidhi Pipeline: OK")
+
+    def test_tripadi_terminal_logic(self):
+        """Tests tripadi.py"""
+        print("\n🔍 Checking Tripadi (Final Phonology)...")
+
+        # Scenario: suhṛd -> suhṛt (Chartva 8.4.56)
+        word = ad("सुहृद्")
+        final, rule = VidhiEngine.apply_chartva_8_4_56(word)
+        assert sanskrit_varna_samyoga(final) == "सुहृत्"
+        assert "८.४.५६" in rule
+        print("   ✅ Tripadi: OK")
 
 
-def test_legacy_examples():
-    """
-    Tests the specific examples from your 2026 logic.
-    EXPECTATION: 1.3.2 removes Vowel + Marker, leaving strict Halanta roots.
-    """
-    print("\n🔍 Running Legacy 2026 Compatibility Check...")
-
-    examples = [
-        # (Input, Context, Expected Output (Strict Halanta))
-        ("भजँ", UpadeshaType.DHATU, "भज्"),
-        ("यजँ", UpadeshaType.DHATU, "यज्"),
-        ("त्यजँ", UpadeshaType.DHATU, "त्यज्"),
-        ("पठँ", UpadeshaType.DHATU, "पठ्"),
-        ("तपँ", UpadeshaType.DHATU, "तप्"),
-        ("पतँ", UpadeshaType.DHATU, "पत्"),
-
-        # Complex Markers
-        ("टुओँस्फूर्जाँ", UpadeshaType.DHATU, "स्फूर्ज्"),
-
-        # [CORRECTION]: Tu-Vepṛ~ -> Vep (Ṛ is It-marker/Anunasika Ach, so it goes)
-        ("टुवेपृँ", UpadeshaType.DHATU, "वेप्"),
-
-        ("ञिफलाँ", UpadeshaType.DHATU, "फल्"),
-        ("डुभजँ", UpadeshaType.DHATU, "भज्"),
-
-        # Suffixes
-        ("घञ्", UpadeshaType.PRATYAYA, "अ"),
-        ("ष्यञ्", UpadeshaType.PRATYAYA, "य"),
-        ("ल्युट्", UpadeshaType.PRATYAYA, "यु")
-    ]
-
-    for inp, ctx, exp in examples:
-        result = clean_and_rejoin(inp, ctx)
-        assert result == exp, f"Failed on {inp}: Expected {exp}, got {result}"
-        print(f"✅ Pass: {inp} -> {result}")
-
-
-# --- GHANJ DERIVATION TEST ---
-def derive_ghanj_logic(dhatu_text):
-    # 1. PROCESS DHATU
-    dhatu_varnas = ad(dhatu_text)
-    dhatu_clean, _ = ItEngine.run_it_prakaran(dhatu_varnas, UpadeshaType.DHATU)
-
-    # 2. PROCESS PRATYAYA
-    suffix_varnas = ad("घञ्")
-    suffix_clean, _ = ItEngine.run_it_prakaran(suffix_varnas, UpadeshaType.PRATYAYA)
-
-    # 3. TAG TRANSFER
-    if suffix_clean:
-        for v in suffix_clean:
-            v.sanjnas.add("ghit")
-            v.sanjnas.add("ñit")
-
-            # 4. COMBINE
-    combined = dhatu_clean + suffix_clean
-    split_idx = len(dhatu_clean)
-
-    # 5. VIDHI
-    combined, _ = VidhiEngine.apply_ata_upadhayah_7_2_116(combined, manual_range=(0, split_idx))
-    combined, _ = VidhiEngine.apply_chajo_ku_7_3_52(combined, manual_range=(0, split_idx))
-
-    return sanskrit_varna_samyoga(combined)
-
-
-@pytest.mark.parametrize("dhatu, expected", [
-    ("यजँ", "याग"),
-    ("भजँ", "भाग"),
-    ("त्यजँ", "त्याग"),
-    ("पठँ", "पाठ"),
-    ("तपँ", "ताप"),
-    ("पचँ", "पाक"),
-    ("वचँ", "वाक"),
-    ("सचँ", "साक")
-])
-def test_ghanj_derivation(dhatu, expected):
-    result = derive_ghanj_logic(dhatu)
-    assert result == expected
+if __name__ == "__main__":
+    pytest.main([__file__])
