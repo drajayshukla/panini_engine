@@ -10,50 +10,29 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- 2. CSS ---
+# --- 2. PREMIUM CSS ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Martel:wght@400;800&family=Noto+Sans:wght@400;700&display=swap');
     
     body { font-family: 'Noto Sans', sans-serif; background-color: #f4f6f9; }
 
-    /* कार्ड */
     .step-card {
-        background-color: #ffffff;
-        padding: 20px;
-        margin-bottom: 20px;
-        border-radius: 12px;
-        border-left: 6px solid #8e44ad;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-        transition: transform 0.2s;
+        background-color: #ffffff; padding: 20px; margin-bottom: 20px;
+        border-radius: 12px; border-left: 6px solid #8e44ad;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08); transition: transform 0.2s;
     }
     .step-card:hover { transform: translateY(-2px); }
 
-    /* हेडर */
     .card-header {
         display: flex; justify-content: space-between; align-items: center;
         border-bottom: 1px solid #f0f0f0; padding-bottom: 10px; margin-bottom: 15px;
     }
     
-    /* सूत्र लिंक स्टाइल */
-    .sutra-link { text-decoration: none; }
-    
     .rule-tag {
-        background: linear-gradient(135deg, #8e44ad, #9b59b6);
-        color: white;
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-size: 0.9rem;
-        font-weight: bold;
-        box-shadow: 0 2px 4px rgba(142, 68, 173, 0.3);
-        transition: background 0.2s;
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-    }
-    .rule-tag:hover {
-        background: linear-gradient(135deg, #9b59b6, #8e44ad);
-        box-shadow: 0 4px 8px rgba(142, 68, 173, 0.5);
+        background: linear-gradient(135deg, #8e44ad, #9b59b6); color: white;
+        padding: 6px 14px; border-radius: 20px; font-size: 0.9rem; font-weight: bold;
+        box-shadow: 0 2px 4px rgba(142, 68, 173, 0.3); text-decoration: none;
     }
     
     .auth-tag {
@@ -61,26 +40,22 @@ st.markdown("""
         text-transform: uppercase; letter-spacing: 0.5px;
     }
 
-    /* ऑपरेशन */
-    .operation-text {
-        font-size: 1.2rem; font-weight: 700; color: #2c3e50; margin: 10px 0;
-    }
+    .operation-text { font-size: 1.2rem; font-weight: 700; color: #2c3e50; margin: 10px 0; }
 
-    /* वर्ण विच्छेद */
     .varna-container {
         background-color: #f8f9fa; padding: 12px; border-radius: 8px;
-        border: 1px solid #e9ecef; margin: 10px 0;
-        display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+        border: 1px solid #e9ecef; margin: 10px 0; display: flex; flex-wrap: wrap; gap: 8px;
     }
+    
     .varna-tile {
         background-color: #fff; border: 1px solid #bdc3c7; border-bottom: 3px solid #bdc3c7;
         padding: 5px 10px; border-radius: 6px; color: #d35400;
         font-family: 'Courier New', monospace; font-weight: bold; font-size: 1.1rem;
         min-width: 30px; text-align: center;
     }
+    
     .plus-sep { color: #bdc3c7; font-weight: bold; font-size: 1.2rem; }
 
-    /* परिणाम */
     .result-row {
         margin-top: 15px; padding-top: 10px; border-top: 2px dashed #f0f2f5;
         display: flex; justify-content: space-between; align-items: center;
@@ -95,7 +70,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. हेल्पर फंक्शन (HTML + LINK GENERATOR) ---
+# --- 3. HTML GENERATOR ---
 def generate_card_html(step_index, step_data):
     rule_str = step_data['rule']
     op = step_data['operation']
@@ -103,34 +78,23 @@ def generate_card_html(step_index, step_data):
     viccheda = step_data['viccheda']
     source = step_data.get('source', 'Maharshi Pāṇini')
     
-    # --- Link Construction Logic ---
-    # rule_str example: "8.2.66 (ससजुषोः रुः)" -> needs parsing "8.2.66"
+    # Link Logic
     try:
-        # पहला भाग लें (ex: "8.2.66")
-        rule_number = rule_str.split()[0]
+        rule_number = rule_str.split()[0] # "8.2.66"
         c, p, s = rule_number.split('.')
-        # ashtadhyayi.com URL format: /sutraani/C/P/S
         link_url = f"https://ashtadhyayi.com/sutraani/{c}/{p}/{s}"
-        
-        # Clickable Badge HTML
-        rule_html = (
-            f'<a href="{link_url}" target="_blank" class="sutra-link">'
-            f'<span class="rule-tag">📖 {rule_str} <span style="font-size:0.7em;">↗</span></span>'
-            f'</a>'
-        )
+        rule_html = f'<a href="{link_url}" target="_blank" class="rule-tag" style="color:white;">📖 {rule_str} ↗</a>'
     except:
-        # Fallback if rule number is weird (e.g. "Final")
         rule_html = f'<span class="rule-tag">📖 {rule_str}</span>'
 
-    # --- Varna Viccheda HTML ---
+    # Varna Logic
     viccheda_html = ""
     if viccheda:
         parts = viccheda.split(" + ")
         tiles = "".join([f'<div class="varna-tile">{p}</div><div class="plus-sep">+</div>' for p in parts])
-        if tiles: tiles = tiles[:-29] # Remove last separator
+        if tiles: tiles = tiles[:-29]
         viccheda_html = f'<div style="font-size:0.85rem; color:#7f8c8d; margin-bottom:5px;">🔍 वर्ण-विश्लेषण (Atomic View):</div><div class="varna-container">{tiles}</div>'
 
-    # --- Full Card HTML (Flattened) ---
     html = (
         f'<div class="step-card">'
             f'<div class="card-header">'
@@ -147,7 +111,7 @@ def generate_card_html(step_index, step_data):
     )
     return html
 
-# --- 4. मुख्य ऐप ---
+# --- 4. MAIN ---
 VIBHAKTI_MAP = {1: "प्रथमा", 2: "द्वितीया", 3: "तृतीया", 4: "चतुर्थी", 5: "पञ्चमी", 6: "षष्ठी", 7: "सप्तमी", 8: "सम्बोधन"}
 VACANA_MAP = {1: "एकवचनम्", 2: "द्विवचनम्", 3: "बहुवचनम्"}
 
@@ -157,8 +121,14 @@ def main():
 
     with st.sidebar:
         st.header("🎛️ इनपुट")
-        stem = st.text_input("प्रातिपदिक", value="राम")
-        st.caption("केवल अकारांत पुल्लिंग (Ram-like) के लिए।")
+        # Default value changed to Hari to show off new capabilities
+        stem = st.text_input("प्रातिपदिक", value="हरि")
+        
+        st.success("✅ **समर्थित (Supported):**")
+        st.markdown("- **राम** (अकारांत पुल्लिंग)
+- **हरि** (इकारांत पुल्लिंग)")
+        
+        st.info("ℹ️ इंजन अब 'घि' संज्ञा (Ghi-Sanjna) के नियमों का पालन करता है।")
 
     if stem:
         with st.expander("📖 तालिका देखें (View Table)", expanded=True):

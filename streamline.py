@@ -1,185 +1,175 @@
 """
-FILE: update_landing_page.py
-PURPOSE: Update app.py to reflect the expanded 34 Strategic Pillars (A1-A2, R1-R32).
+FILE: update_ui_hari_support.py
+PURPOSE: Update the UI sidebar to announce support for Hari (i-stem) alongside Rama.
 """
 import os
 import sys
 
-NEW_APP_CODE = '''import streamlit as st
+NEW_UI_CODE = '''import streamlit as st
+import pandas as pd
+from engine_main import PrakriyaLogger
+from logic.subanta_processor import SubantaProcessor
 
 # --- 1. पेज कॉन्फ़िगरेशन ---
 st.set_page_config(
-    page_title="Pāṇinian Engine",
+    page_title="शब्द-रूप सिद्धि यन्त्र",
     page_icon="🕉️",
     layout="wide"
 )
 
-# --- 2. CSS स्टाइलिंग (Premium Look) ---
+# --- 2. PREMIUM CSS ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Martel:wght@400;800&family=Noto+Sans:wght@400;700&display=swap');
     
-    body { font-family: 'Noto Sans', sans-serif; background-color: #fcfcfc; }
-    
-    .big-title { 
-        font-family: 'Martel', serif; 
-        font-size: 3.5rem; 
-        font-weight: 800; 
-        color: #8e44ad; 
-        text-align: center; 
-        margin-bottom: 0px;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    body { font-family: 'Noto Sans', sans-serif; background-color: #f4f6f9; }
+
+    .step-card {
+        background-color: #ffffff; padding: 20px; margin-bottom: 20px;
+        border-radius: 12px; border-left: 6px solid #8e44ad;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08); transition: transform 0.2s;
+    }
+    .step-card:hover { transform: translateY(-2px); }
+
+    .card-header {
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 1px solid #f0f0f0; padding-bottom: 10px; margin-bottom: 15px;
     }
     
-    .subtitle { 
-        font-size: 1.4rem; 
-        text-align: center; 
-        color: #555; 
-        margin-top: -10px; 
-        font-weight: 300;
-        letter-spacing: 1px;
+    .rule-tag {
+        background: linear-gradient(135deg, #8e44ad, #9b59b6); color: white;
+        padding: 6px 14px; border-radius: 20px; font-size: 0.9rem; font-weight: bold;
+        box-shadow: 0 2px 4px rgba(142, 68, 173, 0.3); text-decoration: none;
     }
     
-    .pillar-card {
-        background-color: white;
-        padding: 15px;
-        border-radius: 8px;
-        border-left: 4px solid #8e44ad;
-        margin-bottom: 10px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        transition: transform 0.2s;
-    }
-    .pillar-card:hover {
-        transform: translateX(5px);
-        background-color: #fdfbff;
-    }
-    
-    .pillar-id {
-        font-weight: bold;
-        color: #8e44ad;
-        margin-right: 8px;
-    }
-    
-    .pillar-desc {
-        color: #2c3e50;
-        font-weight: 500;
+    .auth-tag {
+        font-size: 0.75rem; color: #95a5a6; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.5px;
     }
 
-    .auth-box {
-        background: linear-gradient(135deg, #f3e5f5, #e1bee7);
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-        border: 1px solid #d1c4e9;
+    .operation-text { font-size: 1.2rem; font-weight: 700; color: #2c3e50; margin: 10px 0; }
+
+    .varna-container {
+        background-color: #f8f9fa; padding: 12px; border-radius: 8px;
+        border: 1px solid #e9ecef; margin: 10px 0; display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    
+    .varna-tile {
+        background-color: #fff; border: 1px solid #bdc3c7; border-bottom: 3px solid #bdc3c7;
+        padding: 5px 10px; border-radius: 6px; color: #d35400;
+        font-family: 'Courier New', monospace; font-weight: bold; font-size: 1.1rem;
+        min-width: 30px; text-align: center;
+    }
+    
+    .plus-sep { color: #bdc3c7; font-weight: bold; font-size: 1.2rem; }
+
+    .result-row {
+        margin-top: 15px; padding-top: 10px; border-top: 2px dashed #f0f2f5;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .step-num {
+        font-size: 0.85rem; color: #7f8c8d; background-color: #ecf0f1;
+        padding: 4px 8px; border-radius: 4px;
+    }
+    .res-sanskrit {
+        font-family: 'Martel', serif; font-size: 1.8rem; font-weight: 800; color: #2c3e50;
     }
 </style>
 """, unsafe_allow_html=True)
 
-def main():
-    # --- हेडर ---
-    st.markdown('<p class="big-title">🕉️ The Pāṇinian Engine</p>', unsafe_allow_html=True)
-    st.markdown('<p class="subtitle">A "Glassbox" Computational Approach to Sanskrit Grammar</p>', unsafe_allow_html=True)
+# --- 3. HTML GENERATOR ---
+def generate_card_html(step_index, step_data):
+    rule_str = step_data['rule']
+    op = step_data['operation']
+    res = step_data['result']
+    viccheda = step_data['viccheda']
+    source = step_data.get('source', 'Maharshi Pāṇini')
     
-    st.divider()
+    # Link Logic
+    try:
+        rule_number = rule_str.split()[0] # "8.2.66"
+        c, p, s = rule_number.split('.')
+        link_url = f"https://ashtadhyayi.com/sutraani/{c}/{p}/{s}"
+        rule_html = f'<a href="{link_url}" target="_blank" class="rule-tag" style="color:white;">📖 {rule_str} ↗</a>'
+    except:
+        rule_html = f'<span class="rule-tag">📖 {rule_str}</span>'
 
-    # --- मिशन सेक्शन ---
-    c1, c2 = st.columns([2, 1])
-    with c1:
-        st.subheader("🎯 Mission Statement")
-        st.markdown("""
-        This project is a precision-engineered implementation of **Maharshi Pāṇini's Aṣṭādhyāyī**. 
-        Unlike "Blackbox" AI models that guess patterns based on statistics, this engine strictly follows the 
-        **4,000 algorithmic rules** encoded 2,500 years ago.
+    # Varna Logic
+    viccheda_html = ""
+    if viccheda:
+        parts = viccheda.split(" + ")
+        tiles = "".join([f'<div class="varna-tile">{p}</div><div class="plus-sep">+</div>' for p in parts])
+        if tiles: tiles = tiles[:-29]
+        viccheda_html = f'<div style="font-size:0.85rem; color:#7f8c8d; margin-bottom:5px;">🔍 वर्ण-विश्लेषण (Atomic View):</div><div class="varna-container">{tiles}</div>'
+
+    html = (
+        f'<div class="step-card">'
+            f'<div class="card-header">'
+                f'{rule_html}'
+                f'<span class="auth-tag">— {source}</span>'
+            f'</div>'
+            f'<div class="operation-text">{op}</div>'
+            f'{viccheda_html}'
+            f'<div class="result-row">'
+                f'<span class="step-num">चरण {step_index + 1}</span>'
+                f'<span class="res-sanskrit">{res}</span>'
+            f'</div>'
+        f'</div>'
+    )
+    return html
+
+# --- 4. MAIN ---
+VIBHAKTI_MAP = {1: "प्रथमा", 2: "द्वितीया", 3: "तृतीया", 4: "चतुर्थी", 5: "पञ्चमी", 6: "षष्ठी", 7: "सप्तमी", 8: "सम्बोधन"}
+VACANA_MAP = {1: "एकवचनम्", 2: "द्विवचनम्", 3: "बहुवचनम्"}
+
+def main():
+    st.title("🕉️ शब्द-रूप सिद्धि यन्त्र")
+    st.markdown("---")
+
+    with st.sidebar:
+        st.header("🎛️ इनपुट")
+        # Default value changed to Hari to show off new capabilities
+        stem = st.text_input("प्रातिपदिक", value="हरि")
         
-        It currently masters the **Subanta (Nominal Declension)** process for *Rāma-shabda*, achieving **100% SIDDHA status** (verified by 29/29 regression tests).
-        """)
+        st.success("✅ **समर्थित (Supported):**")
+        st.markdown("- **राम** (अकारांत पुल्लिंग)\n- **हरि** (इकारांत पुल्लिंग)")
         
-        st.info("👈 **To start using the tool:** Select **'🔍 Declension_Engine'** from the sidebar.")
+        st.info("ℹ️ इंजन अब 'घि' संज्ञा (Ghi-Sanjna) के नियमों का पालन करता है।")
 
-    with c2:
-        # Placeholder for Panini Image or Logo
-        st.markdown(
-            """
-            <div style="text-align: center; background-color: #f9f9f9; padding: 20px; border-radius: 10px;">
-                <div style="font-size: 4rem;">📜</div>
-                <div style="margin-top: 10px; font-weight: bold; color: #555;">Sutra-Siddha Code</div>
-            </div>
-            """, unsafe_allow_html=True
-        )
+    if stem:
+        with st.expander("📖 तालिका देखें (View Table)", expanded=True):
+            table_data = []
+            for v in range(1, 9):
+                row = {"विभक्ति": VIBHAKTI_MAP[v]}
+                for n in range(1, 4):
+                    word = SubantaProcessor.derive_pada(stem, v, n, None)
+                    row[VACANA_MAP[n]] = word
+                table_data.append(row)
+            st.dataframe(pd.DataFrame(table_data), use_container_width=True, hide_index=True)
 
-    st.divider()
+    st.markdown("### 🔬 सिद्धि प्रक्रिया (Glassbox)")
+    
+    c1, c2, c3 = st.columns([1, 1, 1])
+    with c1: v_sel = st.selectbox("विभक्ति", list(VIBHAKTI_MAP.keys()), format_func=lambda x: VIBHAKTI_MAP[x])
+    with c2: n_sel = st.selectbox("वचन", list(VACANA_MAP.keys()), format_func=lambda x: VACANA_MAP[x])
+    with c3: 
+        st.write(""); st.write("")
+        btn = st.button("🚀 सिद्धि करें", type="primary")
 
-    # --- 34 STRATEGIC PILLARS ---
-    st.subheader("🏛️ The 34 Strategic Pillars (Architecture)")
-    st.markdown("The engine's kernel is grounded in these immutable axioms:")
-
-    with st.expander("📜 View All 34 Pillars (A1-A2, R1-R32)", expanded=True):
+    if btn:
+        logger = PrakriyaLogger()
+        res = SubantaProcessor.derive_pada(stem, v_sel, n_sel, logger)
+        st.success(f"सिद्ध पद: **{res}**")
         
-        # --- Authority (Axioms) ---
-        st.markdown("### 👑 Authority (Pramāṇa)")
-        st.markdown("""
-        <div class="auth-box">
-            <div><span class="pillar-id">A1:</span> <b>Follow Pāṇini, Kātyāyana, Patañjali, Bhartṛhari, Bhaṭṭojī Dīkṣita, and Nāgeśa Bhaṭṭa mathematically.</b></div>
-            <div style="margin-top:10px;"><span class="pillar-id">A2:</span> <b>If confusion, read A1 again.</b></div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        # --- Rules (R1-R32) ---
-        st.markdown("### ⚙️ Algorithmic Rules (Sūtra-Tantra)")
-        
-        col_a, col_b = st.columns(2)
-        
-        pillars_left = [
-            ("R1", "Upadeśa (Data Initialization)"),
-            ("R2", "Varṇaviccheda (Atomic Tokenization)"),
-            ("R3", "Saṃjñā (Class Tagging/OOP)"),
-            ("R4", "Anubandha (Metadata IT-Flags)"),
-            ("R5", "Anuvṛtti (Recursive Persistence)"),
-            ("R6", "Sthānyādeśa (Substitution Mapping)"),
-            ("R7", "Paribhāṣā (Spatial Logic/Context)"),
-            ("R8", "Balīyaḥ (Conflict Resolution)"),
-            ("R9", "Asiddhatvam (Tripādī Isolation)"),
-            ("R10", "Sūtra-bheda (Taxonomy)"),
-            ("R11", "Niyama (Constraint Validation)"),
-            ("R12", "Adhikāra (Governing Headers)"),
-            ("R13", "Sthānivadbhāva (Property Inheritance)"),
-            ("R14", "Antaraṅga-Bahiraṅga (Proximity Logic)"),
-            ("R15", "Jñāpaka (Inference from Redundancy)"),
-            ("R16", "Yogavibhāga (Rule Refactoring)")
-        ]
-        
-        pillars_right = [
-            ("R17", "Lakṣya-Lakṣaṇa (Empirical Validation/TDD)"),
-            ("R18", "Kārakānvaya (Semantic Dependency)"),
-            ("R19", "Vivakṣā (User Intent/Runtime Params)"),
-            ("R20", "Arthabheda (Context-Aware Middleware)"),
-            ("R21", "Sannipāta (Consistency/Non-Destruction)"),
-            ("R22", "Pratyaya-Lopa (Ghost-Metadata Persistence)"),
-            ("R23", "Tad-anta-Vidhi (Extension Logic)"),
-            ("R24", "Sthāna-Antaratamya (Physics of Phonetics)"),
-            ("R25", "Paratva (Chronological Priority)"),
-            ("R26", "Ekādeśa (Fusion/Morphing)"),
-            ("R27", "Bahiraṅga (External-Weight Logic)"),
-            ("R28", "Lakṣaṇa-Pratipado-kta (Specificity Principle)"),
-            ("R29", "Anuvṛtti-Sthiti (State Memory)"),
-            ("R30", "Sthānivad-bhāva (Property-Parity Check)"),
-            ("R31", "Nivṛtti (De-activation/Boundary Logic)"),
-            ("R32", "Pratyākhyāna (Redundancy-Rejection)")
-        ]
-
-        with col_a:
-            for pid, pdesc in pillars_left:
-                st.markdown(f'<div class="pillar-card"><span class="pillar-id">{pid}:</span><span class="pillar-desc">{pdesc}</span></div>', unsafe_allow_html=True)
-
-        with col_b:
-            for pid, pdesc in pillars_right:
-                st.markdown(f'<div class="pillar-card"><span class="pillar-id">{pid}:</span><span class="pillar-desc">{pdesc}</span></div>', unsafe_allow_html=True)
+        history = logger.get_history()
+        for i, step in enumerate(history):
+            st.markdown(generate_card_html(i, step), unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
 '''
 
-with open("app.py", "w", encoding="utf-8") as f:
-    f.write(NEW_APP_CODE)
+with open("pages/1_🔍_Declension_Engine.py", "w", encoding="utf-8") as f:
+    f.write(NEW_UI_CODE)
 
-print("🚀 app.py Updated with 34 Strategic Pillars. Refresh the main page!")
+print("🚀 UI Updated to showcase Hari Support. Refresh the app!")
