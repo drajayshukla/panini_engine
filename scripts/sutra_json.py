@@ -1,40 +1,18 @@
-import json
+"""
+FILE: scripts/force_sync.py
+PAS-v2.0: 5.0 (Siddha)
+"""
+from core.sutra_manager import SutraManager
 import os
 
+# Delete the old cache to ensure a fresh start
+if os.path.exists("data/sutra_cache.json"):
+    os.remove("data/sutra_cache.json")
+    print("🗑️ Old cache removed.")
 
-def clean_sanskrit_database(input_filename, output_filename):
-    # १. फाइल लोड करना
-    if not os.path.exists(input_filename):
-        print(f"❌ त्रुटि: {input_filename} नहीं मिली।")
-        return
+manager = SutraManager()
+# Use the direct raw link to the Vasu Summary JSON
+manager.GITHUB_URL = "https://raw.githubusercontent.com/ashtadhyayi-com/data/master/sutraani/vasu_english_summary.json"
+manager.sync_with_github()
 
-    with open(input_filename, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-
-    print(f"🔄 कुल {len(data)} प्रविष्टियों का विश्लेषण शुरू...")
-
-    # २. रिडंडेंट फील्ड्स को हटाना (Diagnostic Cleaning)
-    cleaned_count = 0
-    for entry in data:
-        # इन हेडिंग्स को हटाना जो हम कोड में खुद जनरेट कर सकते हैं
-        keys_to_remove = ["separated_forms", "suffix_only"]
-
-        for key in keys_to_remove:
-            if key in entry:
-                del entry[key]
-                cleaned_count += 1
-
-    # ३. 'Lean' JSON फाइल को सेव करना
-    with open(output_filename, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
-
-    print(f"✅ सफलता! क्लीन फाइल '{output_filename}' तैयार है।")
-    print(f"🗑️ कुल {cleaned_count} रिडंडेंट फील्ड्स हटाए गए।")
-
-
-if __name__ == "__main__":
-    # आपकी फाइल का नाम यहाँ लिखें
-    input_file = "filtered_data.json"
-    output_file = "shbadroop.json"
-
-    clean_sanskrit_database(input_file, output_file)
+print(f"✅ Sync Complete. Items in cache: {len(manager.kosa)}")

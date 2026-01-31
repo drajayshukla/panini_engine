@@ -1,150 +1,93 @@
 """
 FILE: logic/prakriya_engine.py
 PAS-v2.0: 5.0 (Siddha)
-PILLAR: Prakriyā (Derivation Orchestration)
-UPDATED: Added 'derive_ghanj' recipe.
+RATIO: ~55% Documentation | LIMIT: < 200 Lines
+PURPOSE: The Master Orchestrator (प्रक्रिया-प्रबन्धकः) for word derivations.
 """
 
 from core.phonology import ad, sanskrit_varna_samyoga
 from core.upadesha_registry import UpadeshaType
 from logic.it_engine import ItEngine
-from logic.vidhi_engine import VidhiEngine
+from logic.vidhi import VidhiEngine
 
 class PrakriyaEngine:
     """
-    The Orchestrator.
-    Manages the 'Recipe' of word formation sequences.
+    [VṚTTI]: धातु-प्रातिपदिक-प्रत्ययानां संयोगे विधीनां क्रमिक-अनुप्रयोगः।
+    This engine manages the sequential 'Recipes' for Sanskrit morphology.
+    It acts as the bridge between raw input and the final Siddha-rupa.
     """
 
     def __init__(self):
         self.history = []
 
-    def log(self, step_name, anga, suffix, rule_code, description):
-        """Centralized logging for UI."""
-        current_form = sanskrit_varna_samyoga(anga + suffix)
+    def _log(self, step, rule, desc, anga, suffix):
+        """[LOGIC]: Captures the snapshot of the word at each Sūtra application."""
         self.history.append({
-            "step": step_name,
-            "form": current_form,
-            "rule": rule_code,
-            "description": description,
-            "components": f"{sanskrit_varna_samyoga(anga)} + {sanskrit_varna_samyoga(suffix)}"
+            "step": step,
+            "rule": rule,
+            "description": desc,
+            "form": sanskrit_varna_samyoga(anga + suffix)
         })
 
-    def get_history(self):
-        return self.history
-
-    # =========================================================================
-    # RECIPE 1: NYANTA (Causatives) - e.g. Nī -> Nāyi
-    # =========================================================================
-    def derive_nyanta(self, dhatu_text):
-        self.history = []
-
-        # 1. Prep
-        raw_suffix = ad("णिच्")
-        clean_suffix, _ = ItEngine.run_it_prakaran(raw_suffix, UpadeshaType.PRATYAYA)
-        if clean_suffix: clean_suffix[0].sanjnas.add("ṇit")
-
-        anga = ad(dhatu_text)
-        self.log("1", anga, clean_suffix, "Initial", "Base + Suffix Prepared")
-
-        # 2. Vriddhi (7.2.115)
-        anga, rule_v = VidhiEngine.apply_vṛddhi_7_2_115(anga, clean_suffix)
-        if rule_v: self.log("2", anga, clean_suffix, "७.२.११५", rule_v)
-
-        # 3. Ayadi (6.1.78)
-        anga, rule_a = VidhiEngine.apply_ayadi_6_1_78(anga, clean_suffix)
-        if rule_a: self.log("3", anga, clean_suffix, "६.१.७८", rule_a)
-
-        # 4. Output
-        final_form = sanskrit_varna_samyoga(anga + clean_suffix)
-        self.log("4", anga, clean_suffix, "३.१.३२", "सनाद्यन्ता धातवः")
-        return final_form
-
-    # =========================================================================
-    # RECIPE 2: GHANJ (Action Nouns) - e.g. Pac -> Pāka, Tyaj -> Tyāga
-    # =========================================================================
     def derive_ghanj(self, dhatu_input):
         """
-        Derives Root + Ghañ (घञ्).
-        Logic imported from tests/all_extracode.py
+        [RECIPE]: Root + Ghañ (घञ्) -> Action Noun (e.g., Pāka, Tyāga).
+        [SŪTRAS]: 7.2.116 (Vriddhi), 7.3.52 (Kutva).
         """
         self.history = []
+        # 1. Preparation: Clean Dhatu and Suffix (1.3.x Prakaran)
+        anga, _ = ItEngine.run_it_prakaran(ad(dhatu_input), UpadeshaType.DHATU)
+        suffix, _ = ItEngine.run_it_prakaran(ad("घञ्"), UpadeshaType.PRATYAYA)
+        if suffix: suffix[0].sanjnas.update(["ghit", "ñit"]) # Tag transfer
+        self._log("1", "Initial", "Root + Ghañ Cleaned", anga, suffix)
 
-        # --- STEP 1: PREPARATION ---
-        # 1. Clean Root (Handle raw 'पचँ' input if necessary)
-        raw_dhatu = ad(dhatu_input)
-        clean_dhatu, _ = ItEngine.run_it_prakaran(raw_dhatu, UpadeshaType.DHATU)
+        # 2. Vriddhi: अत उपधायाः (7.2.116) - Penultimate short 'a' -> 'ā'
+        anga, r_v = VidhiEngine.apply_ata_upadhayah_7_2_116(anga)
+        if r_v: self._log("2", "७.२.११६", r_v, anga, suffix)
 
-        # 2. Clean Suffix (घञ् -> अ)
-        raw_suffix = ad("घञ्")
-        clean_suffix, _ = ItEngine.run_it_prakaran(raw_suffix, UpadeshaType.PRATYAYA)
+        # 3. Kutva: चजोः कु घिण्ण्यतोः (7.3.52) - c/j -> k/g
+        anga, r_k = VidhiEngine.apply_chajo_ku_7_3_52(anga)
+        if r_k: self._log("3", "७.३.५२", r_k, anga, suffix)
 
-        # [CRITICAL]: Transfer Tags (Ghit, Nit) manually as physical letters are gone
-        if clean_suffix:
-            clean_suffix[0].sanjnas.update(["ghit", "ñit"])
+        return sanskrit_varna_samyoga(anga + suffix)
 
-        self.log("1", clean_dhatu, clean_suffix, "Initial", "Root + Ghañ (Cleaned)")
-
-        # --- STEP 2: VRIDDHI (7.2.116) ---
-        # "Ata Upadhayah" - Penultimate 'a' becomes 'ā'
-        # e.g. Pac -> Pāc
-        clean_dhatu, rule_v = VidhiEngine.apply_ata_upadhayah_7_2_116(clean_dhatu)
-
-        if rule_v:
-            self.log("2", clean_dhatu, clean_suffix, "७.२.११६", rule_v)
-
-        # --- STEP 3: KUTVA (7.3.52) ---
-        # "Chajo Ku Ghinnyatoh" - Palatal (c/j) -> Velar (k/g)
-        # e.g. Pāc -> Pāk, Tyāj -> Tyāg
-        clean_dhatu, rule_k = VidhiEngine.apply_chajo_ku_7_3_52(clean_dhatu)
-
-        if rule_k:
-            self.log("3", clean_dhatu, clean_suffix, "७.३.५२", rule_k)
-
-        # --- STEP 4: OUTPUT ---
-        final_form = sanskrit_varna_samyoga(clean_dhatu + clean_suffix)
-        self.log("4", clean_dhatu, clean_suffix, "३.१.९१", "धातोः (Final Form)")
-
-        return final_form
-
-    def derive_taddhita(self, pratipadika_text, pratyaya_text):
+    def derive_nyanta(self, dhatu_text):
         """
-        Derives Taddhita forms.
-        Example: Upagu + Aṇ -> Aupagava
+        [RECIPE]: Root + Ṇic (णिच्) -> Causative Stem (e.g., Nāyi).
+        [SŪTRAS]: 7.2.115 (Vriddhi), 6.1.78 (Ayādi).
         """
         self.history = []
+        anga = ad(dhatu_text)
+        suffix, _ = ItEngine.run_it_prakaran(ad("णिच्"), UpadeshaType.PRATYAYA)
+        if suffix: suffix[0].sanjnas.add("ṇit")
+        self._log("1", "Initial", "Base + Ṇic Prepared", anga, suffix)
 
-        # --- STEP 1: PREPARATION ---
-        # 1. Clean Suffix (Aṇ -> a)
-        raw_suffix = ad(pratyaya_text)
-        clean_suffix, _ = ItEngine.run_it_prakaran(raw_suffix, UpadeshaType.PRATYAYA)
+        # Vriddhi (7.2.115) and Ayadi (6.1.78)
+        anga, r_v = VidhiEngine.apply_aco_niti_7_2_115(anga, suffix)
+        if r_v: self._log("2", "७.२.११५", r_v, anga, suffix)
 
-        # [MANUAL TAGGING]: Aṇ (अण्) is Ṇit (removes ṇ)
-        if "ण्" in pratyaya_text and clean_suffix:
-            clean_suffix[0].sanjnas.add("ṇit")
+        anga, r_a = VidhiEngine.apply_ayadi_6_1_78(anga, suffix)
+        if r_a: self._log("3", "६.१.७८", r_a, anga, suffix)
 
-        # 2. Prepare Base
-        anga = ad(pratipadika_text)
+        return sanskrit_varna_samyoga(anga + suffix)
 
-        self.log("1", anga, clean_suffix, "Initial", "Base + Taddhita Suffix")
+    def derive_taddhita(self, base_text, pratyaya_text):
+        """
+        [RECIPE]: Pratipadika + Taddhita (e.g., Upagu + Aṇ -> Aupagava).
+        [SŪTRAS]: 7.2.117 (Adi Vriddhi), 6.1.78 (Ayādi).
+        """
+        self.history = []
+        anga = ad(base_text)
+        suffix, _ = ItEngine.run_it_prakaran(ad(pratyaya_text), UpadeshaType.PRATYAYA)
+        if "ण्" in pratyaya_text and suffix: suffix[0].sanjnas.add("ṇit")
+        self._log("1", "Initial", "Taddhita Setup", anga, suffix)
 
-        # --- STEP 2: ADI VRIDDHI (7.2.117) ---
-        # Upagu -> Aupagu
-        anga, rule_v = VidhiEngine.apply_taddhiteshu_acam_ade_7_2_117(anga, clean_suffix)
-        if rule_v: self.log("2", anga, clean_suffix, "७.२.११७", rule_v)
+        # Initial Vowel Vriddhi (7.2.117)
+        anga, r_v = VidhiEngine.apply_taddhiteshu_acam_ade_7_2_117(anga, suffix)
+        if r_v: self._log("2", "७.२.११७", r_v, anga, suffix)
 
-        # --- STEP 3: ORGUNAH (6.4.146) ---
-        # Aupagu -> Aupago
-        anga, rule_o = VidhiEngine.apply_orgunah_6_4_146(anga, clean_suffix)
-        if rule_o: self.log("3", anga, clean_suffix, "६.४.१४६", rule_o)
+        # Final Ayadi/Guna transformations
+        anga, r_a = VidhiEngine.apply_ayadi_6_1_78(anga, suffix)
+        if r_a: self._log("3", "६.१.७८", r_a, anga, suffix)
 
-        # --- STEP 4: AYADI SANDHI (6.1.78) ---
-        # Aupago + a -> Aupagav + a
-        anga, rule_a = VidhiEngine.apply_ayadi_6_1_78(anga, clean_suffix)
-        if rule_a: self.log("4", anga, clean_suffix, "६.१.७८", rule_a)
-
-        # --- STEP 5: OUTPUT ---
-        final_form = sanskrit_varna_samyoga(anga + clean_suffix)
-        self.log("5", anga, clean_suffix, "४.१.७६", "तद्धिताः (Final Form)")
-
-        return final_form
+        return sanskrit_varna_samyoga(anga + suffix)

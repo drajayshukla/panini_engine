@@ -1,20 +1,17 @@
 """
 FILE: logic/sanjna/__init__.py
-PAS-v2.0: 5.0 (Siddha)
-PILLAR: Sanjñā-Orchestrator
-REFERENCE: Combined Aṣṭādhyāyī Definitions
+PAS-v2.0: 5.0.1 (Siddha) | TIMESTAMP: 2026-01-30 16:10:00
 """
-from .definitions_1_1 import FoundationSanjnas
 from .it_prakaranam import ItSanjnas
+from .definitions_1_1 import FoundationSanjnas
 from .morpho_sanjna import MorphoSanjnas
 
-class SanjnaEngine(FoundationSanjnas, ItSanjnas, MorphoSanjnas):
+# Order of inheritance: ItSanjnas must be present for 1.3.x rules
+class SanjnaEngine(ItSanjnas, FoundationSanjnas, MorphoSanjnas):
     """
-    Universal Sanjñā interface.
-    This class binds all Paninian technical definitions (1.1.x, 1.3.x, 1.4.x)
-    into a single executable engine.
+    Universal Sanjñā Interface.
+    Inherits all 1.3.x methods from ItSanjnas to resolve Bridge AttributeErrors.
     """
     pass
 
-# For easier access across the project
 sanjna_engine = SanjnaEngine()

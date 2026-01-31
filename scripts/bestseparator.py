@@ -44,8 +44,8 @@ def sanskrit_varna_vichhed(text):
         if char in independent_vowels:
             res.append(char)
             i += 1
-            if i < len(text) and text[i] == '३':  # प्लुत स्वर
-                res[-1] += '३'
+            if i < len(text) and text[i] == '3':  # प्लुत स्वर
+                res[-1] += '3'
                 i += 1
             # स्वर के आश्रित अनुस्वार/विसर्ग/अनुनासिक
             while i < len(text) and text[i] in 'ंःँ':

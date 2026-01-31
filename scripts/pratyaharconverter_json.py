@@ -4,7 +4,7 @@ import os
 
 
 def convert_pratyahara_csv_to_json():
-    # १. हार्डकोडेड पाथ (Current Folder)
+    # 1. हार्डकोडेड पाथ (Current Folder)
     # यह उसी फोल्डर को टारगेट करेगा जहाँ आपकी स्क्रिप्ट रखी है
     current_folder = os.path.dirname(os.path.abspath(__file__))
     input_csv = os.path.join(current_folder, 'pratyaharconverter_json.csv')
@@ -13,7 +13,7 @@ def convert_pratyahara_csv_to_json():
     data = []
 
     try:
-        # २. डेटा प्रोसेसिंग
+        # 2. डेटा प्रोसेसिंग
         with open(input_csv, encoding='utf-8') as csvf:
             csv_reader = csv.DictReader(csvf)
             for rows in csv_reader:
@@ -22,7 +22,7 @@ def convert_pratyahara_csv_to_json():
                     rows['varnas'] = [v.strip() for v in rows['varnas'].split(',')]
                 data.append(rows)
 
-        # ३. JSON राइटिंग
+        # 3. JSON राइटिंग
         with open(output_json, 'w', encoding='utf-8') as jsonf:
             json.dump(data, jsonf, indent=4, ensure_ascii=False)
 

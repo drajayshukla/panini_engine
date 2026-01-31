@@ -2,7 +2,6 @@
 import streamlit as st
 import json
 import os
-from core.sanjna_engine import SanjnaEngine
 from core.upadesha_registry import Upadesha
 from core.phonology import sanskrit_varna_vichhed
 
@@ -34,7 +33,7 @@ sutra_master = load_sutra_master()
 # ==========================================
 # ZONE 3: EXECUTION ENGINE (The logic mapping)
 # ==========================================
-from logic.vidhi_engine import VidhiEngine
+from logic.vidhi.vidhi_engine import VidhiEngine
 from core.sanjna_engine import SanjnaEngine
 
 

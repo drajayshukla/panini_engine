@@ -6,7 +6,7 @@ def convert_digits(text):
     """देवनागरी अंकों को मानक अंकों में बदलता है।"""
     if not isinstance(text, str):
         return str(text) if text is not None else ""
-    mapping = str.maketrans('०१२३४५६७८९', '0123456789')
+    mapping = str.maketrans('0123456789', '0123456789')
     return text.translate(mapping).strip()
 
 
@@ -43,19 +43,19 @@ def upgrade_dhatu_master():
     for entry in data:
         new_entry = {}
         for key, value in entry.items():
-            # १. kaumudi_index (Safety Check के साथ)
+            # 1. kaumudi_index (Safety Check के साथ)
             if key == 'kaumudi_index':
                 new_entry[key] = safe_int(value)
 
-            # २. identifier (Formatting सुरक्षित रखते हुए)
+            # 2. identifier (Formatting सुरक्षित रखते हुए)
             elif key == 'identifier':
                 new_entry[key] = convert_digits(value) if value else ""
 
-            # ३. tags (TypeError से बचाव)
+            # 3. tags (TypeError से बचाव)
             elif key == 'tags' and isinstance(value, list):
                 new_entry[key] = [t.strip() for t in value if isinstance(t, str)]
 
-            # ४. अन्य सभी स्ट्रिंग्स
+            # 4. अन्य सभी स्ट्रिंग्स
             elif isinstance(value, str):
                 new_entry[key] = value.strip()
 

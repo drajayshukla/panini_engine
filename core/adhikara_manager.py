@@ -1,7 +1,8 @@
 """
 FILE: core/adhikara_manager.py
-PAS-v2.0: 5.0 (Siddha)
-PILLAR: Adhikāra (Spatial Jurisdiction)
+TIMESTAMP: 2026-01-30 20:50:00 (IST)
+LOCATION: Lucknow, Uttar Pradesh, India
+QUALITY: PAS-v2.0: 6.0 (Subanta) | PILLAR: Adhikāra (Spatial Jurisdiction)
 REFERENCE: Brahmadutt Jigyasu, Prathamavritti Vol 1 & Ashtadhyayi.com
 """
 
@@ -54,7 +55,7 @@ class AdhikaraManager:
     def is_tripadi(cls, sutra_number: str) -> bool:
         """
         Sutra: ८.२.१ पूर्वत्रासिद्धम्।
-        Logic: Rules in the Tripādī are 'Asiddha' (non-existent) to rules in the Sapta-adhyāyī.
+        Logic: Rules in the Tripādī are 'Asiddha' (invisible) to the Sapāda-saptādhyāyī.
         """
         target = cls.parse_sutra(sutra_number)
         return target >= cls.TRIPADI_START

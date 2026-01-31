@@ -1,53 +1,63 @@
-import json
-from collections import OrderedDict
+"""
+FILE: scripts/normalize_numbers.py
+PAS-v2.0: 5.0 (Siddha)
+PILLAR: Maintenance (परिवर्धनम्)
+REFERENCE: Numerals Normalization for DNA Audit
+TIMESTAMP: 2026-01-30 10:30:00
+RATIO: ~15% Documentation | LIMIT: < 200 Lines
+"""
+import os
+import re
 
+# Mapping for Sanskrit (Devanagari) to International (Arabic) Numerals
+SN_TO_IN = str.maketrans('0123456789', '0123456789')
 
-def refine_active_voice_db(file_path, output_path):
-    with open(file_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
+def normalize_file(file_path):
+    """
+    Reads a file and replaces all Devanagari numerals with International digits.
+    Ensures DNA traces (e.g., 7.4.60) are compatible with JSON lookups.
+    """
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
 
-    # १. पाणिनीय लकार क्रम (Standard Order Mapping)
-    lakara_order = {
-        "plat": 1, "alat": 2,  # लट्
-        "plit": 3, "alit": 4,  # लिट्
-        "plut": 5, "alut": 6,  # लुट्
-        "plrut": 7, "alrut": 8,  # लृट्
-        "plot": 9, "alot": 10,  # लोट्
-        "plang": 11, "alang": 12,  # लङ्
-        "pvidhiling": 13, "avidhiling": 14,  # विधिलिङ्
-        "pashirling": 15, "aashirling": 16,  # आशीर्लिङ्
-        "plung": 17, "alung": 18,  # लुङ्
-        "plrung": 19, "alrung": 20  # लृङ्
-    }
+        # 1. Translate Sanskrit Numerals to International
+        new_content = content.translate(SN_TO_IN)
 
-    refined_db = {}
+        # 2. Safety: Only rewrite if changes detected
+        if new_content != content:
+            # Prevent overwriting critical binary-like data if any
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(new_content)
+            return True
+        return False
+    except Exception as e:
+        print(f"⚠️ Could not process {file_path}: {e}")
+        return False
 
-    for dhatu_id, lakaras in data.items():
-        # २. लकारों को क्रमबद्ध करना (Sorting Lakaras)
-        sorted_lakaras = sorted(
-            lakaras.items(),
-            key=lambda x: lakara_order.get(x[0], 99)
-        )
+def run_normalization(root_dir):
+    """
+    Walks through the engine and normalizes .py and .txt files.
+    """
+    print(f"🚀 [{os.path.basename(root_dir)}] Starting Siddha Normalization...")
+    count = 0
+    # Include .txt if your test files or JSON sources need normalization
+    target_extensions = ('.py', '.txt', '.json')
 
-        # ३. पुरुष और वचन का क्रम भी सुनिश्चित करना (OrderedDict)
-        ordered_lakaras = OrderedDict()
-        for lakara_name, grid in sorted_lakaras:
-            ordered_grid = OrderedDict()
-            for purusha in ["prathama", "madhyama", "uttama"]:
-                if purusha in grid:
-                    ordered_grid[purusha] = OrderedDict(
-                        (v, grid[purusha][v]) for v in ["ekavachana", "dvivachana", "bahuvachana"] if v in grid[purusha]
-                    )
-            ordered_lakaras[lakara_name] = ordered_grid
+    for root, _, files in os.walk(root_dir):
+        # Skip virtual environments or git folders
+        if any(x in root for x in ['venv', '.git', '__pycache__']):
+            continue
 
-        refined_db[dhatu_id] = ordered_lakaras
+        for name in files:
+            if name.endswith(target_extensions):
+                path = os.path.join(root, name)
+                if normalize_file(path):
+                    print(f"✅ Normalized: {path}")
+                    count += 1
 
-    # ४. सुरक्षित रूप से फाइल सेव करना
-    with open(output_path, 'w', encoding='utf-8') as f:
-        json.dump(refined_db, f, ensure_ascii=False, indent=4)
+    print(f"🏁 Normalization Complete. {count} files synchronized.")
 
-    return "✅ Database Examination & Refinement Successful!"
-
-# निष्पादन
-status = refine_active_voice_db('active_voice.json', 'active_voice_refined.json')
-print(status)
+if __name__ == "__main__":
+    # Ensure we are in the panini_engine root
+    run_normalization('.')

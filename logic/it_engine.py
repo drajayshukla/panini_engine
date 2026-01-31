@@ -1,128 +1,113 @@
 """
 FILE: logic/it_engine.py
-PAS-v2.0: 5.0 (Siddha)
-PILLAR: It-Prakaraṇam (Meta-Data & Cleaning)
-UPDATED: Added Tag Inheritance (Kit/Nit/Shit properties transfer to survivors).
+TIMESTAMP: 2026-01-31 08:45:00 (IST)
+PILLAR: It-Prakaraṇam (Orchestrator)
+QUALITY: PAS-v2.0: 6.0 (Subanta/Siddha)
+DESCRIPTION:
+    The Master Engine for marker identification and removal.
+    - Orchestrates Sañjñā rules (1.3.2 - 1.3.8) in valid sequence.
+    - Harvests metadata (DNA/Tags) from markers before deletion.
+    - Performs physical removal (1.3.9 Lopa) via SanjnaEngine.
 """
-
 from core.upadesha_registry import UpadeshaType
-
-# Import rule logic directly from Sanjna Rules (Zone 1)
-from logic.sanjna_rules import (
-    apply_1_3_2_ajanunasika,
-    apply_1_3_3_halantyam,
-    apply_1_3_4_na_vibhaktau,
-    apply_1_3_5_adir_nitudavah,
-    apply_1_3_6_shah,
-    apply_1_3_7_chutu,
-    apply_1_3_8_lashakva
-)
+from core.phonology import Varna, sanskrit_varna_samyoga
 
 class ItEngine:
     """
-    इत्-संज्ञा सञ्चालक: (The Marker Removal Engine)
-    Diagnoses 'It' markers, preserves their grammatical tags, and performs 'Tasya Lopah'.
+    The Gateway for marker processing.
+    Diagnoses markers, transfers metadata tags (like Kit/Nit),
+    and performs the physical deletion to allow Sandhi engines to see junctions.
     """
 
     @staticmethod
-    def run_it_prakaran(varna_list, source_type=UpadeshaType.DHATU):
+    def run_it_prakaran(varna_list, source_type=UpadeshaType.DHATU, is_taddhita=False):
         """
-        Executes the entire It-Sanjna pipeline (1.3.2 to 1.3.9).
-        RETURNS: (cleaned_varna_list, log_of_rules_applied)
+        Executes the full It-Sanjna and Lopa pipeline.
+
+        Args:
+            varna_list (list[Varna]): The phonological input list.
+            source_type (UpadeshaType): Context (Dhatu, Pratyaya, Vibhakti, etc.).
+            is_taddhita (bool): Specific flag for rule 1.3.8.
+
+        Returns:
+            tuple: (cleaned_varna_list, list[trace_log_strings])
         """
         if not varna_list:
             return [], []
 
+        # Local Import to prevent Circular Dependency with logic/__init__.py
+        from logic.sanjna import SanjnaEngine
+
         it_indices = set()
         trace_log = []
 
-        # =====================================================================
-        # PHASE 1: IDENTIFICATION (Diagnose Markers)
-        # =====================================================================
+        # =========================================================
+        # PHASE 1: IDENTIFICATION (Sañjñā Identification)
+        # =========================================================
 
-        # 1.3.2 Upadeshe'janunasika It
-        indices, log = apply_1_3_2_ajanunasika(varna_list)
-        if indices:
-            it_indices.update(indices)
-            trace_log.extend(log)
+        # 1.3.2: Upadeshe'janunasika (Nasalized vowels)
+        idx, rule = SanjnaEngine.apply_1_3_2_ajanunasika(varna_list)
+        if idx:
+            it_indices.update(idx)
+            trace_log.append(rule)
 
-        # 1.3.3 Halantyam (Final Consonant)
-        # Note: We must check 1.3.4 (Blocking) immediately after.
-        indices, log = apply_1_3_3_halantyam(varna_list, blocked_indices=it_indices)
-        if indices:
-            # Check 1.3.4 Na Vibhaktau (Blocker)
-            blocked = apply_1_3_4_na_vibhaktau(varna_list, source_type)
-            final_indices = indices - blocked
-            if final_indices:
-                it_indices.update(final_indices)
-                trace_log.extend(log)
-
-        # 1.3.5 Adir Nitudavah (Initial Ñi, Tu, Du)
+        # Context-Specific Initial Markers
         if source_type == UpadeshaType.DHATU:
-            indices, log = apply_1_3_5_adir_nitudavah(varna_list)
-            if indices:
-                it_indices.update(indices)
-                trace_log.extend(log)
+            # 1.3.5: Adir Ñi-Tu-Du
+            idx, rule = SanjnaEngine.apply_1_3_5_adir_nitudavah(varna_list)
+            if idx:
+                it_indices.update(idx)
+                trace_log.append(rule)
 
-        # 1.3.6 Shah Pratyayasya (Initial Sh)
-        indices, log = apply_1_3_6_shah(varna_list, source_type)
-        if indices:
-            it_indices.update(indices)
-            trace_log.extend(log)
+        elif source_type in [UpadeshaType.PRATYAYA, UpadeshaType.VIBHAKTI]:
+            # 1.3.6: Shah Pratyayasya
+            idx, rule = SanjnaEngine.apply_1_3_6_shah(varna_list, source_type)
+            if idx:
+                it_indices.update(idx)
+                trace_log.append(rule)
 
-        # 1.3.7 Chutu (Initial C-varga, T-varga)
-        indices, log = apply_1_3_7_chutu(varna_list, source_type)
-        if indices:
-            it_indices.update(indices)
-            trace_log.extend(log)
+            # 1.3.7: Cutu (Initial Palatals/Cerebrals)
+            idx, rule = SanjnaEngine.apply_1_3_7_chutu(varna_list, source_type)
+            if idx:
+                it_indices.update(idx)
+                trace_log.append(rule)
 
-        # 1.3.8 Lashakvataddhite (Initial L, S, K-varga)
-        # Assumption: Not Taddhita by default unless specified
-        is_taddhita = False
-        indices, log = apply_1_3_8_lashakva(varna_list, source_type, is_taddhita)
-        if indices:
-            it_indices.update(indices)
-            trace_log.extend(log)
+            # 1.3.8: Lashakva Taddhite
+            idx, rule = SanjnaEngine.apply_1_3_8_lashakva(varna_list, source_type, is_taddhita)
+            if idx:
+                it_indices.update(idx)
+                trace_log.append(rule)
 
-        # =====================================================================
-        # PHASE 2: TAG INHERITANCE (CRITICAL FIX)
-        # =====================================================================
-        # Identify the grammatical property of the marker (Kit, Nit, etc.)
-        # and store it to transfer to the survivor.
+        # 1.3.3: Halantyam (Run last to allow 1.3.4 'Na Vibhaktau' blocks inside 1.3.3)
+        idx, rule = SanjnaEngine.apply_1_3_3_halantyam(varna_list, source_type, it_indices)
+        if idx:
+            it_indices.update(idx)
+            trace_log.append(rule)
 
-        inherited_tags = set()
-        for idx in it_indices:
-            char = varna_list[idx].char
-
-            # Map marker char to grammatical tag
-            if 'क्' in char: inherited_tags.add("kit")
-            if 'ग्' in char: inherited_tags.add("gnit")
-            if 'ङ्' in char: inherited_tags.add("ngit")
-            if 'ञ्' in char: inherited_tags.add("ñit")
-            if 'ण्' in char: inherited_tags.add("ṇit")
-            if 'न्' in char: inherited_tags.add("nit")
-            if 'श्' in char: inherited_tags.add("śit")
-            if 'ष्' in char: inherited_tags.add("ṣit")
-            if 'प्' in char: inherited_tags.add("pit")
-            if 'र्' in char: inherited_tags.add("rit")
-
-        # =====================================================================
-        # PHASE 3: SURGICAL REMOVAL (Tasya Lopah 1.3.9)
-        # =====================================================================
+        # =========================================================
+        # PHASE 2: METADATA HARVEST & LOPA (1.3.9)
+        # =========================================================
+        # Physically filters the list and transfers 'DNA' (tags) to the segment.
+        cleaned_list = SanjnaEngine.run_tasya_lopah_1_3_9(varna_list, it_indices)
 
         if it_indices:
-            trace_log.append("१.३.९ तस्य लोपः (Removal of Markers)")
+            removed_chars = [varna_list[i].char for i in sorted(it_indices)]
+            trace_log.append(f"1.3.9 तस्य लोपः (Removed: {removed_chars})")
 
-            # Create new list excluding markers
-            cleaned_list = []
-            for i, v in enumerate(varna_list):
-                if i not in it_indices:
-                    cleaned_list.append(v)
+        return cleaned_list, trace_log
 
-            # Apply inherited tags to the first remaining letter (the representative)
-            if cleaned_list:
-                cleaned_list[0].sanjnas.update(inherited_tags)
+    # =========================================================
+    # UTILITY METHODS (Logic Helpers)
+    # =========================================================
 
-            return cleaned_list, trace_log
+    @staticmethod
+    def is_halanta(varnas):
+        """Checks if the list ends in a consonant (Hal)."""
+        if not varnas: return False
+        return varnas[-1].is_consonant
 
-        return varna_list, trace_log
+    @staticmethod
+    def is_ajanta(varnas):
+        """Checks if the list ends in a vowel (Ac)."""
+        if not varnas: return False
+        return varnas[-1].is_vowel

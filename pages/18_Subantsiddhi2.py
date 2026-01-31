@@ -7,7 +7,7 @@ from logic.pratipadika_engine import PratipadikaEngine
 from logic.sanjna_rules import check_pada_sanjna_1_4_14
 
 # Import Vidhi logic (Ensure these exist in your logic/vidhi_engine.py)
-from logic.vidhi_engine import (
+from logic.vidhi.vidhi_engine import (
     apply_rutva_8_2_66,
     apply_visarga_8_3_15,
     apply_hal_nyab_6_1_68,

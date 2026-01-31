@@ -1,5 +1,4 @@
 import streamlit as st
-import pandas as pd
 
 # --- 1. CONFIGURATION ---
 st.set_page_config(page_title="Subant Siddhi Lab", page_icon="🔬", layout="wide")
@@ -9,8 +8,7 @@ from core.phonology import ad, sanskrit_varna_samyoga
 from core.upadesha_registry import UpadeshaType
 from logic.pratipadika_engine import PratipadikaEngine
 from logic.it_engine import ItEngine
-from logic.anga_engine import AngaEngine
-from logic.vidhi_engine import VidhiEngine
+from logic.vidhi.vidhi_engine import VidhiEngine
 from logic.sanjna_rules import apply_1_4_14_pada
 
 
