@@ -15,12 +15,10 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Martel:wght@400;800&family=Noto+Sans:wght@400;700&display=swap');
     
-    /* मुख्य फॉन्ट */
     html, body, [class*="css"] {
         font-family: 'Noto Sans', sans-serif;
     }
 
-    /* संस्कृत टेक्स्ट स्टाइल */
     .sanskrit-text {
         font-family: 'Martel', serif;
         font-weight: 800;
@@ -42,7 +40,6 @@ st.markdown("""
         box-shadow: 0 8px 12px rgba(0, 0, 0, 0.1);
     }
 
-    /* सूत्र बैज */
     .rule-badge {
         background: linear-gradient(135deg, #8e44ad, #9b59b6);
         color: white;
@@ -54,7 +51,6 @@ st.markdown("""
         margin-bottom: 8px;
     }
 
-    /* ऑपरेशन टेक्स्ट */
     .op-header {
         font-size: 1.1rem;
         font-weight: 700;
@@ -67,11 +63,11 @@ st.markdown("""
         background-color: #f8f9fa;
         border: 1px solid #e9ecef;
         border-radius: 8px;
-        padding: 10px;
+        padding: 12px;
         margin: 10px 0;
         display: flex;
         flex-wrap: wrap;
-        gap: 5px;
+        gap: 8px;
         align-items: center;
     }
     
@@ -80,22 +76,23 @@ st.markdown("""
         background-color: #ffffff;
         border: 1px solid #bdc3c7;
         color: #d35400;
-        padding: 4px 8px;
+        padding: 6px 10px;
         border-radius: 6px;
         font-family: 'Courier New', monospace;
         font-weight: bold;
-        font-size: 1rem;
+        font-size: 1.1rem;
         box-shadow: 0 2px 2px rgba(0,0,0,0.05);
     }
     
     .plus-sign {
-        color: #bdc3c7;
+        color: #95a5a6;
         font-weight: bold;
+        font-size: 1.2rem;
+        margin-top: -3px; /* slight visual alignment */
     }
 
-    /* परिणाम अनुभाग */
     .result-section {
-        margin-top: 10px;
+        margin-top: 15px;
         padding-top: 10px;
         border-top: 1px dashed #ecf0f1;
         display: flex;
@@ -109,7 +106,7 @@ st.markdown("""
         letter-spacing: 1px;
     }
     .result-value {
-        font-size: 1.5rem;
+        font-size: 1.6rem;
     }
 
 </style>
@@ -178,19 +175,23 @@ def main():
         history = logger.get_history()
         
         for i, step in enumerate(history):
-            # वर्ण विच्छेद को सुंदर टाइल्स में बदलना
+            # वर्ण विच्छेद को सुंदर टाइल्स में बदलना (Safe Join Method)
             viccheda_html = ""
             if step['viccheda']:
-                # "र् + आ" को अलग करके HTML बनाना
+                # 1. स्ट्रिंग को विभाजित करें
                 parts = step['viccheda'].split(' + ')
-                tiles = "".join([f'<span class="varna-tile">{p}</span><span class="plus-sign">+</span>' for p in parts])
-                # अंतिम '+' हटाना
-                tiles = tiles[:-28] 
+                
+                # 2. हर भाग को स्पैन में लपेटें
+                tile_htmls = [f'<span class="varna-tile">{p}</span>' for p in parts]
+                
+                # 3. प्लस साइन के साथ सुरक्षित रूप से जोड़ें (No slicing bugs!)
+                separator = '<span class="plus-sign">+</span>'
+                final_html_str = separator.join(tile_htmls)
                 
                 viccheda_html = f"""
                 <div style="font-size:0.8rem; color:#7f8c8d; margin-bottom:4px;">🔍 वर्ण-विश्लेषण (Atomic View):</div>
                 <div class="viccheda-container">
-                    {tiles}
+                    {final_html_str}
                 </div>
                 """
 
