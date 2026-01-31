@@ -10,7 +10,6 @@ class SandhiProcessor:
         last = anga[-1]; first = suffix[0]
 
         # R6: Ayadi (6.1.78)
-        # Fix: Use Halanta 'य्' and 'व्'
         if first.is_vowel:
             if last.char == 'ए':
                 last.char = 'अ'; y_v = Varna('य्'); y_v.trace.append("6.1.78")
@@ -35,16 +34,16 @@ class SandhiProcessor:
         return anga + suffix, None
 
     @staticmethod
-    def run_tripadi(v_list):
+    def run_tripadi(v_list, logger=None):
         if not v_list: return []
         
-        # R7: Shattva (8.3.59) - Pure Devanagari check
+        # R7: Shattva (8.3.59)
         for i in range(1, len(v_list)):
             if v_list[i].char == 'स्':
                 prev = v_list[i-1].char
-                # In (vowels except a/aa) or Ku (k-varga)
                 if any(v in prev for v in "इईउऊऋॠएऐओऔ") or prev in ['य्','व्','र्','ल्','ह्', 'क्','ख्','ग्','घ्','ङ्']:
                     v_list[i].char = 'ष्'; v_list[i].trace.append("8.3.59")
+                    if logger: logger.log("8.3.59 (आदेशप्रत्यययोः)", "Shattva (षत्व)", sanskrit_varna_samyoga(v_list), v_list)
 
         # R17: Natva (8.4.2)
         triggers = [i for i, v in enumerate(v_list) if v.char in ['र्', 'ष्', 'ऋ', 'ॠ']]
@@ -55,13 +54,25 @@ class SandhiProcessor:
                 blocked = False
                 for j in range(valid_trigs[-1] + 1, t_idx):
                     c = v_list[j].char
-                    # Att, Ku, Pu, Ang, Num
                     if not (any(v in c for v in "अआइईउऊऋॠएऐओऔं") or c in "ह् य् व् र् क् ख् ग् घ् ङ् प् फ् ब् भ् म्".split()):
                         blocked = True; break
-                if not blocked: v_list[t_idx].char = 'ण्'; v_list[t_idx].trace.append("8.4.2")
+                if not blocked: 
+                    v_list[t_idx].char = 'ण्'; v_list[t_idx].trace.append("8.4.2")
+                    if logger: logger.log("8.4.2 (अट्कुप्वाङ्...)", "Natva (णत्व)", sanskrit_varna_samyoga(v_list), v_list)
 
-        # R9: Visarga (8.3.15)
-        if v_list[-1].char in ['स्', 'ष्', 'र्']:
-            v_list[-1].char = 'ः'; v_list[-1].trace.append("8.3.15")
+        # R9: Visarga Logic (Rutva -> Visarga)
+        if v_list[-1].char in ['स्', 'ष्']:
+            # 1. Sasajusho Ruh (8.2.66)
+            v_list[-1].char = 'र्' 
+            if logger: logger.log("8.2.66 (ससजुषोः रुः)", "Rutva (रुँत्वम्)", sanskrit_varna_samyoga(v_list), v_list)
+            
+            # 2. Kharavasanayor Visarjaniyah (8.3.15)
+            v_list[-1].char = 'ः'
+            if logger: logger.log("8.3.15 (खरवसानयोर्विसर्जनीयः)", "Visarga (विसर्गः)", sanskrit_varna_samyoga(v_list), v_list)
+        
+        # Check if already R (e.g. Punar)
+        elif v_list[-1].char == 'र्':
+             v_list[-1].char = 'ः'
+             if logger: logger.log("8.3.15 (खरवसानयोर्विसर्जनीयः)", "Visarga (विसर्गः)", sanskrit_varna_samyoga(v_list), v_list)
              
         return v_list
