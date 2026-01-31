@@ -7,7 +7,7 @@ OUTPUT_FILE = "all_source_code.txt"
 # 1. Names of directories to skip anywhere they appear in the project
 EXCLUDE_DIR_NAMES = {
     'scripts',  # Added this to exclude the scripts folder and its contents
-    'data', 'pages', 'tests', 'venv', '__pycache__',
+    'data', 'venv', '__pycache__',
     '.pytest_cache', '.git', '.venv', '.vscode', 'node_modules',
     'logs', 'temp', 'backup', 'dist', 'build'
 }
