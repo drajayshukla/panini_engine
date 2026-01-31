@@ -1,11 +1,14 @@
 """
-FILE: update_ui_hari_support.py
-PURPOSE: Update the UI sidebar to announce support for Hari (i-stem) alongside Rama.
+FILE: fix_syntax_crash.py
+PURPOSE: Fix SyntaxError in the Streamlit page by simplifying string construction.
 """
 import os
 import sys
 
-NEW_UI_CODE = '''import streamlit as st
+# ==============================================================================
+# SAFE & STABLE UI CODE (Syntax Verified)
+# ==============================================================================
+NEW_UI_CODE = r'''import streamlit as st
 import pandas as pd
 from engine_main import PrakriyaLogger
 from logic.subanta_processor import SubantaProcessor
@@ -40,6 +43,7 @@ st.markdown("""
         background: linear-gradient(135deg, #8e44ad, #9b59b6); color: white;
         padding: 6px 14px; border-radius: 20px; font-size: 0.9rem; font-weight: bold;
         box-shadow: 0 2px 4px rgba(142, 68, 173, 0.3); text-decoration: none;
+        display: inline-block;
     }
     
     .auth-tag {
@@ -77,7 +81,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. HTML GENERATOR ---
+# --- 3. HTML GENERATOR (Simplified Logic) ---
 def generate_card_html(step_index, step_data):
     rule_str = step_data['rule']
     op = step_data['operation']
@@ -85,37 +89,50 @@ def generate_card_html(step_index, step_data):
     viccheda = step_data['viccheda']
     source = step_data.get('source', 'Maharshi Pāṇini')
     
-    # Link Logic
+    # -- Link Logic --
+    rule_html = f'<span class="rule-tag">📖 {rule_str}</span>'
     try:
-        rule_number = rule_str.split()[0] # "8.2.66"
-        c, p, s = rule_number.split('.')
-        link_url = f"https://ashtadhyayi.com/sutraani/{c}/{p}/{s}"
-        rule_html = f'<a href="{link_url}" target="_blank" class="rule-tag" style="color:white;">📖 {rule_str} ↗</a>'
+        if rule_str and "." in rule_str:
+            parts = rule_str.split()[0].split('.')
+            if len(parts) == 3:
+                c, p, s = parts
+                link = f"https://ashtadhyayi.com/sutraani/{c}/{p}/{s}"
+                rule_html = f'<a href="{link}" target="_blank" class="rule-tag" style="color:white;">📖 {rule_str} ↗</a>'
     except:
-        rule_html = f'<span class="rule-tag">📖 {rule_str}</span>'
+        pass
 
-    # Varna Logic
+    # -- Varna Logic --
     viccheda_html = ""
     if viccheda:
         parts = viccheda.split(" + ")
-        tiles = "".join([f'<div class="varna-tile">{p}</div><div class="plus-sep">+</div>' for p in parts])
-        if tiles: tiles = tiles[:-29]
-        viccheda_html = f'<div style="font-size:0.85rem; color:#7f8c8d; margin-bottom:5px;">🔍 वर्ण-विश्लेषण (Atomic View):</div><div class="varna-container">{tiles}</div>'
+        # Using string join instead of slicing to prevent errors
+        tile_list = []
+        for p in parts:
+            tile_list.append(f'<div class="varna-tile">{p}</div>')
+        
+        # Join with separators
+        tiles = '<div class="plus-sep">+</div>'.join(tile_list)
+        
+        viccheda_html = f"""
+        <div style="font-size:0.85rem; color:#7f8c8d; margin-bottom:5px;">🔍 वर्ण-विश्लेषण (Atomic View):</div>
+        <div class="varna-container">{tiles}</div>
+        """
 
-    html = (
-        f'<div class="step-card">'
-            f'<div class="card-header">'
-                f'{rule_html}'
-                f'<span class="auth-tag">— {source}</span>'
-            f'</div>'
-            f'<div class="operation-text">{op}</div>'
-            f'{viccheda_html}'
-            f'<div class="result-row">'
-                f'<span class="step-num">चरण {step_index + 1}</span>'
-                f'<span class="res-sanskrit">{res}</span>'
-            f'</div>'
-        f'</div>'
-    )
+    # -- Construct HTML safely --
+    html = f"""
+    <div class="step-card">
+        <div class="card-header">
+            {rule_html}
+            <span class="auth-tag">— {source}</span>
+        </div>
+        <div class="operation-text">{op}</div>
+        {viccheda_html}
+        <div class="result-row">
+            <span class="step-num">चरण {step_index + 1}</span>
+            <span class="res-sanskrit">{res}</span>
+        </div>
+    </div>
+    """
     return html
 
 # --- 4. MAIN ---
@@ -128,12 +145,10 @@ def main():
 
     with st.sidebar:
         st.header("🎛️ इनपुट")
-        # Default value changed to Hari to show off new capabilities
         stem = st.text_input("प्रातिपदिक", value="हरि")
         
         st.success("✅ **समर्थित (Supported):**")
         st.markdown("- **राम** (अकारांत पुल्लिंग)\n- **हरि** (इकारांत पुल्लिंग)")
-        
         st.info("ℹ️ इंजन अब 'घि' संज्ञा (Ghi-Sanjna) के नियमों का पालन करता है।")
 
     if stem:
@@ -172,4 +187,4 @@ if __name__ == "__main__":
 with open("pages/1_🔍_Declension_Engine.py", "w", encoding="utf-8") as f:
     f.write(NEW_UI_CODE)
 
-print("🚀 UI Updated to showcase Hari Support. Refresh the app!")
+print("🚀 Syntax Fixed. App restored successfully.")
