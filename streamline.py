@@ -1,13 +1,12 @@
 """
-FILE: fix_ui_indentation.py
-PURPOSE: Fix the 'Raw HTML visible' bug by stripping indentation from f-strings.
+FILE: polish_ui_final.py
+PURPOSE: Fix UI rendering by removing whitespace/newlines from HTML strings.
 """
 import os
 import sys
 
 NEW_UI_CODE = '''import streamlit as st
 import pandas as pd
-import textwrap
 from engine_main import PrakriyaLogger
 from logic.subanta_processor import SubantaProcessor
 
@@ -18,104 +17,164 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- 2. CSS ---
+# --- 2. PREMIUM CSS (No indent issues) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Martel:wght@400;800&family=Noto+Sans:wght@400;700&display=swap');
     
-    body { font-family: 'Noto Sans', sans-serif; }
+    body { font-family: 'Noto Sans', sans-serif; background-color: #f4f6f9; }
 
+    /* कार्ड का मुख्य डिब्बा */
     .step-card {
-        background-color: white;
-        padding: 15px;
-        margin-bottom: 15px;
-        border-radius: 10px;
-        border-left: 5px solid #8e44ad;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        background-color: #ffffff;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-radius: 12px;
+        border-left: 6px solid #8e44ad;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        transition: transform 0.2s;
+    }
+    .step-card:hover {
+        transform: translateY(-2px);
     }
 
+    /* हेडर सेक्शन */
     .card-header {
-        display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #f0f0f0;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
     }
     
     .rule-tag {
-        background-color: #8e44ad; color: white; padding: 4px 12px; 
-        border-radius: 15px; font-size: 0.85rem; font-weight: bold;
+        background: linear-gradient(135deg, #8e44ad, #9b59b6);
+        color: white;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: bold;
+        box-shadow: 0 2px 4px rgba(142, 68, 173, 0.3);
     }
     
     .auth-tag {
-        font-size: 0.75rem; color: #888; font-weight: bold; text-transform: uppercase;
+        font-size: 0.75rem;
+        color: #95a5a6;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
 
+    /* ऑपरेशन टेक्स्ट */
     .operation-text {
-        font-size: 1.1rem; font-weight: 700; color: #2c3e50; margin-bottom: 8px;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin: 10px 0;
     }
 
-    .varna-box {
-        background-color: #f8f9fa; padding: 10px; border-radius: 6px; 
-        border: 1px solid #eee; margin: 8px 0; line-height: 2.0;
+    /* वर्ण विच्छेद (Scrabble Tiles Style) */
+    .varna-container {
+        background-color: #f8f9fa;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+        margin: 10px 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
     }
     
-    .varna-token {
-        display: inline-block; background: white; border: 1px solid #bdc3c7; 
-        padding: 4px 8px; margin: 0 3px; border-radius: 4px; 
-        color: #d35400; font-family: monospace; font-weight: bold; font-size: 1rem;
+    .varna-tile {
+        background-color: #fff;
+        border: 1px solid #bdc3c7;
+        border-bottom: 3px solid #bdc3c7; /* 3D Effect */
+        padding: 5px 10px;
+        border-radius: 6px;
+        color: #d35400;
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+        font-size: 1.1rem;
+        min-width: 30px;
+        text-align: center;
     }
     
-    .plus-sep { color: #ccc; font-weight: bold; font-size: 1.2rem; }
+    .plus-sep {
+        color: #bdc3c7;
+        font-weight: bold;
+        font-size: 1.2rem;
+    }
 
+    /* परिणाम */
     .result-row {
-        margin-top: 10px; padding-top: 5px; border-top: 1px dashed #eee;
-        display: flex; justify-content: space-between; align-items: center;
+        margin-top: 15px;
+        padding-top: 10px;
+        border-top: 2px dashed #f0f2f5;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
     
+    .step-num {
+        font-size: 0.85rem;
+        color: #7f8c8d;
+        background-color: #ecf0f1;
+        padding: 4px 8px;
+        border-radius: 4px;
+    }
+
     .res-sanskrit {
-        font-family: 'Martel', serif; font-size: 1.5rem; font-weight: 800; color: #2c3e50;
+        font-family: 'Martel', serif;
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: #2c3e50;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. हेल्पर फंक्शन (CLEAN HTML GENERATOR) ---
+# --- 3. हेल्पर फंक्शन (FLAT HTML GENERATOR - NO NEWLINES) ---
 def generate_card_html(step_index, step_data):
+    """
+    Generates a single line HTML string to prevent Streamlit/Markdown parsing errors.
+    """
     rule = step_data['rule']
-    operation = step_data['operation']
-    result = step_data['result']
+    op = step_data['operation']
+    res = step_data['result']
     viccheda = step_data['viccheda']
     source = step_data.get('source', 'Maharshi Pāṇini')
     
+    # 1. वर्ण विच्छेद HTML (एक लाइन में)
     viccheda_html = ""
     if viccheda:
         parts = viccheda.split(" + ")
-        # टाइल्स बनाना
-        token_spans = [f'<span class="varna-token">{p}</span>' for p in parts]
-        # सेपरेटर जोड़ना
-        separator = '<span class="plus-sep">+</span>'
-        tokens_html = separator.join(token_spans)
+        # टाइल्स बनाएँ
+        tiles = "".join([f'<div class="varna-tile">{p}</div><div class="plus-sep">+</div>' for p in parts])
+        # अंतिम '+' हटा दें (HTML String slicing)
+        # <div class="plus-sep">+</div> is 29 chars long
+        if tiles: tiles = tiles[:-29]
         
-        # HTML Block (No Indentation to prevent Code Block rendering)
-        viccheda_html = f"""
-<div style="font-size:0.8rem; color:#777; margin-bottom:4px;">🔍 वर्ण-विश्लेषण:</div>
-<div class="varna-box">{tokens_html}</div>
-"""
+        viccheda_html = f'<div style="font-size:0.85rem; color:#7f8c8d; margin-bottom:5px;">🔍 वर्ण-विश्लेषण (Atomic View):</div><div class="varna-container">{tiles}</div>'
 
-    # मुख्य कार्ड HTML (Use textwrap.dedent to strip indentation)
-    raw_html = f"""
-    <div class="step-card">
-        <div class="card-header">
-            <span class="rule-tag">📖 {rule}</span>
-            <span class="auth-tag">— {source}</span>
-        </div>
-        <div class="operation-text">{operation}</div>
-        {viccheda_html}
-        <div class="result-row">
-            <span style="color:#777; font-size:0.8rem;">चरण {step_index + 1}</span>
-            <span class="res-sanskrit">{result}</span>
-        </div>
-    </div>
-    """
-    return textwrap.dedent(raw_html)
+    # 2. मुख्य कार्ड HTML (एक लाइन में - NO indentation inside string)
+    html = (
+        f'<div class="step-card">'
+            f'<div class="card-header">'
+                f'<span class="rule-tag">📖 {rule}</span>'
+                f'<span class="auth-tag">— {source}</span>'
+            f'</div>'
+            f'<div class="operation-text">{op}</div>'
+            f'{viccheda_html}'
+            f'<div class="result-row">'
+                f'<span class="step-num">चरण {step_index + 1}</span>'
+                f'<span class="res-sanskrit">{res}</span>'
+            f'</div>'
+        f'</div>'
+    )
+    return html
 
-# --- 4. मुख्य ऐप लॉजिक ---
+# --- 4. मुख्य ऐप ---
 VIBHAKTI_MAP = {1: "प्रथमा", 2: "द्वितीया", 3: "तृतीया", 4: "चतुर्थी", 5: "पञ्चमी", 6: "षष्ठी", 7: "सप्तमी", 8: "सम्बोधन"}
 VACANA_MAP = {1: "एकवचनम्", 2: "द्विवचनम्", 3: "बहुवचनम्"}
 
@@ -155,7 +214,6 @@ def main():
         
         history = logger.get_history()
         for i, step in enumerate(history):
-            # HTML Generate करें और Render करें
             st.markdown(generate_card_html(i, step), unsafe_allow_html=True)
 
 if __name__ == "__main__":
@@ -165,4 +223,4 @@ if __name__ == "__main__":
 with open("pages/1_🔍_Declension_Engine.py", "w", encoding="utf-8") as f:
     f.write(NEW_UI_CODE)
 
-print("🚀 UI Indentation Fixed. HTML tags should now disappear and render correctly.")
+print("🚀 HTML Logic Flattened. Formatting artifacts removed.")
