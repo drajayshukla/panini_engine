@@ -1,273 +1,252 @@
 """
-FILE: phase_r31_nivritti.py
-PURPOSE:
-  1. Upgrade Logger for A1 (Citations).
-  2. Implement R31 (Nivṛtti) logic for Adhikāra boundaries.
-  3. Add Regression Test for R31.
+FILE: upgrade_ui_final.py
+PURPOSE: Apply the final 'Premium' UI with Atomic Tiles, Authority Citations, and fixed HTML logic.
 """
 import os
-import shutil
-import subprocess
 import sys
 
 # ==============================================================================
-# 1. UPGRADE LOGGER (A1: Authority Citations)
+# FINAL PREMIUM UI CODE
 # ==============================================================================
-NEW_LOGGER_CODE = '''"""
-FILE: engine_main.py
-PURPOSE: Core Logger with A1 Authority Citations and Varna-Viccheda.
-"""
+NEW_UI_CODE = '''import streamlit as st
+import pandas as pd
+from engine_main import PrakriyaLogger
+from logic.subanta_processor import SubantaProcessor
 
-class PrakriyaLogger:
-    def __init__(self):
-        self.history = []
+# --- 1. पेज कॉन्फ़िगरेशन ---
+st.set_page_config(
+    page_title="शब्द-रूप सिद्धि यन्त्र",
+    page_icon="🕉️",
+    layout="wide"
+)
 
-    def log(self, rule, operation, result, raw_state=None, source="Maharshi Pāṇini"):
-        """
-        Logs a derivation step with Authority Citation (A1).
-        source: 'Maharshi Pāṇini', 'Vārttikakāra Kātyāyana', 'Patañjali', etc.
-        """
-        viccheda = ""
-        if raw_state:
-            chars = [v.char for v in raw_state]
-            viccheda = " + ".join(chars)
-
-        step_data = {
-            "rule": rule,
-            "operation": operation,
-            "result": str(result),
-            "viccheda": viccheda,
-            "source": source
-        }
-        self.history.append(step_data)
-
-    def print_history(self):
-        print("\\n=== Prakriya Derivation (प्रक्रिया) ===")
-        for step in self.history:
-            print(f"→ {step['result']}")
-            print(f"   [Rule: {step['rule']} | Op: {step['operation']} | Auth: {step['source']}]")
-            if step['viccheda']:
-                print(f"   ↳ 🔍 विश्लेषण: {step['viccheda']}")
-        print("=======================================")
-
-    def get_history(self):
-        return self.history
-'''
-
-# ==============================================================================
-# 2. IMPLEMENT R12 (Adhikāra) & R31 (Nivṛtti) MANAGER
-# ==============================================================================
-# We create a new controller to manage scope boundaries mathematically.
-ADHIKARA_CONTROLLER_CODE = '''"""
-FILE: core/adhikara_controller.py
-PURPOSE: Manages R12 (Headers) and R31 (Nivṛtti - Deactivation).
-"""
-
-class AdhikaraController:
-    # Mathematical Boundaries of Adhikaras in Ashtadhyayi
-    SCOPES = {
-        "ANGASYA": (6, 4, 1, 7, 4, 97),   # 6.4.1 to 7.4.97
-        "BHASYA":  (6, 4, 129, 6, 4, 175) # 6.4.129 to 6.4.175
+# --- 2. आधुनिक CSS (Modern Styling) ---
+st.markdown("""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Martel:wght@400;800&family=Noto+Sans:wght@400;700&display=swap');
+    
+    html, body, [class*="css"] {
+        font-family: 'Noto Sans', sans-serif;
     }
 
-    @staticmethod
-    def is_rule_in_scope(rule_str, adhikara_name):
-        """
-        Checks if a target rule falls within the Adhikara's mathematical domain.
-        rule_str format: "x.y.z" (e.g., "7.1.12")
-        """
-        try:
-            c, p, s = map(int, rule_str.split('.'))
-        except:
-            return False # Non-standard rule format
+    /* संस्कृत टेक्स्ट */
+    .sanskrit-text {
+        font-family: 'Martel', serif;
+        font-weight: 800;
+        color: #2c3e50;
+    }
 
-        start_c, start_p, start_s, end_c, end_p, end_s = AdhikaraController.SCOPES[adhikara_name]
+    /* चरण कार्ड (Step Card) */
+    .step-card {
+        background-color: #ffffff;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        border-left: 6px solid #8e44ad;
+        transition: transform 0.2s;
+    }
+    .step-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 12px rgba(0, 0, 0, 0.1);
+    }
 
-        # Convert to absolute integer for comparison (simple heuristic: c*10000 + p*1000 + s)
-        target_val = c * 10000 + p * 1000 + s
-        start_val = start_c * 10000 + start_p * 1000 + start_s
-        end_val = end_c * 10000 + end_p * 1000 + end_s
+    /* सूत्र बैज */
+    .rule-badge {
+        background: linear-gradient(135deg, #8e44ad, #9b59b6);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: bold;
+        display: inline-block;
+    }
 
-        return start_val <= target_val <= end_val
+    /* ऋषि उद्धरण (Authority Citation) */
+    .auth-text {
+        font-size: 0.75rem;
+        color: #8e44ad;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        float: right;
+        margin-top: 4px;
+    }
 
-    @staticmethod
-    def check_nivritti(context, adhikara_name):
-        """
-        R31 (Nivṛtti): Checks if the Context DEACTIVATES the Adhikara.
-        """
-        # BHASYA Context: Needs suffix to be Y-adi or Vowel-adi (1.4.18) AND weak (non-sarvanamasthana)
-        if adhikara_name == "BHASYA":
-            is_yachi = context.get("is_yachi", False)
-            is_bham = context.get("is_bham", False)
-            if not is_bham:
-                return True # NIVRITTI: Deactivate Bhasya rules!
+    /* ऑपरेशन हेडर */
+    .op-header {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #34495e;
+        margin: 12px 0;
+    }
+
+    /* वर्ण विच्छेद कंटेनर */
+    .viccheda-container {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 12px;
+        margin: 10px 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px; /* टाइल्स के बीच गैप */
+        align-items: center;
+    }
+    
+    /* वर्ण टाइल (Atomic Tile) */
+    .varna-tile {
+        background-color: #ffffff;
+        border: 1px solid #bdc3c7;
+        color: #d35400;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+        font-size: 1.1rem;
+        box-shadow: 0 2px 2px rgba(0,0,0,0.05);
+    }
+    
+    .plus-sign {
+        color: #95a5a6;
+        font-weight: bold;
+        font-size: 1.2rem;
+        margin-top: -3px;
+    }
+
+    /* परिणाम अनुभाग */
+    .result-section {
+        margin-top: 15px;
+        padding-top: 10px;
+        border-top: 1px dashed #ecf0f1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .result-label {
+        font-size: 0.9rem;
+        color: #7f8c8d;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .result-value {
+        font-size: 1.6rem;
+    }
+
+</style>
+""", unsafe_allow_html=True)
+
+# --- 3. डेटा ---
+VIBHAKTI_MAP = {1: "प्रथमा", 2: "द्वितीया", 3: "तृतीया", 4: "चतुर्थी", 5: "पञ्चमी", 6: "षष्ठी", 7: "सप्तमी", 8: "सम्बोधन"}
+VACANA_MAP = {1: "एकवचनम्", 2: "द्विवचनम्", 3: "बहुवचनम्"}
+
+def main():
+    st.title("🕉️ शब्द-रूप सिद्धि यन्त्र")
+    st.markdown("### पाणिनीय व्याकरण का 'ग्लास-बॉक्स' विश्लेषण")
+    st.markdown("---")
+
+    # --- साइडबार ---
+    with st.sidebar:
+        st.header("🎛️ इनपुट")
+        stem = st.text_input("प्रातिपदिक (Stem)", value="राम")
+        st.info("ℹ️ केवल 'अकारांत पुल्लिंग' (जैसे राम, देव) के लिए अनुकूलित।")
+
+    # --- तालिका (Table Logic Restored) ---
+    if stem:
+        with st.expander("📖 पूरी तालिका देखें (Show Full Table)", expanded=True):
+            table_data = []
+            for v in range(1, 9):
+                row = {"विभक्ति": VIBHAKTI_MAP[v]}
+                for n in range(1, 4):
+                    # लॉगर के बिना कॉल करें (केवल शब्द पाने के लिए)
+                    word = SubantaProcessor.derive_pada(stem, v, n, None)
+                    row[VACANA_MAP[n]] = word
+                table_data.append(row)
+            
+            df = pd.DataFrame(table_data)
+            st.dataframe(
+                df, 
+                use_container_width=True, 
+                hide_index=True,
+                column_config={
+                    "विभक्ति": st.column_config.TextColumn("विभक्ति", width="medium"),
+                    "एकवचनम्": st.column_config.TextColumn("एकवचनम्", width="large"),
+                    "द्विवचनम्": st.column_config.TextColumn("द्विवचनम्", width="large"),
+                    "बहुवचनम्": st.column_config.TextColumn("बहुवचनम्", width="large"),
+                }
+            )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # --- इंस्पेक्टर (Derivation Inspector) ---
+    st.header("🔬 सिद्धि प्रक्रिया (Process Inspector)")
+    
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col1:
+        sel_vib = st.selectbox("विभक्ति चुनें", list(VIBHAKTI_MAP.keys()), format_func=lambda x: VIBHAKTI_MAP[x])
+    with col2:
+        sel_vac = st.selectbox("वचन चुनें", list(VACANA_MAP.keys()), format_func=lambda x: VACANA_MAP[x])
+    with col3:
+        st.write("")
+        st.write("")
+        derive_btn = st.button("🚀 सिद्धि देखें", type="primary", use_container_width=True)
+
+    if derive_btn:
+        logger = PrakriyaLogger()
+        final_res = SubantaProcessor.derive_pada(stem, sel_vib, sel_vac, logger)
         
-        return False # Active
+        st.success(f"सिद्ध पद: **{final_res}**")
+        
+        history = logger.get_history()
+        
+        for i, step in enumerate(history):
+            # --- वर्ण विच्छेद विज़ुअलाइज़ेशन (Atomic Tiles) ---
+            viccheda_html = ""
+            if step['viccheda']:
+                # 1. स्ट्रिंग को विभाजित करें (जैसे "र् + आ" -> ["र्", "आ"])
+                parts = step['viccheda'].split(' + ')
+                
+                # 2. हर भाग को स्पैन में लपेटें
+                tile_htmls = [f'<span class="varna-tile">{p}</span>' for p in parts]
+                
+                # 3. सुरक्षित रूप से जोड़ें (Join safely with separator)
+                separator = '<span class="plus-sign">+</span>'
+                final_html_str = separator.join(tile_htmls)
+                
+                viccheda_html = f"""
+                <div style="font-size:0.8rem; color:#7f8c8d; margin-bottom:4px;">🔍 वर्ण-विश्लेषण (Atomic View):</div>
+                <div class="viccheda-container">
+                    {final_html_str}
+                </div>
+                """
+            
+            # --- ऋषि उद्धरण (Authority) ---
+            source = step.get('source', 'Maharshi Pāṇini')
+
+            # --- कार्ड रेंडरिंग ---
+            st.markdown(f"""
+            <div class="step-card">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span class="rule-badge">📖 सूत्र: {step['rule']}</span>
+                    <span class="auth-text">— {source}</span>
+                </div>
+                
+                <div class="op-header">{step['operation']}</div>
+                
+                {viccheda_html}
+                
+                <div class="result-section">
+                    <span class="result-label">परिणाम (State)</span>
+                    <span class="sanskrit-text result-value">{step['result']}</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+if __name__ == "__main__":
+    main()
 '''
 
-# ==============================================================================
-# 3. UPDATE SUBANTA PROCESSOR (Integrate R31 & A1)
-# ==============================================================================
-NEW_SUBANTA_CODE = '''"""
-FILE: logic/subanta_processor.py
-"""
-from core.core_foundation import Varna, ad, sanskrit_varna_samyoga, UpadeshaType
-from core.sanjna_controller import SanjnaController
-from core.knowledge_base import KnowledgeBase
-from logic.sandhi_processor import SandhiProcessor
-from core.adhikara_controller import AdhikaraController
+with open("pages/1_🔍_Declension_Engine.py", "w", encoding="utf-8") as f:
+    f.write(NEW_UI_CODE)
 
-class SubantaProcessor:
-    @staticmethod
-    def derive_pada(stem_str, vibhakti, vacana, logger=None):
-        stem = ad(stem_str); is_at = (stem[-1].char == 'अ')
-        sup_data = KnowledgeBase.get_sup(vibhakti, vacana)
-        if not sup_data: return "?"
-        raw_sup, tags = sup_data; suffix = ad(raw_sup)
-        
-        # A1: Citation - Pāṇini 4.1.2
-        if logger: logger.log("4.1.2", f"Suffix Attachment ({raw_sup})", f"{stem_str} + {raw_sup}", stem + suffix, "Maharshi Pāṇini")
-        
-        clean_suffix, trace = SanjnaController.run_it_prakaran(suffix, UpadeshaType.VIBHAKTI)
-        if clean_suffix: clean_suffix[0].sanjnas.update(tags)
-        
-        if logger and trace:
-             logger.log(trace[-1], "It-Lopa", sanskrit_varna_samyoga(stem + clean_suffix), stem + clean_suffix, "Maharshi Pāṇini")
-
-        # Context Analysis for R31 (Nivṛtti)
-        # Check Bha Sanjna (1.4.18 Yachi Bham)
-        is_yachi = False
-        if clean_suffix:
-            f = clean_suffix[0].char
-            if clean_suffix[0].is_vowel or f == 'य्': is_yachi = True
-        
-        # Simple Logic: 1.1 to 2.2 are Sarvanamasthana (Strong) -> Pada (mostly). 
-        # 4.1 (Ne -> Ya) is Bha? No, Ne starts with Ng (It), remaining is E. Yachi Bham applies.
-        # For Rama, we simplify:
-        context = {"is_bham": is_yachi and vibhakti >= 4} # Rough heuristic for demonstration
-
-        # [8.1] Sambodhana
-        if vibhakti == 8 and vacana == 1 and is_at:
-            if clean_suffix and clean_suffix[0].char == 'स्':
-                clean_suffix = [] 
-                if logger: logger.log("6.1.69", "Sambuddhi Lopa", sanskrit_varna_samyoga(stem), stem, "Maharshi Pāṇini")
-
-        # R11: Niyama
-        if is_at:
-            if vibhakti == 3 and vacana == 1: 
-                clean_suffix = ad("इन")
-                if logger: logger.log("7.1.12", "Ta -> Ina", "रामेन", stem + clean_suffix, "Maharshi Pāṇini")
-            elif vibhakti == 3 and vacana == 3: 
-                clean_suffix = ad("ऐस्")
-                if logger: logger.log("7.1.9", "Bhis -> Ais", "रामऐस्", stem + clean_suffix, "Maharshi Pāṇini")
-            elif vibhakti == 4 and vacana == 1: 
-                clean_suffix = ad("य")
-                if logger: logger.log("7.1.13", "Ne -> Ya", "रामय", stem + clean_suffix, "Maharshi Pāṇini")
-            elif vibhakti == 5 and vacana == 1: 
-                clean_suffix = ad("आत्")
-                if logger: logger.log("7.1.12", "Ngasi -> At", "रामआत्", stem + clean_suffix, "Maharshi Pāṇini")
-            elif vibhakti == 6 and vacana == 1: 
-                clean_suffix = ad("स्य")
-                if logger: logger.log("7.1.12", "Ngas -> Sya", "रामस्य", stem + clean_suffix, "Maharshi Pāṇini")
-            elif vibhakti == 6 and vacana == 3: 
-                clean_suffix = ad("न्") + clean_suffix
-                if logger: logger.log("7.1.54", "Nut Agama", "रामनाम्", stem + clean_suffix, "Maharshi Pāṇini")
-                stem[-1].char = 'आ' # Nami
-                if logger: logger.log("6.4.3", "Nami (Dirgha)", "रामानाम्", stem + clean_suffix, "Maharshi Pāṇini")
-
-        # R12: Adhikara - Mutators (Requires R31 check!)
-        if is_at and clean_suffix:
-            f = clean_suffix[0].char
-            
-            # Jhalyet (7.3.103) - Under Angasya
-            # R31 Check: Is Angasya Active? Yes (Global for Subanta).
-            if vacana == 3 and f in ['भ्', 'स्']: 
-                if not (vibhakti == 2 and vacana == 3): 
-                    stem[-1].char = 'ए'
-                    if logger: logger.log("7.3.103", "Bahuvacane Jhalyet", sanskrit_varna_samyoga(stem + clean_suffix), stem + clean_suffix, "Maharshi Pāṇini")
-            
-            # Osi Ca (7.3.104)
-            elif vibhakti in [6, 7] and vacana == 2: 
-                stem[-1].char = 'ए'
-                if logger: logger.log("7.3.104", "Osi Ca", sanskrit_varna_samyoga(stem + clean_suffix), stem + clean_suffix, "Maharshi Pāṇini")
-            
-            # Supi Ca (7.3.102) - Under Angasya
-            elif f in ['भ्', 'य', 'व्', 'य्', 'व']: 
-                # Verify Adhikara Scope
-                if AdhikaraController.is_rule_in_scope("7.3.102", "ANGASYA"):
-                     stem[-1].char = 'आ'
-                     if logger: logger.log("7.3.102", "Supi Ca", sanskrit_varna_samyoga(stem + clean_suffix), stem + clean_suffix, "Maharshi Pāṇini")
-
-        # 2.1 Ami Purvah Bypass
-        if is_at and vibhakti == 2 and vacana == 1:
-            res_str = stem_str + "म्"
-            if logger: logger.log("6.1.107", "Ami Purvah", res_str, ad(res_str), "Maharshi Pāṇini")
-            return res_str
-
-        # Sandhi
-        fp, rule = SandhiProcessor.apply_ac_sandhi(stem, clean_suffix)
-        if logger and rule:
-             logger.log(rule, "Sandhi", sanskrit_varna_samyoga(fp), fp, "Maharshi Pāṇini")
-        
-        # 2.3 Shaso Nah Pumsi
-        if is_at and vibhakti == 2 and vacana == 3:
-            if fp[-1].char == 'स्' or fp[-1].char == 'ः':
-                fp[-1].char = 'न्'
-                if logger: logger.log("6.1.103", "Shaso Nah", sanskrit_varna_samyoga(fp), fp, "Maharshi Pāṇini")
-                return sanskrit_varna_samyoga(fp)
-
-        # Tripadi (Visarga etc.)
-        final = SandhiProcessor.run_tripadi(fp, logger) 
-        res = sanskrit_varna_samyoga(final)
-        
-        if vibhakti == 8: return "हे " + res
-
-        return res
-'''
-
-# ==============================================================================
-# 4. CREATE REGRESSION TEST FOR R31 (Nivṛtti)
-# ==============================================================================
-TEST_R31_CODE = '''"""
-FILE: tests/test_r31_nivritti.py
-TEST CASE: Prove that Bhasya rules do NOT fire when Nivṛtti is active.
-"""
-import unittest
-from core.adhikara_controller import AdhikaraController
-
-class TestR31Nivritti(unittest.TestCase):
-    def test_nivritti_logic(self):
-        """
-        Verify mathematical boundaries of Adhikaras.
-        """
-        print("\\n" + "="*60)
-        print("🚀 TEST R31: Nivṛtti (De-activation) Logic")
-        
-        # 1. Supi Ca (7.3.102) IS inside Angasya (6.4.1 - 7.4.97)
-        self.assertTrue(AdhikaraController.is_rule_in_scope("7.3.102", "ANGASYA"), "7.3.102 must be inside ANGASYA")
-        
-        # 2. Supi Ca (7.3.102) IS NOT inside Bhasya (6.4.129 - 6.4.175)
-        self.assertFalse(AdhikaraController.is_rule_in_scope("7.3.102", "BHASYA"), "7.3.102 must be OUTSIDE BHASYA")
-        
-        # 3. Contextual Nivṛtti
-        # Case: Rama + Su (1.1). Not Bham.
-        context = {"is_bham": False}
-        is_nivrutta = AdhikaraController.check_nivritti(context, "BHASYA")
-        self.assertTrue(is_nivrutta, "Bhasya must be Deactivated (Nivṛtti) for Rama + Su")
-
-if __name__ == '__main__':
-    unittest.main()
-'''
-
-# 5. WRITE FILES
-with open("engine_main.py", "w", encoding="utf-8") as f: f.write(NEW_LOGGER_CODE)
-with open("core/adhikara_controller.py", "w", encoding="utf-8") as f: f.write(ADHIKARA_CONTROLLER_CODE)
-with open("logic/subanta_processor.py", "w", encoding="utf-8") as f: f.write(NEW_SUBANTA_CODE)
-with open("tests/test_r31_nivritti.py", "w", encoding="utf-8") as f: f.write(TEST_R31_CODE)
-
-# Clear Cache
-for r, d, f in os.walk("."):
-    if "__pycache__" in d: shutil.rmtree(os.path.join(r, "__pycache__"))
-
-print("🚀 R31 (Nivṛtti) Implemented. Logger Upgraded to A1. Running Tests...")
-subprocess.run([sys.executable, "master_runner.py"])
+print("🚀 Premium UI Updated! Streamlit ऐप को Refresh (R) करें।")
