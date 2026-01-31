@@ -1,12 +1,12 @@
 """
-FILE: restore_stability.py
-PURPOSE: Re-write the UI with a SAFE HTML generator function to prevent broken layouts.
+FILE: fix_html_rendering.py
+PURPOSE: Fix broken HTML tags in Streamlit UI using safe string joining.
 """
 import os
 import sys
 
 # ==============================================================================
-# SAFE & STABLE UI CODE
+# SAFE UI CODE (No String Slicing)
 # ==============================================================================
 NEW_UI_CODE = '''import streamlit as st
 import pandas as pd
@@ -37,7 +37,7 @@ st.markdown("""
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
 
-    /* हेडर (सूत्र और ऑथोरेटी) */
+    /* हेडर */
     .card-header {
         display: flex;
         justify-content: space-between;
@@ -48,7 +48,7 @@ st.markdown("""
     .rule-tag {
         background-color: #8e44ad;
         color: white;
-        padding: 3px 10px;
+        padding: 4px 12px;
         border-radius: 15px;
         font-size: 0.85rem;
         font-weight: bold;
@@ -72,22 +72,30 @@ st.markdown("""
     /* वर्ण विच्छेद */
     .varna-box {
         background-color: #f8f9fa;
-        padding: 8px;
-        border-radius: 5px;
+        padding: 10px;
+        border-radius: 6px;
         border: 1px solid #eee;
         margin: 8px 0;
+        line-height: 2.0; /* टाइल्स के लिए जगह */
     }
     
     .varna-token {
         display: inline-block;
         background: white;
-        border: 1px solid #ddd;
-        padding: 2px 6px;
-        margin: 0 2px;
+        border: 1px solid #bdc3c7;
+        padding: 4px 8px;
+        margin: 0 4px;
         border-radius: 4px;
         color: #d35400;
         font-family: monospace;
         font-weight: bold;
+        font-size: 1rem;
+    }
+    
+    .plus-sep {
+        color: #ccc;
+        font-weight: bold;
+        font-size: 1.2rem;
     }
 
     /* परिणाम */
@@ -109,32 +117,32 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. हेल्पर फंक्शन (HTML Generator) ---
+# --- 3. हेल्पर फंक्शन (SAFE HTML Generation) ---
 def generate_card_html(step_index, step_data):
-    """
-    Python function to safely generate HTML logic.
-    Prevents f-string nesting errors.
-    """
     rule = step_data['rule']
     operation = step_data['operation']
     result = step_data['result']
     viccheda = step_data['viccheda']
     source = step_data.get('source', 'Maharshi Pāṇini')
     
-    # वर्ण विच्छेद HTML बनाएँ
+    # --- FIX: Safe Join Method (No Slicing) ---
     viccheda_html = ""
     if viccheda:
+        # 1. लिस्ट बनाएँ: ["र्", "आ", "म्", ...]
         parts = viccheda.split(" + ")
-        tokens_html = "".join([f'<span class="varna-token">{p}</span><span style="color:#ccc;">+</span>' for p in parts])
-        # अंतिम '+' हटा दें
-        tokens_html = tokens_html[:-31] if parts else "" 
+        
+        # 2. हर आइटम को स्पैन में लपेटें
+        token_spans = [f'<span class="varna-token">{p}</span>' for p in parts]
+        
+        # 3. बीच में सेपरेटर डालें (Safe Join)
+        separator = '<span class="plus-sep">+</span>'
+        tokens_html = separator.join(token_spans)
         
         viccheda_html = f"""
-        <div style="font-size:0.8rem; color:#777;">🔍 वर्ण-विश्लेषण:</div>
+        <div style="font-size:0.8rem; color:#777; margin-bottom:4px;">🔍 वर्ण-विश्लेषण:</div>
         <div class="varna-box">{tokens_html}</div>
         """
 
-    # मुख्य कार्ड HTML
     html = f"""
     <div class="step-card">
         <div class="card-header">
@@ -159,13 +167,11 @@ def main():
     st.title("🕉️ शब्द-रूप सिद्धि यन्त्र")
     st.markdown("---")
 
-    # साइडबार
     with st.sidebar:
         st.header("🎛️ इनपुट")
         stem = st.text_input("प्रातिपदिक", value="राम")
         st.caption("केवल अकारांत पुल्लिंग (Ram-like) के लिए।")
 
-    # तालिका
     if stem:
         with st.expander("📖 तालिका देखें (View Table)", expanded=True):
             table_data = []
@@ -193,9 +199,7 @@ def main():
         
         history = logger.get_history()
         for i, step in enumerate(history):
-            # सुरक्षित HTML जनरेटर को कॉल करें
-            card_html = generate_card_html(i, step)
-            st.markdown(card_html, unsafe_allow_html=True)
+            st.markdown(generate_card_html(i, step), unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
@@ -204,4 +208,4 @@ if __name__ == "__main__":
 with open("pages/1_🔍_Declension_Engine.py", "w", encoding="utf-8") as f:
     f.write(NEW_UI_CODE)
 
-print("🚀 UI Stabilized. Clean layout applied. Refresh the app now.")
+print("🚀 HTML Logic Fixed. No broken tags guaranteed.")
