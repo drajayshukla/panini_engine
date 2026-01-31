@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import textwrap
 from engine_main import PrakriyaLogger
 from logic.subanta_processor import SubantaProcessor
 
@@ -10,14 +11,13 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- 2. CSS (Clean & Robust) ---
+# --- 2. CSS ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Martel:wght@400;800&family=Noto+Sans:wght@400;700&display=swap');
     
     body { font-family: 'Noto Sans', sans-serif; }
 
-    /* कार्ड कंटेनर */
     .step-card {
         background-color: white;
         padding: 15px;
@@ -27,87 +27,48 @@ st.markdown("""
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
 
-    /* हेडर */
     .card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 10px;
+        display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
     }
     
     .rule-tag {
-        background-color: #8e44ad;
-        color: white;
-        padding: 4px 12px;
-        border-radius: 15px;
-        font-size: 0.85rem;
-        font-weight: bold;
+        background-color: #8e44ad; color: white; padding: 4px 12px; 
+        border-radius: 15px; font-size: 0.85rem; font-weight: bold;
     }
     
     .auth-tag {
-        font-size: 0.75rem;
-        color: #888;
-        font-weight: bold;
-        text-transform: uppercase;
+        font-size: 0.75rem; color: #888; font-weight: bold; text-transform: uppercase;
     }
 
-    /* ऑपरेशन */
     .operation-text {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: #2c3e50;
-        margin-bottom: 8px;
+        font-size: 1.1rem; font-weight: 700; color: #2c3e50; margin-bottom: 8px;
     }
 
-    /* वर्ण विच्छेद */
     .varna-box {
-        background-color: #f8f9fa;
-        padding: 10px;
-        border-radius: 6px;
-        border: 1px solid #eee;
-        margin: 8px 0;
-        line-height: 2.0; /* टाइल्स के लिए जगह */
+        background-color: #f8f9fa; padding: 10px; border-radius: 6px; 
+        border: 1px solid #eee; margin: 8px 0; line-height: 2.0;
     }
     
     .varna-token {
-        display: inline-block;
-        background: white;
-        border: 1px solid #bdc3c7;
-        padding: 4px 8px;
-        margin: 0 4px;
-        border-radius: 4px;
-        color: #d35400;
-        font-family: monospace;
-        font-weight: bold;
-        font-size: 1rem;
+        display: inline-block; background: white; border: 1px solid #bdc3c7; 
+        padding: 4px 8px; margin: 0 3px; border-radius: 4px; 
+        color: #d35400; font-family: monospace; font-weight: bold; font-size: 1rem;
     }
     
-    .plus-sep {
-        color: #ccc;
-        font-weight: bold;
-        font-size: 1.2rem;
-    }
+    .plus-sep { color: #ccc; font-weight: bold; font-size: 1.2rem; }
 
-    /* परिणाम */
     .result-row {
-        margin-top: 10px;
-        padding-top: 5px;
-        border-top: 1px dashed #eee;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+        margin-top: 10px; padding-top: 5px; border-top: 1px dashed #eee;
+        display: flex; justify-content: space-between; align-items: center;
     }
     
     .res-sanskrit {
-        font-family: 'Martel', serif;
-        font-size: 1.5rem;
-        font-weight: 800;
-        color: #2c3e50;
+        font-family: 'Martel', serif; font-size: 1.5rem; font-weight: 800; color: #2c3e50;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. हेल्पर फंक्शन (SAFE HTML Generation) ---
+# --- 3. हेल्पर फंक्शन (CLEAN HTML GENERATOR) ---
 def generate_card_html(step_index, step_data):
     rule = step_data['rule']
     operation = step_data['operation']
@@ -115,25 +76,23 @@ def generate_card_html(step_index, step_data):
     viccheda = step_data['viccheda']
     source = step_data.get('source', 'Maharshi Pāṇini')
     
-    # --- FIX: Safe Join Method (No Slicing) ---
     viccheda_html = ""
     if viccheda:
-        # 1. लिस्ट बनाएँ: ["र्", "आ", "म्", ...]
         parts = viccheda.split(" + ")
-        
-        # 2. हर आइटम को स्पैन में लपेटें
+        # टाइल्स बनाना
         token_spans = [f'<span class="varna-token">{p}</span>' for p in parts]
-        
-        # 3. बीच में सेपरेटर डालें (Safe Join)
+        # सेपरेटर जोड़ना
         separator = '<span class="plus-sep">+</span>'
         tokens_html = separator.join(token_spans)
         
+        # HTML Block (No Indentation to prevent Code Block rendering)
         viccheda_html = f"""
-        <div style="font-size:0.8rem; color:#777; margin-bottom:4px;">🔍 वर्ण-विश्लेषण:</div>
-        <div class="varna-box">{tokens_html}</div>
-        """
+<div style="font-size:0.8rem; color:#777; margin-bottom:4px;">🔍 वर्ण-विश्लेषण:</div>
+<div class="varna-box">{tokens_html}</div>
+"""
 
-    html = f"""
+    # मुख्य कार्ड HTML (Use textwrap.dedent to strip indentation)
+    raw_html = f"""
     <div class="step-card">
         <div class="card-header">
             <span class="rule-tag">📖 {rule}</span>
@@ -147,7 +106,7 @@ def generate_card_html(step_index, step_data):
         </div>
     </div>
     """
-    return html
+    return textwrap.dedent(raw_html)
 
 # --- 4. मुख्य ऐप लॉजिक ---
 VIBHAKTI_MAP = {1: "प्रथमा", 2: "द्वितीया", 3: "तृतीया", 4: "चतुर्थी", 5: "पञ्चमी", 6: "षष्ठी", 7: "सप्तमी", 8: "सम्बोधन"}
@@ -189,6 +148,7 @@ def main():
         
         history = logger.get_history()
         for i, step in enumerate(history):
+            # HTML Generate करें और Render करें
             st.markdown(generate_card_html(i, step), unsafe_allow_html=True)
 
 if __name__ == "__main__":
