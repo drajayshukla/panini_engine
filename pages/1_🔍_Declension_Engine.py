@@ -10,14 +10,14 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- 2. PREMIUM CSS (No indent issues) ---
+# --- 2. CSS ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Martel:wght@400;800&family=Noto+Sans:wght@400;700&display=swap');
     
     body { font-family: 'Noto Sans', sans-serif; background-color: #f4f6f9; }
 
-    /* कार्ड का मुख्य डिब्बा */
+    /* कार्ड */
     .step-card {
         background-color: #ffffff;
         padding: 20px;
@@ -27,19 +27,16 @@ st.markdown("""
         box-shadow: 0 4px 10px rgba(0,0,0,0.08);
         transition: transform 0.2s;
     }
-    .step-card:hover {
-        transform: translateY(-2px);
-    }
+    .step-card:hover { transform: translateY(-2px); }
 
-    /* हेडर सेक्शन */
+    /* हेडर */
     .card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 1px solid #f0f0f0;
-        padding-bottom: 10px;
-        margin-bottom: 15px;
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 1px solid #f0f0f0; padding-bottom: 10px; margin-bottom: 15px;
     }
+    
+    /* सूत्र लिंक स्टाइल */
+    .sutra-link { text-decoration: none; }
     
     .rule-tag {
         background: linear-gradient(135deg, #8e44ad, #9b59b6);
@@ -49,112 +46,95 @@ st.markdown("""
         font-size: 0.9rem;
         font-weight: bold;
         box-shadow: 0 2px 4px rgba(142, 68, 173, 0.3);
+        transition: background 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .rule-tag:hover {
+        background: linear-gradient(135deg, #9b59b6, #8e44ad);
+        box-shadow: 0 4px 8px rgba(142, 68, 173, 0.5);
     }
     
     .auth-tag {
-        font-size: 0.75rem;
-        color: #95a5a6;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        font-size: 0.75rem; color: #95a5a6; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.5px;
     }
 
-    /* ऑपरेशन टेक्स्ट */
+    /* ऑपरेशन */
     .operation-text {
-        font-size: 1.2rem;
-        font-weight: 700;
-        color: #2c3e50;
-        margin: 10px 0;
+        font-size: 1.2rem; font-weight: 700; color: #2c3e50; margin: 10px 0;
     }
 
-    /* वर्ण विच्छेद (Scrabble Tiles Style) */
+    /* वर्ण विच्छेद */
     .varna-container {
-        background-color: #f8f9fa;
-        padding: 12px;
-        border-radius: 8px;
-        border: 1px solid #e9ecef;
-        margin: 10px 0;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        align-items: center;
+        background-color: #f8f9fa; padding: 12px; border-radius: 8px;
+        border: 1px solid #e9ecef; margin: 10px 0;
+        display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
     }
-    
     .varna-tile {
-        background-color: #fff;
-        border: 1px solid #bdc3c7;
-        border-bottom: 3px solid #bdc3c7; /* 3D Effect */
-        padding: 5px 10px;
-        border-radius: 6px;
-        color: #d35400;
-        font-family: 'Courier New', monospace;
-        font-weight: bold;
-        font-size: 1.1rem;
-        min-width: 30px;
-        text-align: center;
+        background-color: #fff; border: 1px solid #bdc3c7; border-bottom: 3px solid #bdc3c7;
+        padding: 5px 10px; border-radius: 6px; color: #d35400;
+        font-family: 'Courier New', monospace; font-weight: bold; font-size: 1.1rem;
+        min-width: 30px; text-align: center;
     }
-    
-    .plus-sep {
-        color: #bdc3c7;
-        font-weight: bold;
-        font-size: 1.2rem;
-    }
+    .plus-sep { color: #bdc3c7; font-weight: bold; font-size: 1.2rem; }
 
     /* परिणाम */
     .result-row {
-        margin-top: 15px;
-        padding-top: 10px;
-        border-top: 2px dashed #f0f2f5;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+        margin-top: 15px; padding-top: 10px; border-top: 2px dashed #f0f2f5;
+        display: flex; justify-content: space-between; align-items: center;
     }
-    
     .step-num {
-        font-size: 0.85rem;
-        color: #7f8c8d;
-        background-color: #ecf0f1;
-        padding: 4px 8px;
-        border-radius: 4px;
+        font-size: 0.85rem; color: #7f8c8d; background-color: #ecf0f1;
+        padding: 4px 8px; border-radius: 4px;
     }
-
     .res-sanskrit {
-        font-family: 'Martel', serif;
-        font-size: 1.8rem;
-        font-weight: 800;
-        color: #2c3e50;
+        font-family: 'Martel', serif; font-size: 1.8rem; font-weight: 800; color: #2c3e50;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. हेल्पर फंक्शन (FLAT HTML GENERATOR - NO NEWLINES) ---
+# --- 3. हेल्पर फंक्शन (HTML + LINK GENERATOR) ---
 def generate_card_html(step_index, step_data):
-    """
-    Generates a single line HTML string to prevent Streamlit/Markdown parsing errors.
-    """
-    rule = step_data['rule']
+    rule_str = step_data['rule']
     op = step_data['operation']
     res = step_data['result']
     viccheda = step_data['viccheda']
     source = step_data.get('source', 'Maharshi Pāṇini')
     
-    # 1. वर्ण विच्छेद HTML (एक लाइन में)
+    # --- Link Construction Logic ---
+    # rule_str example: "8.2.66 (ससजुषोः रुः)" -> needs parsing "8.2.66"
+    try:
+        # पहला भाग लें (ex: "8.2.66")
+        rule_number = rule_str.split()[0]
+        c, p, s = rule_number.split('.')
+        # ashtadhyayi.com URL format: /sutraani/C/P/S
+        link_url = f"https://ashtadhyayi.com/sutraani/{c}/{p}/{s}"
+        
+        # Clickable Badge HTML
+        rule_html = (
+            f'<a href="{link_url}" target="_blank" class="sutra-link">'
+            f'<span class="rule-tag">📖 {rule_str} <span style="font-size:0.7em;">↗</span></span>'
+            f'</a>'
+        )
+    except:
+        # Fallback if rule number is weird (e.g. "Final")
+        rule_html = f'<span class="rule-tag">📖 {rule_str}</span>'
+
+    # --- Varna Viccheda HTML ---
     viccheda_html = ""
     if viccheda:
         parts = viccheda.split(" + ")
-        # टाइल्स बनाएँ
         tiles = "".join([f'<div class="varna-tile">{p}</div><div class="plus-sep">+</div>' for p in parts])
-        # अंतिम '+' हटा दें (HTML String slicing)
-        # <div class="plus-sep">+</div> is 29 chars long
-        if tiles: tiles = tiles[:-29]
-        
+        if tiles: tiles = tiles[:-29] # Remove last separator
         viccheda_html = f'<div style="font-size:0.85rem; color:#7f8c8d; margin-bottom:5px;">🔍 वर्ण-विश्लेषण (Atomic View):</div><div class="varna-container">{tiles}</div>'
 
-    # 2. मुख्य कार्ड HTML (एक लाइन में - NO indentation inside string)
+    # --- Full Card HTML (Flattened) ---
     html = (
         f'<div class="step-card">'
             f'<div class="card-header">'
-                f'<span class="rule-tag">📖 {rule}</span>'
+                f'{rule_html}'
                 f'<span class="auth-tag">— {source}</span>'
             f'</div>'
             f'<div class="operation-text">{op}</div>'
