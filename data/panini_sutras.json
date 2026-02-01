@@ -1450,12 +1450,12 @@
     },
     {
         "sutra_num": "1.3.4",
-        "kaumudi_num": 190,
         "name": "न विभक्तौ तुस्माः",
-        "adhyaya": 1,
-        "pada": 3,
-        "order": 4,
-        "type": "Vidhi"
+        "type": "Niyama",
+        "vartikas": [
+            "विभक्तिस्थास्तवर्गसकारमकारा इतो न स्युः । (Dental class, s, and m in a Vibhakti do NOT get It-Sanjna).",
+            "इति सकारस्य नेत्त्वम् (Example: 's' in Su/Jas does not disappear)."
+        ]
     },
     {
         "sutra_num": "1.3.5",
@@ -1477,14 +1477,11 @@
     },
     {
         "sutra_num": "1.3.7",
-        "kaumudi_num": 189,
         "name": "चुटू",
-        "adhyaya": 1,
-        "pada": 3,
-        "order": 7,
-        "type": "Vidhi",
+        "type": "Sanjna",
         "vartikas": [
-            "इर इत्संज्ञा वक्तव्या ।"
+            "प्रत्ययाद्यौ चुटू इतौ स्तः । (Initial ch-varga and t-varga of a suffix get It-Sanjna).",
+            "इति जस्येत्संज्ञायाम् (Example: 'j' in Jas)."
         ]
     },
     {
@@ -4901,12 +4898,11 @@
     },
     {
         "sutra_num": "2.3.49",
-        "kaumudi_num": 192,
         "name": "एकवचनं संबुद्धिः",
-        "adhyaya": 2,
-        "pada": 3,
-        "order": 49,
-        "type": "Vidhi"
+        "type": "Sanjna",
+        "vartikas": [
+            "संबोधने प्रथमाया एकवचनं संबुद्धिसंज्ञं स्यात् ॥ (Vocative Singular is called Sambuddhi)."
+        ]
     },
     {
         "sutra_num": "2.3.50",
@@ -23968,12 +23964,12 @@
     },
     {
         "sutra_num": "6.1.69",
-        "kaumudi_num": 193,
         "name": "एङ्ह्रस्वात् सम्बुद्धेः",
-        "adhyaya": 6,
-        "pada": 1,
-        "order": 69,
-        "type": "Vidhi"
+        "type": "Vidhi",
+        "vartikas": [
+            "एङन्ताद्ध्रस्वान्ताच्चाङ्गाद्धल्लुप्यते संबुद्धेश्चेत् । (Consonant of Sambuddhi is deleted after Eng or Short vowel).",
+            "हे राम (Short 'a'), हे हरे (Eng 'e')."
+        ]
     },
     {
         "sutra_num": "6.1.70",
@@ -24244,12 +24240,12 @@
     },
     {
         "sutra_num": "6.1.97",
-        "kaumudi_num": 191,
         "name": "अतो गुणे",
-        "adhyaya": 6,
-        "pada": 1,
-        "order": 97,
-        "type": "Sanjna"
+        "type": "Vidhi",
+        "vartikas": [
+            "अपदान्तादकाराद्गुणे परतः पररूपमेकादेशः स्यात् । (Short 'a' + Guna -> Pararupa).",
+            "पुरस्तादपवादा अनन्तरान्विधीन्बाधन्ते नोत्तरान् (Exceptions block immediate predecessors, not successors)."
+        ]
     },
     {
         "sutra_num": "6.1.98",
@@ -33292,12 +33288,11 @@
     },
     {
         "sutra_num": "7.3.108",
-        "kaumudi_num": 242,
         "name": "ह्रस्वस्य गुणः",
-        "adhyaya": 7,
-        "pada": 3,
-        "order": 108,
-        "type": "Sanjna"
+        "type": "Vidhi",
+        "vartikas": [
+            "सम्बुद्धौ (In Sambuddhi, short vowel gets Guna)."
+        ]
     },
     {
         "sutra_num": "7.3.109",

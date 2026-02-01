@@ -6,6 +6,7 @@ from core.core_foundation import Varna, ad, sanskrit_varna_samyoga
 class SandhiProcessor:
     
     AC = {'अ', 'आ', 'इ', 'ई', 'उ', 'ऊ', 'ऋ', 'ॠ', 'ऌ', 'ए', 'ऐ', 'ओ', 'औ'}
+    GUNA_VOWELS = {'अ', 'ए', 'ओ'} # 'a' is also Guna (At-eng Gunah)
     
     @staticmethod
     def is_vowel(char):
@@ -27,6 +28,18 @@ class SandhiProcessor:
         
         if not (SandhiProcessor.is_vowel(v1) and SandhiProcessor.is_vowel(v2)):
             return res, None
+
+        # --- 0. ATO GUNE (6.1.97) ---
+        # Apadanta 'a' + Guna (a, e, o) -> Pararupa (v2)
+        # Note: 'Rama + As' hits this if SubantaProcessor doesn't handle 6.1.102 first.
+        # But SubantaProcessor DOES handle 6.1.102 for Ramah.
+        # This is critical for Tad -> Ta + a -> Ta.
+        if v1 == 'अ' and v2 in SandhiProcessor.GUNA_VOWELS:
+            # Check context? We assume 'stem_varnas' implies non-padanta at the junction
+            # for internal derivation.
+            res[idx].char = v2 # Pararupa (Takes form of the second)
+            del res[idx+1]
+            return res, "6.1.97 Ato Gune"
 
         # 1. SAVARNA DIRGHA (6.1.101)
         savarna_pairs = {
@@ -79,9 +92,6 @@ class SandhiProcessor:
 
     @staticmethod
     def apply_natva(varnas):
-        """
-        8.4.1 Rashabhyam No Nah Samanapade
-        """
         r_sh_found = False
         ALLOWED_BASE = [
             'अ', 'आ', 'इ', 'ई', 'उ', 'ऊ', 'ऋ', 'ॠ', 'ए', 'ऐ', 'ओ', 'औ',
@@ -103,8 +113,6 @@ class SandhiProcessor:
                 if '्' in char: res[i].char = 'ण्'
                 else: res[i].char = 'ण'
             if r_sh_found:
-                # FIX: Only 'n' (dental) allows pass-through as target.
-                # 'N' (Retroflex) IS A BLOCKER (Tavarga).
                 if char in ['न', 'न्']: pass
                 elif char not in ALLOWED_SET: r_sh_found = False
         return res, "8.4.1 Rashabhyam No Nah"
@@ -127,34 +135,23 @@ class SandhiProcessor:
         for i in range(1, len(res)):
             curr = res[i].char
             prev = res[i-1].char
-            
             if curr in ['स', 'स्']:
                 if i == len(res) - 1: continue
                 if prev in TRIGGER_SET:
                     if '्' in curr: res[i].char = 'ष्'
                     else: res[i].char = 'ष'
-                    
         return res, "8.3.59 Adesha-pratyayayoh"
 
     @staticmethod
     def run_tripadi(varnas, logger=None):
         if not varnas: return []
-        
-        # 1. Rutva
         res = varnas[:]
         if res[-1].char == 'स्':
             res[-1].char = 'र्'
             if logger: logger.log("8.2.66", "Sasajusho Ruh", sanskrit_varna_samyoga(res), res, "Maharshi Pāṇini")
-        
-        # 2. Visarga
         if res[-1].char == 'र्':
              res[-1].char = 'ः'
              if logger: logger.log("8.3.15", "Kharavasanayo Visarjaniyah", sanskrit_varna_samyoga(res), res, "Maharshi Pāṇini")
-
-        # 3. Natva
         res, _ = SandhiProcessor.apply_natva(res)
-        
-        # 4. Shatva
         res, _ = SandhiProcessor.apply_shatva(res)
-
         return res
