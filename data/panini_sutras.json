@@ -2515,21 +2515,19 @@
     },
     {
         "sutra_num": "1.4.21",
-        "kaumudi_num": 187,
         "name": "बहुषु बहुवचनम्",
-        "adhyaya": 1,
-        "pada": 4,
-        "order": 21,
-        "type": "Vidhi"
+        "type": "Niyama",
+        "vartikas": [
+            "बहुत्वे एतत्स्यात् (Use Plural for count > 2)."
+        ]
     },
     {
         "sutra_num": "1.4.22",
-        "kaumudi_num": 186,
         "name": "द्व्येकयोर्द्विवचनैकवचने",
-        "adhyaya": 1,
-        "pada": 4,
-        "order": 22,
-        "type": "Vidhi"
+        "type": "Niyama",
+        "vartikas": [
+            "द्वित्वैकत्वयोरेते स्तः (Use Dual/Singular for count of 2 or 1)."
+        ]
     },
     {
         "sutra_num": "1.4.23",
@@ -3296,21 +3294,19 @@
     },
     {
         "sutra_num": "1.4.103",
-        "kaumudi_num": 185,
         "name": "सुपः",
-        "adhyaya": 1,
-        "pada": 4,
-        "order": 103,
-        "type": "Vidhi"
+        "type": "Paribhasha",
+        "vartikas": [
+            "सुपस्त्रीणि त्रीणि वचनान्येकश एकवचनद्विवचनबहुवचनसंज्ञानि स्युः ॥ (Sup suffixes are grouped in threes)."
+        ]
     },
     {
         "sutra_num": "1.4.104",
-        "kaumudi_num": 184,
         "name": "विभक्तिश्च",
-        "adhyaya": 1,
-        "pada": 4,
-        "order": 104,
-        "type": "Vidhi"
+        "type": "Sanjna",
+        "vartikas": [
+            "सुप्तिङौ विभक्तिसंज्ञौ स्तः ।"
+        ]
     },
     {
         "sutra_num": "1.4.105",
@@ -5972,21 +5968,19 @@
     },
     {
         "sutra_num": "3.1.1",
-        "kaumudi_num": 180,
         "name": "प्रत्ययः",
-        "adhyaya": 3,
-        "pada": 1,
-        "order": 1,
-        "type": "Vidhi"
+        "type": "Adhikara",
+        "vartikas": [
+            "आपञ्चमपरिसमाप्तेः अधिकारः अयम् ॥"
+        ]
     },
     {
         "sutra_num": "3.1.2",
-        "kaumudi_num": 181,
         "name": "परश्च",
-        "adhyaya": 3,
-        "pada": 1,
-        "order": 2,
-        "type": "Vidhi"
+        "type": "Paribhasha",
+        "vartikas": [
+            "अयमपि तथा (Suffixes occur after the root/stem)."
+        ]
     },
     {
         "sutra_num": "3.1.3",
@@ -11976,21 +11970,20 @@
     },
     {
         "sutra_num": "4.1.1",
-        "kaumudi_num": 182,
         "name": "ङ्याप्प्रातिपदिकात्",
-        "adhyaya": 4,
-        "pada": 1,
-        "order": 1,
-        "type": "Vidhi"
+        "type": "Adhikara",
+        "vartikas": [
+            "ङ्यन्तात् आबन्तात् प्रातिपदिकात् चेति आपञ्चमपरिसमाप्तेः अधिकारः ।",
+            "प्रातिपदिकग्रहणे लिङ्गविशिष्टस्यापि ग्रहणम् (Paribhasha: Gendered stems are also Pratipadikas)"
+        ]
     },
     {
         "sutra_num": "4.1.2",
-        "kaumudi_num": 183,
         "name": "स्वौजसमौट्छष्टाभ्याम्भिस्ङेभ्याम्भ्यस्ङसिभ्याम्भ्यस्ङसोसाङ्ङ्योस्सुप्",
-        "adhyaya": 4,
-        "pada": 1,
-        "order": 2,
-        "type": "Vidhi"
+        "type": "Vidhi",
+        "vartikas": [
+            "ङ्यन्तादाबन्तात्प्रातिपदिकाच्च परे स्वादयः प्रत्ययाः स्युः ।"
+        ]
     },
     {
         "sutra_num": "4.1.3",
