@@ -8,62 +8,26 @@ from logic.sandhi_processor import SandhiProcessor
 from core.adhikara_controller import AdhikaraController
 
 class SubantaProcessor:
-    # --- KNOWLEDGE BASE OF FORBIDDEN INPUTS (Mock Data) ---
-    # In a real engine, this would be a query to the Dhatupatha & Pratyaya DB.
-    KNOWN_DHATUS = {
-        'भू', 'एध', 'पच्', 'गम्', 'स्था', 'दृश्', 'अस्', 'कृ', 'हृ', 'नी', 'या', 'वा', 
-        'जि', 'क्षि', 'श्रु', 'दा', 'धा'
-    }
-    
-    KNOWN_PRATYAYAS = {
-        'सु', 'औ', 'जस्', 'अम्', 'औट्', 'शस्', 'टा', 'भ्याम्', 'भिस्', 
-        'ङे', 'भ्यस्', 'ङसि', 'ङस्', 'ओस्', 'आम्', 'ङि', 'सुप्',
-        'तिप्', 'तस्', 'झि', 'सिप्', 'थस्', 'थ', 'मिप्', 'वस्', 'मस्',
-        'शप्', 'श्नु', 'स्य', 'तासि', 'क्विप्', 'घञ्'
-    }
+    KNOWN_DHATUS = {'भू', 'एध', 'पच्', 'गम्', 'स्था', 'दृश्', 'अस्', 'कृ', 'हृ', 'नी', 'या', 'वा', 'जि', 'क्षि', 'श्रु', 'दा', 'धा'}
+    KNOWN_PRATYAYAS = {'सु', 'औ', 'जस्', 'अम्', 'औट्', 'शस्', 'टा', 'भ्याम्', 'भिस्', 'ङे', 'भ्यस्', 'ङसि', 'ङस्', 'ओस्', 'आम्', 'ङि', 'सुप्', 'तिप्', 'तस्', 'झि', 'सिप्', 'थस्', 'थ', 'मिप्', 'वस्', 'मस्', 'शप्', 'श्नु', 'स्य', 'तासि', 'क्विप्', 'घञ्'}
+    FEMININE_I_U_STEMS = {'मति', 'बुद्धि', 'धेनु', 'कीर्ति', 'जाति', 'भक्ति'}
 
     @staticmethod
     def derive_pada(stem_str, vibhakti, vacana, logger=None):
         stem = ad(stem_str)
         
-        # ========================================================
-        # 🛡️ STEP 0: PRATIPADIKA VALIDATION (1.2.45)
-        # ========================================================
-        # "Arthavad-adhatu-rapratyayah Pratipadikam"
-        
-        # 1. Adhatu Check (Not a Root)
-        if stem_str in SubantaProcessor.KNOWN_DHATUS:
-            msg = f"⛔ PROHIBITED: '{stem_str}' is a Dhatu (Root)."
-            if logger: 
-                logger.log("1.2.45", "Adhatuh (Validation Fail)", msg, stem, "Maharshi Pāṇini")
-            return "Error: Dhatu"
+        # 1.2.45 Validation
+        if stem_str in SubantaProcessor.KNOWN_DHATUS: return "Error: Dhatu"
+        if stem_str in SubantaProcessor.KNOWN_PRATYAYAS: return "Error: Pratyaya"
+        if logger: logger.log("1.2.45", "Arthavad-adhatu-rapratyayah Pratipadikam", f"✅ '{stem_str}'", stem, "Maharshi Pāṇini")
 
-        # 2. Apratyaya Check (Not a Suffix)
-        if stem_str in SubantaProcessor.KNOWN_PRATYAYAS:
-            msg = f"⛔ PROHIBITED: '{stem_str}' is a Pratyaya (Suffix)."
-            if logger: 
-                logger.log("1.2.45", "Apratyayah (Validation Fail)", msg, stem, "Maharshi Pāṇini")
-            return "Error: Pratyaya"
-
-        # 3. Success Log
-        if logger:
-            logger.log("1.2.45", "Arthavad-adhatu-rapratyayah Pratipadikam", f"✅ '{stem_str}' is a valid Stem.", stem, "Maharshi Pāṇini")
-
-        # ========================================================
-        # 🚀 DERIVATION START
-        # ========================================================
         last_char = stem[-1].char
-        
         is_at = (last_char == 'अ')   
         is_aa = (last_char == 'आ')   
         is_it = (last_char == 'इ')                 
         is_ut = (last_char == 'उ')                 
-        is_ghi = (is_it or is_ut)                  
-        
-        # Gender Heuristics (Simple for now)
-        # Assuming explicit feminine list or Aa-ending
-        FEMININE_STEMS = {'मति', 'बुद्धि', 'धेनु', 'रमा', 'गौरी', 'लता'}
-        is_fem_ghi = (stem_str in FEMININE_STEMS) or is_aa
+        is_fem_ghi = (stem_str in SubantaProcessor.FEMININE_I_U_STEMS) or is_aa
+        is_ghi_any = (is_it or is_ut)
         
         sup_data = KnowledgeBase.get_sup(vibhakti, vacana)
         if not sup_data: return "?"
@@ -73,46 +37,29 @@ class SubantaProcessor:
         
         clean_suffix, trace = SanjnaController.run_it_prakaran(suffix, UpadeshaType.VIBHAKTI)
         if clean_suffix: clean_suffix[0].sanjnas.update(tags)
-        
-        if logger and trace:
-             logger.log(trace[-1], "It-Lopa", sanskrit_varna_samyoga(stem + clean_suffix), stem + clean_suffix, "Maharshi Pāṇini")
+        if logger and trace: logger.log(trace[-1], "It-Lopa", sanskrit_varna_samyoga(stem + clean_suffix), stem + clean_suffix, "Maharshi Pāṇini")
 
         # --- RAMA (Feminine) ---
         if is_aa:
-            # 1.1 Su Lopa
             if vibhakti == 1 and vacana == 1:
                 clean_suffix = [] 
                 if logger: logger.log("6.1.68", "Hal-Ngya-Bbhyo (Su Lopa)", sanskrit_varna_samyoga(stem), stem, "Maharshi Pāṇini")
                 return sanskrit_varna_samyoga(stem)
-            
-            # 8.1 Sambodhana
             if vibhakti == 8 and vacana == 1:
-                stem[-1].char = 'ए'
-                if logger: logger.log("7.3.106", "Sambuddhau Ca (Aa->E)", "रमे + स्", stem + clean_suffix, "Maharshi Pāṇini")
+                stem[-1].char = 'ए'; 
+                if logger: logger.log("7.3.106", "Sambuddhau Ca", "रमे + स्", stem + clean_suffix, "Maharshi Pāṇini")
                 if clean_suffix and clean_suffix[0].char == 'स्': clean_suffix = []
                 return "हे " + sanskrit_varna_samyoga(stem)
-
-            # 1.2/2.2 Au -> Shee
             if vacana == 2 and (vibhakti == 1 or vibhakti == 2):
                 stem[-1].char = 'ए'; clean_suffix = []
                 if logger: logger.log("7.1.18", "Aungaapah", "रमे", stem, "Maharshi Pāṇini")
                 return sanskrit_varna_samyoga(stem)
-
-            # 3.1 Ta -> Ramaya
             if vibhakti == 3 and vacana == 1:
                 stem[-1].char = 'ए'
                 if logger: logger.log("7.3.105", "Angi Capah", "रमे + आ", stem + clean_suffix, "Maharshi Pāṇini")
-
-            # Yat Agama (4.1, 5.1, 6.1, 7.1)
             if vibhakti in [4, 5, 6, 7] and vacana == 1:
-                if vibhakti == 7:
-                    clean_suffix = ad("आम्")
-                    if logger: logger.log("7.3.116", "Neraam", "रमा + आम्", stem + clean_suffix, "Maharshi Pāṇini")
-                
+                if vibhakti == 7: clean_suffix = ad("आम्")
                 clean_suffix = ad("या") + clean_suffix
-                if logger: logger.log("7.3.113", "Yadaapah", sanskrit_varna_samyoga(stem + clean_suffix), stem + clean_suffix, "Maharshi Pāṇini")
-
-                # Vriddhi / Dirgha handling inside suffixes
                 if vibhakti == 4:
                     clean_suffix = ad("यै")
                     if logger: logger.log("6.1.88", "Vriddhi", "रमायै", stem + clean_suffix, "Maharshi Pāṇini")
@@ -124,59 +71,68 @@ class SubantaProcessor:
                     clean_suffix = ad("याम्")
                     if logger: logger.log("6.1.101", "Dirgha", "रमायाम्", stem + clean_suffix, "Maharshi Pāṇini")
                     return "रमायाम्"
-
-            if vibhakti == 6 and vacana == 3:
-                clean_suffix = ad("नाम्")
-                if logger: logger.log("7.1.54", "Nut", "रमानाम्", stem + clean_suffix, "Maharshi Pāṇini")
+            if vibhakti == 6 and vacana == 3: clean_suffix = ad("नाम्")
 
         # --- PRE-CHECKS ---
-        if (is_at or is_ghi or is_aa) and vibhakti == 2 and vacana == 1:
+        if (is_at or is_ghi_any or is_aa) and vibhakti == 2 and vacana == 1:
             res_str = stem_str + "म्"
             if logger: logger.log("6.1.107", "Ami Purvah", res_str, ad(res_str), "Maharshi Pāṇini")
             return res_str
 
-        # --- GHI (HARI/GURU/MATI) ---
-        if is_ghi:
+        # --- GHI STRATEGY ---
+        if is_ghi_any:
             guna_char = 'ए' if is_it else 'ओ'
             dirgha_char = 'ई' if is_it else 'ऊ'
             
-            if (vibhakti == 1 and vacana == 2) or                (vibhakti == 2 and vacana == 2) or                (vibhakti == 2 and vacana == 3):
+            if (vibhakti == 1 and vacana == 2) or (vibhakti == 2 and vacana == 2) or (vibhakti == 2 and vacana == 3):
                 stem[-1].char = dirgha_char
-                if vacana == 2: clean_suffix = []
+                if vacana == 2: 
+                    clean_suffix = []
+                    if logger: logger.log("6.1.102", "Prathamayoh Purvasavarnah", sanskrit_varna_samyoga(stem), stem, "Maharshi Pāṇini")
+                    return sanskrit_varna_samyoga(stem)
                 if vacana == 3: clean_suffix = ad("स्")
-                if logger: logger.log("6.1.102", "Prathamayoh Purvasavarnah", sanskrit_varna_samyoga(stem+clean_suffix), stem, "Maharshi Pāṇini")
 
             elif vibhakti == 3 and vacana == 1:
                 if not is_fem_ghi:
                     clean_suffix = ad("ना")
                     if logger: logger.log("7.3.120", "Ango Na Astriyam", sanskrit_varna_samyoga(stem+clean_suffix), stem, "Maharshi Pāṇini")
-                else:
-                    if logger: logger.log("7.3.120", "Astriyam (No Na)", sanskrit_varna_samyoga(stem+clean_suffix), stem, "Maharshi Pāṇini")
-
+            
             elif vibhakti in [4, 5, 6, 7] and vacana == 1:
-                # Ghi Form
+                # Option A (Ghi)
                 stem_a = stem[:]; stem_a[-1].char = guna_char
                 suffix_a = clean_suffix[:]
-                if vibhakti in [5, 6]: suffix_a = ad("स्")
-                if vibhakti == 7: stem_a = ad(stem_str[:-1]+"औ"); suffix_a = []
-                res_a = sanskrit_varna_samyoga(stem_a + suffix_a)
-                if vibhakti == 4:
-                    fp, _ = SandhiProcessor.apply_ac_sandhi(stem_a, suffix_a)
-                    res_a = sanskrit_varna_samyoga(fp)
+                if vibhakti in [5, 6]: suffix_a = ad("स्") # Guna + As -> Guna + s (Purvarupa)
+                
+                # 7.1 Aut Logic (Corrected: No string concat)
+                if vibhakti == 7: 
+                    stem_a[-1].char = 'अ' # 7.3.119 Accha Gheh
+                    suffix_a = ad("औ")    # 7.3.118 Aut
+                
+                # Resolve Sandhi for Ghi Form
+                # 4.1: e + e -> ay + e (Ayadi) | o + e -> av + e (Ayadi)
+                # 5.1/6.1: e + s -> es | o + s -> os (No sandhi needed, just join)
+                # 7.1: a + au -> au (Vriddhi)
+                
+                fp_a, rule_a = SandhiProcessor.apply_ac_sandhi(stem_a, suffix_a)
+                # For 5.1/6.1, we manually did Purvarupa by setting suffix to 's'. 
+                # So SandhiProcessor might see 'e' + 's' and do nothing, which is correct.
+                
+                res_a_final = SandhiProcessor.run_tripadi(fp_a, None) # Apply Visarga for 5.1/6.1
+                res_a_str = sanskrit_varna_samyoga(res_a_final)
 
                 if not is_fem_ghi:
-                    if logger: logger.log("7.3.111", "Gher-Niti", res_a, ad(res_a), "Maharshi Pāṇini")
-                    return res_a
+                    if logger: logger.log("7.3.111+", "Ghi Logic", res_a_str, res_a_final, "Maharshi Pāṇini")
+                    return res_a_str
                 
-                # Nadi Form (Mati)
+                # Option B (Nadi - Mati)
                 stem_b = stem[:]
                 res_b = ""
                 if vibhakti == 4: res_b = stem_str[:-1] + "्यै"
                 elif vibhakti in [5, 6]: res_b = stem_str[:-1] + "्याः"
                 elif vibhakti == 7: res_b = stem_str[:-1] + "्याम्"
                 
-                if logger: logger.log("7.3.117", "Idudbhyam (Option)", f"{res_a} / {res_b}", stem, "Maharshi Pāṇini")
-                return f"{res_a} / {res_b}"
+                if logger: logger.log("7.3.117", "Idudbhyam", f"{res_a_str} / {res_b}", stem, "Maharshi Pāṇini")
+                return f"{res_a_str} / {res_b}"
 
             elif vibhakti == 1 and vacana == 3:
                 stem[-1].char = guna_char
@@ -218,9 +174,18 @@ class SubantaProcessor:
         fp, rule = SandhiProcessor.apply_ac_sandhi(stem, clean_suffix)
         if logger and rule: logger.log(rule, "Sandhi", sanskrit_varna_samyoga(fp), fp, "Maharshi Pāṇini")
         
+        # 2.3 Shaso Nah (Restricted Natva)
         if vibhakti == 2 and vacana == 3:
-            if fp[-1].char == 'स्' or fp[-1].char == 'ः': fp[-1].char = 'न्'
+            if fp[-1].char == 'स्' or fp[-1].char == 'ः': 
+                fp[-1].char = 'न्'
+                # NOTE: Padantasya (8.4.37) prevents Natva here for Ramaan.
+                # So we just return the result with 'n'.
+                # Natva logic in SandhiProcessor needs to be context-aware.
+                # For now, we assume 'n' is final.
+                if logger: logger.log("6.1.103", "Tasmacchaso Nah Pumsi", sanskrit_varna_samyoga(fp), fp, "Maharshi Pāṇini")
+                return sanskrit_varna_samyoga(fp)
 
+        # Tripadi
         final = SandhiProcessor.run_tripadi(fp, logger) 
         res = sanskrit_varna_samyoga(final)
         if vibhakti == 8: return "हे " + res
