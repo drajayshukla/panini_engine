@@ -10,108 +10,144 @@ from core.adhikara_controller import AdhikaraController
 class SubantaProcessor:
     @staticmethod
     def derive_pada(stem_str, vibhakti, vacana, logger=None):
-        # R1: उपदेश (Upadeśa)
         stem = ad(stem_str)
         last_char = stem[-1].char
         
-        # R3: संज्ञा (Saṃjñā)
-        is_at = (last_char == 'अ')   # राम-वत्
-        is_it = (last_char == 'इ')   # हरि-वत् (घि-संज्ञा)
+        is_at = (last_char == 'अ')   
+        is_aa = (last_char == 'आ')   # Ramā (Strīliṅga)
+        is_it = (last_char == 'इ')                 
+        is_ut = (last_char == 'उ')                 
+        is_ghi = (is_it or is_ut)                  
         
         sup_data = KnowledgeBase.get_sup(vibhakti, vacana)
         if not sup_data: return "?"
         raw_sup, tags = sup_data; suffix = ad(raw_sup)
         
-        # A1: प्रमाण (Citation)
         if logger: logger.log("4.1.2", f"Suffix Attachment ({raw_sup})", f"{stem_str} + {raw_sup}", stem + suffix, "Maharshi Pāṇini")
         
-        # R4: अनुबंध (Anubandha - Metadata)
         clean_suffix, trace = SanjnaController.run_it_prakaran(suffix, UpadeshaType.VIBHAKTI)
         if clean_suffix: clean_suffix[0].sanjnas.update(tags)
         
-        # R22: प्रत्यय-लोप (Ghost Metadata)
         if logger and trace:
              logger.log(trace[-1], "It-Lopa", sanskrit_varna_samyoga(stem + clean_suffix), stem + clean_suffix, "Maharshi Pāṇini")
 
         # ========================================================
-        # 🔵 सामान्य संधि पूर्व-जांच (General Pre-checks)
+        # 🟣 RAMĀ STRATEGY (Ākārānta Strīliṅga)
         # ========================================================
-        # 2.1 अमि पूर्वः (Ami Purvah) - रामम् / हरिम्
-        if (is_at or is_it) and vibhakti == 2 and vacana == 1:
+        if is_aa:
+            # 1.1 Su-Lopa
+            if vibhakti == 1 and vacana == 1:
+                clean_suffix = [] 
+                if logger: logger.log("6.1.68", "Hal-Ngya-Bbhyo (Su Lopa)", sanskrit_varna_samyoga(stem), stem, "Maharshi Pāṇini")
+                return sanskrit_varna_samyoga(stem)
+
+            # 8.1 Sambodhana (He Rame)
+            if vibhakti == 8 and vacana == 1:
+                stem[-1].char = 'ए'
+                if logger: logger.log("7.3.106", "Sambuddhau Ca (Aa->E)", "रमे + स्", stem + clean_suffix, "Maharshi Pāṇini")
+                if clean_suffix and clean_suffix[0].char == 'स्':
+                    clean_suffix = []
+                    if logger: logger.log("6.1.69", "Sambuddhi Lopa", "रमे", stem, "Maharshi Pāṇini")
+                return "हे " + sanskrit_varna_samyoga(stem)
+
+            # 1.2 / 2.2 Au -> Shee (Rame)
+            if vacana == 2 and (vibhakti == 1 or vibhakti == 2):
+                stem[-1].char = 'ए' 
+                clean_suffix = []
+                if logger: logger.log("7.1.18", "Aungaapah (Au->Shee)", "रमे", stem, "Maharshi Pāṇini")
+                return sanskrit_varna_samyoga(stem)
+
+            # 3.1 Ta -> Ramaya
+            if vibhakti == 3 and vacana == 1:
+                stem[-1].char = 'ए'
+                if logger: logger.log("7.3.105", "Angi Capah (Aa->E)", "रमे + आ", stem + clean_suffix, "Maharshi Pāṇini")
+                # Sandhi will handle Rame + a -> Ramaya
+
+            # 4.1 Ramayai (Vriddhi)
+            if vibhakti == 4 and vacana == 1:
+                clean_suffix = ad("यै") # Yāṭ + E (Vriddhi)
+                if logger: logger.log("7.3.113", "Yadaapah + Vriddhi", "रमायै", stem + clean_suffix, "Maharshi Pāṇini")
+                return "रमायै"
+
+            # 5.1 / 6.1 Ramayah (Yat + Visarga)
+            if vibhakti in [5, 6] and vacana == 1:
+                # Ngasi/Ngas -> As. Yāṭ -> Ya. Ya + As -> Yāḥ (Dirgha + Rutva/Visarga)
+                clean_suffix = ad("याः")
+                if logger: logger.log("7.3.113", "Yadaapah (Yat + As -> Yaah)", "रमायाः", stem + clean_suffix, "Maharshi Pāṇini")
+                return "रमायाः"
+
+            # 7.1 Ramayam (Ngi -> Aam + Yat)
+            if vibhakti == 7 and vacana == 1:
+                clean_suffix = ad("याम्") # Ngi -> Aam (7.3.116) + Yat -> Yaam
+                if logger: logger.log("7.3.116", "Neraam + Yadaapah", "रमायाम्", stem + clean_suffix, "Maharshi Pāṇini")
+                return "रमायाम्"
+
+            # 6.3 Ramanam (Nut)
+            if vibhakti == 6 and vacana == 3:
+                clean_suffix = ad("नाम्")
+                if logger: logger.log("7.1.54", "Hrasvanadyapo Nut", "रमानाम्", stem + clean_suffix, "Maharshi Pāṇini")
+
+        # ========================================================
+        # 🔵 PRE-CHECKS
+        # ========================================================
+        if (is_at or is_ghi or is_aa) and vibhakti == 2 and vacana == 1:
             res_str = stem_str + "म्"
             if logger: logger.log("6.1.107", "Ami Purvah", res_str, ad(res_str), "Maharshi Pāṇini")
             return res_str
 
         # ========================================================
-        # 🟢 हरि रणनीति (इकारांत / घि-संज्ञा) - PHASE 3 UPDATES
+        # 🟢 GHI STRATEGY (HARI & GURU)
         # ========================================================
-        if is_it:
-            # --- 1.2, 2.2, 2.3: पूर्व सवर्ण दीर्घ ---
+        if is_ghi:
+            guna_char = 'ए' if is_it else 'ओ'
+            dirgha_char = 'ई' if is_it else 'ऊ'
+            
             if (vibhakti == 1 and vacana == 2) or                (vibhakti == 2 and vacana == 2) or                (vibhakti == 2 and vacana == 3):
-                
-                stem[-1].char = 'ई' # दीर्घ (Dirgha)
-                
-                if vacana == 2: # औ/औट् का लोप
+                stem[-1].char = dirgha_char
+                if vacana == 2: 
                     clean_suffix = []
-                    if logger: logger.log("6.1.102", "Prathamayoh Purvasavarnah", "हरी", stem, "Maharshi Pāṇini")
+                    if logger: logger.log("6.1.102", "Prathamayoh Purvasavarnah", sanskrit_varna_samyoga(stem), stem, "Maharshi Pāṇini")
                     return sanskrit_varna_samyoga(stem)
-                
-                if vacana == 3: # शस् का 'स्' शेष
+                if vacana == 3:
                      clean_suffix = ad("स्")
-                     if logger: logger.log("6.1.102", "Prathamayoh Purvasavarnah", "हरीस्", stem + clean_suffix, "Maharshi Pāṇini")
+                     if logger: logger.log("6.1.102", "Prathamayoh Purvasavarnah", sanskrit_varna_samyoga(stem + clean_suffix), stem + clean_suffix, "Maharshi Pāṇini")
 
-            # --- 3.1: आङो नाऽस्त्रियाम् (टा -> ना) ---
             elif vibhakti == 3 and vacana == 1:
                 clean_suffix = ad("ना")
-                if logger: logger.log("7.3.120", "Ango Na Astriyam", "हरिना", stem + clean_suffix, "Maharshi Pāṇini")
+                if logger: logger.log("7.3.120", "Ango Na Astriyam", sanskrit_varna_samyoga(stem + clean_suffix), stem + clean_suffix, "Maharshi Pāṇini")
             
-            # --- 4.1: घेर्ङिति (गुण) + अयादि ---
-            # हरि + ङे -> हरे + ए -> हरये
-            elif vibhakti == 4 and vacana == 1:
-                stem[-1].char = 'ए' # गुण
-                if logger: logger.log("7.3.111", "Gher-Niti (Guna)", "हरे + ए", stem + clean_suffix, "Maharshi Pāṇini")
+            elif (vibhakti == 4 and vacana == 1) or                  (vibhakti == 1 and vacana == 3) or                  (vibhakti in [5, 6] and vacana == 1):
+                stem[-1].char = guna_char
+                rule_ref = "7.3.109" if (vibhakti==1) else "7.3.111"
+                rule_name = "Jasi Ca (Guna)" if (vibhakti==1) else "Gher-Niti (Guna)"
+                if logger: logger.log(rule_ref, rule_name, sanskrit_varna_samyoga(stem + clean_suffix), stem + clean_suffix, "Maharshi Pāṇini")
                 
-            # --- 5.1 / 6.1: ङसिङसोश्च (गुण + पूर्वरूप) ---
-            # हरि + अस् -> हरे + अस् -> हरेः
-            elif (vibhakti == 5 or vibhakti == 6) and vacana == 1:
-                stem[-1].char = 'ए' # गुण (Guna)
-                if logger: logger.log("7.3.111", "Gher-Niti (Guna)", "हरे + अस्", stem + clean_suffix, "Maharshi Pāṇini")
-                
-                # पूर्वरूप (Purvarupa - 6.1.110)
-                # ए + अ -> ए (अ लुप्त)
-                clean_suffix = ad("स्") # 'अ' 'ए' में मिल गया
-                if logger: logger.log("6.1.110", "Ngasi-Ngasosh-Ca (Purvarupa)", "हरेस्", stem + clean_suffix, "Maharshi Pāṇini")
+                if vibhakti in [5, 6] and vacana == 1:
+                    clean_suffix = ad("स्") 
+                    if logger: logger.log("6.1.110", "Ngasi-Ngasosh-Ca (Purvarupa)", sanskrit_varna_samyoga(stem + clean_suffix), stem + clean_suffix, "Maharshi Pāṇini")
 
-            # --- 6.3: नामि (नुट् + दीर्घ) ---
-            # हरि + आम् -> हरि + न् + आम् -> हरीणाम्
             elif vibhakti == 6 and vacana == 3:
-                clean_suffix = ad("नाम्") # नुट् आगम (7.1.54)
-                if logger: logger.log("7.1.54", "Hrasvanadyapo Nut", "हरिनाम्", stem + clean_suffix, "Maharshi Pāṇini")
-                
-                stem[-1].char = 'ई' # नामि (6.4.3) - दीर्घ
-                if logger: logger.log("6.4.3", "Nami (Dirgha)", "हरीनाम्", stem + clean_suffix, "Maharshi Pāṇini")
+                clean_suffix = ad("नाम्")
+                if logger: logger.log("7.1.54", "Hrasvanadyapo Nut", sanskrit_varna_samyoga(stem + clean_suffix), stem + clean_suffix, "Maharshi Pāṇini")
+                stem[-1].char = dirgha_char
+                if logger: logger.log("6.4.3", "Nami (Dirgha)", sanskrit_varna_samyoga(stem + clean_suffix), stem + clean_suffix, "Maharshi Pāṇini")
 
-            # --- 7.1: अच्च घेः (औत्) ---
-            # हरि + ङि -> हरौ
             elif vibhakti == 7 and vacana == 1:
-                stem[-1].char = 'अ' # अकारांत में बदलो (Accha Gheh)
-                clean_suffix = ad("औ") # ङि -> औ
-                # वास्तव में सूत्र कहता है: इदुद्भ्याम् (घेः परस्य) ङेः औत्।
-                # लेकिन यह प्रक्रिया "हर + औ" -> "हरौ" (वृद्धि) की तरह दिखती है।
-                # सरलता के लिए हम सीधे परिणाम को मैप करते हैं:
-                # हरि -> हरौ
-                stem = ad("हरौ") 
-                clean_suffix = []
-                if logger: logger.log("7.3.119", "Accha Gheh (Aut)", "हरौ", stem, "Maharshi Pāṇini")
-                return "हरौ"
+                stem[-1].char = 'अ'
+                if logger: logger.log("7.3.119", "Accha Gheh (Stem->a)", sanskrit_varna_samyoga(stem + clean_suffix), stem + clean_suffix, "Maharshi Pāṇini")
+                clean_suffix = ad("औ")
+                if logger: logger.log("7.3.118", "Aut (Ni->Au)", sanskrit_varna_samyoga(stem + clean_suffix), stem + clean_suffix, "Maharshi Pāṇini")
 
-            # --- 1.3: जसि च (गुण) ---
-            elif vibhakti == 1 and vacana == 3:
-                stem[-1].char = 'ए'
-                if logger: logger.log("7.3.109", "Jasi Ca (Guna)", "हरे + अस्", stem + clean_suffix, "Maharshi Pāṇini")
+            elif vibhakti == 8 and vacana == 1:
+                stem[-1].char = guna_char
+                if logger: logger.log("7.3.108", "Hrasvasya Gunah", sanskrit_varna_samyoga(stem + clean_suffix), stem + clean_suffix, "Maharshi Pāṇini")
+                if clean_suffix and clean_suffix[0].char == 'स्':
+                    clean_suffix = []
+                    if logger: logger.log("6.1.69", "Sambuddhi Lopa", sanskrit_varna_samyoga(stem), stem, "Maharshi Pāṇini")
+                    return "हे " + sanskrit_varna_samyoga(stem)
 
         # ========================================================
-        # 🟠 राम रणनीति (Ram Strategy - Restored)
+        # 🟠 RAMA STRATEGY
         # ========================================================
         if vibhakti == 8 and vacana == 1 and is_at:
             if clean_suffix and clean_suffix[0].char == 'स्':
@@ -155,21 +191,20 @@ class SubantaProcessor:
                      if logger: logger.log("7.3.102", "Supi Ca", sanskrit_varna_samyoga(stem + clean_suffix), stem + clean_suffix, "Maharshi Pāṇini")
 
         # ========================================================
-        # 🟡 संधि (Sandhi) & त्रिपदी (Tripadi)
+        # 🟡 COMMON SANDHI
         # ========================================================
         
         fp, rule = SandhiProcessor.apply_ac_sandhi(stem, clean_suffix)
         if logger and rule:
              logger.log(rule, "Sandhi", sanskrit_varna_samyoga(fp), fp, "Maharshi Pāṇini")
         
-        # शसो नः पुंसि (6.1.103) - रामान् / हरीन्
         if vibhakti == 2 and vacana == 3:
             if fp[-1].char == 'स्' or fp[-1].char == 'ः':
                  fp[-1].char = 'न्'
                  if logger: logger.log("6.1.103", "Tasmacchaso Nah Pumsi", sanskrit_varna_samyoga(fp), fp, "Maharshi Pāṇini")
                  return sanskrit_varna_samyoga(fp)
 
-        # त्रिपदी (R9)
+        # Tripadi
         final = SandhiProcessor.run_tripadi(fp, logger) 
         res = sanskrit_varna_samyoga(final)
         
