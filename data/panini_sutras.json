@@ -1486,12 +1486,12 @@
     },
     {
         "sutra_num": "1.3.8",
-        "kaumudi_num": 195,
         "name": "लशक्वतद्धिते",
-        "adhyaya": 1,
-        "pada": 3,
-        "order": 8,
-        "type": "Vidhi"
+        "type": "Sanjna",
+        "vartikas": [
+            "तद्धितवर्जप्रत्ययाद्या लशकवर्गा इतः स्युः । (Initial L, Sh, K-varga of non-Taddhita suffixes are It).",
+            "इति शसः शस्येत्संज्ञा ॥ (Thus, the 'Sh' of 'Shas' gets It-Sanjna/Deletion)."
+        ]
     },
     {
         "sutra_num": "1.3.9",
@@ -4901,7 +4901,8 @@
         "name": "एकवचनं संबुद्धिः",
         "type": "Sanjna",
         "vartikas": [
-            "संबोधने प्रथमाया एकवचनं संबुद्धिसंज्ञं स्यात् ॥ (Vocative Singular is called Sambuddhi)."
+            "संबोधने प्रथमाया एकवचनं संबुद्धिसंज्ञं स्यात् ॥",
+            "(The singular of the first case in Vocative is called Sambuddhi)."
         ]
     },
     {
@@ -23967,8 +23968,10 @@
         "name": "एङ्ह्रस्वात् सम्बुद्धेः",
         "type": "Vidhi",
         "vartikas": [
-            "एङन्ताद्ध्रस्वान्ताच्चाङ्गाद्धल्लुप्यते संबुद्धेश्चेत् । (Consonant of Sambuddhi is deleted after Eng or Short vowel).",
-            "हे राम (Short 'a'), हे हरे (Eng 'e')."
+            "एङन्ताद्ध्रस्वान्ताच्चाङ्गाद्धल्लुप्यते संबुद्धेश्चेत् ।",
+            "संबुद्ध्याक्षिप्तस्याङ्गस्यैङ्ह्रस्वाभ्यां विशेषणान्नेह । हे कतरत्कुलेति ।",
+            "हे राम । हे रामौ । हे रामाः ।",
+            "अत्र हि परत्वान्नित्यत्वाच्च संबुद्धिगुणे कृते ह्रस्वात्परत्वं नास्ति ॥"
         ]
     },
     {
@@ -24292,21 +24295,20 @@
     },
     {
         "sutra_num": "6.1.102",
-        "kaumudi_num": 164,
         "name": "प्रथमयोः पूर्वसवर्णः",
-        "adhyaya": 6,
-        "pada": 1,
-        "order": 102,
-        "type": "Sanjna"
+        "type": "Vidhi",
+        "vartikas": [
+            "अकः प्रथमाद्वितीययोरचि पूर्वसवर्णदीर्घः एकादेशः स्यात् ।"
+        ]
     },
     {
         "sutra_num": "6.1.103",
-        "kaumudi_num": 196,
         "name": "तस्माच्छसो नः पुंसि",
-        "adhyaya": 6,
-        "pada": 1,
-        "order": 103,
-        "type": "Vidhi"
+        "type": "Vidhi",
+        "vartikas": [
+            "पूर्वसवर्णदीर्घात्परो यः शसः सकारस्तस्य नः स्यात्पुंसि ॥",
+            "(In Masculine, 's' of Shas following Purvasavarna Dirgha becomes 'n')."
+        ]
     },
     {
         "sutra_num": "6.1.104",
@@ -24336,12 +24338,12 @@
     },
     {
         "sutra_num": "6.1.107",
-        "kaumudi_num": 194,
         "name": "अमि पूर्वः",
-        "adhyaya": 6,
-        "pada": 1,
-        "order": 107,
-        "type": "Vidhi"
+        "type": "Vidhi",
+        "vartikas": [
+            "अकोऽम्यचि परतः पूर्वरूपमेकादेशः स्यात् । (When Ak is followed by Am, the previous form is the single substitute).",
+            "रामम् ।"
+        ]
     },
     {
         "sutra_num": "6.1.108",
@@ -37126,24 +37128,20 @@
     },
     {
         "sutra_num": "8.4.1",
-        "kaumudi_num": 235,
         "name": "रषाभ्यां नो णः समानपदे",
-        "adhyaya": 8,
-        "pada": 4,
-        "order": 1,
-        "type": "Vidhi",
+        "type": "Adhikara",
         "vartikas": [
-            "ऋवर्णान्नस्य णत्वं वाच्यम् ।"
+            "(Change n to ṇ if preceded by r or ṣ in the same pada)."
         ]
     },
     {
         "sutra_num": "8.4.2",
-        "kaumudi_num": 197,
         "name": "अट्कुप्वाङ्नुम्व्यवायेऽपि",
-        "adhyaya": 8,
-        "pada": 4,
-        "order": 2,
-        "type": "Vidhi"
+        "type": "Vidhi",
+        "vartikas": [
+            "अट्कवर्गपवर्ग आङ् नुम् एतैर्व्यस्तैर्यथासंभवमिलितैश्च व्यवधानेऽपि रषाभ्यां परस्य नस्य णः स्यात्समानपदे ।",
+            "(n becomes ṇ even if intervened by Aṭ, Ku, Pu, Āṅ, or Num)."
+        ]
     },
     {
         "sutra_num": "8.4.3",

@@ -1,157 +1,103 @@
 """
 FILE: logic/sandhi_processor.py
+FINAL SIDDHA VERSION
 """
 from core.core_foundation import Varna, ad, sanskrit_varna_samyoga
+from core.maheshwara_sutras import MaheshwaraSutras
 
 class SandhiProcessor:
-    
-    AC = {'अ', 'आ', 'इ', 'ई', 'उ', 'ऊ', 'ऋ', 'ॠ', 'ऌ', 'ए', 'ऐ', 'ओ', 'औ'}
-    GUNA_VOWELS = {'अ', 'ए', 'ओ'} # 'a' is also Guna (At-eng Gunah)
-    
-    @staticmethod
-    def is_vowel(char):
-        return char in SandhiProcessor.AC
+    AC = MaheshwaraSutras.get_pratyahara("अच्")
+    IN_PRATYAHARA = MaheshwaraSutras.get_pratyahara("इण्", force_n2=True)
+    AT_PRATYAHARA = MaheshwaraSutras.get_pratyahara("अट्")
+
+    KU_VARGA = set(['क', 'ख', 'ग', 'घ', 'ङ', 'क्', 'ख्', 'ग्', 'घ्', 'ङ्'])
+    PU_VARGA = set(['प', 'फ', 'ब', 'भ', 'म', 'प्', 'फ्', 'ब्', 'भ्', 'म्'])
+    MATRAS = set(['ा', 'ि', 'ी', 'ु', 'ू', 'ृ', 'ॄ', 'ॢ', 'े', 'ै', 'ो', 'ौ', 'ं', 'ः'])
+
+    ALLOWED_NATVA_INTERVENERS = AT_PRATYAHARA.union(KU_VARGA).union(PU_VARGA).union(MATRAS).union({'ं', 'ँ'})
 
     @staticmethod
     def apply_ac_sandhi(stem_varnas, suffix_varnas):
-        if not stem_varnas or not suffix_varnas:
-            return stem_varnas + suffix_varnas, None
+        if not suffix_varnas: return stem_varnas, None
+        s = [v.char for v in stem_varnas]; p = [v.char for v in suffix_varnas]
+        if not s or not p: return stem_varnas + suffix_varnas, None
+        last = s[-1]; first = p[0]
 
-        res = stem_varnas[:] + suffix_varnas[:]
-        idx = len(stem_varnas) - 1
-        
-        if idx < 0 or (idx + 1) >= len(res):
-            return res, None
+        # VRIDDHI
+        if last in ['अ', 'आ']:
+            if first in ['ए', 'ऐ']: s.pop(); p[0]='ऐ'; return ad("".join(s)+"".join(p)), "6.1.88 Vriddhirechi"
+            elif first in ['ओ', 'औ']: s.pop(); p[0]='औ'; return ad("".join(s)+"".join(p)), "6.1.88 Vriddhirechi"
+        # GUNA
+        if last in ['अ', 'आ']:
+            if first in ['इ', 'ई']: s.pop(); p[0]='ए'; return ad("".join(s)+"".join(p)), "6.1.87 Ad Gunah"
+            elif first in ['उ', 'ऊ']: s.pop(); p[0]='ओ'; return ad("".join(s)+"".join(p)), "6.1.87 Ad Gunah"
+            elif first in ['ऋ', 'ॠ']: s.pop(); p.pop(0); return ad("".join(s)+"अर्"+"".join(p)), "6.1.87 Ad Gunah"
+        # YAN
+        if last in ['इ', 'ई'] and first in SandhiProcessor.AC and first!=last:
+            s[-1]='य्'; return ad("".join(s)+"".join(p)), "6.1.77 Iko Yanachi"
+        elif last in ['उ', 'ऊ'] and first in SandhiProcessor.AC and first!=last:
+            s[-1]='व्'; return ad("".join(s)+"".join(p)), "6.1.77 Iko Yanachi"
+        # AYADI
+        is_ac = first in SandhiProcessor.AC or first in SandhiProcessor.MATRAS or first in ['ए','ओ','ऐ','औ']
+        if last == 'ए' and is_ac: s.pop(); return ad("".join(s)+"अय्"+"".join(p)), "6.1.78 H.O.A.V"
+        elif last == 'ओ' and is_ac: s.pop(); return ad("".join(s)+"अव्"+"".join(p)), "6.1.78 H.O.A.V"
+        elif last == 'ऐ' and is_ac: s.pop(); return ad("".join(s)+"आय्"+"".join(p)), "6.1.78 H.O.A.V"
+        elif last == 'औ' and is_ac: s.pop(); return ad("".join(s)+"राव्"+"".join(p)), "6.1.78 H.O.A.V"
+        # SAVARNA
+        is_savarna=False; res_char=''
+        if last in ['अ','आ'] and first in ['अ','आ']: is_savarna=True; res_char='आ'
+        elif last in ['इ','ई'] and first in ['इ','ई']: is_savarna=True; res_char='ई'
+        elif last in ['उ','ऊ'] and first in ['उ','ऊ']: is_savarna=True; res_char='ऊ'
+        elif last in ['ऋ','ॠ'] and first in ['ऋ','ॠ']: is_savarna=True; res_char='ॠ'
+        if is_savarna: s.pop(); p[0]=res_char; return ad("".join(s)+"".join(p)), "6.1.101 Aka Savarne Dirghah"
 
-        v1 = res[idx].char
-        v2 = res[idx+1].char
-        
-        if not (SandhiProcessor.is_vowel(v1) and SandhiProcessor.is_vowel(v2)):
-            return res, None
-
-        # --- 0. ATO GUNE (6.1.97) ---
-        # Apadanta 'a' + Guna (a, e, o) -> Pararupa (v2)
-        # Note: 'Rama + As' hits this if SubantaProcessor doesn't handle 6.1.102 first.
-        # But SubantaProcessor DOES handle 6.1.102 for Ramah.
-        # This is critical for Tad -> Ta + a -> Ta.
-        if v1 == 'अ' and v2 in SandhiProcessor.GUNA_VOWELS:
-            # Check context? We assume 'stem_varnas' implies non-padanta at the junction
-            # for internal derivation.
-            res[idx].char = v2 # Pararupa (Takes form of the second)
-            del res[idx+1]
-            return res, "6.1.97 Ato Gune"
-
-        # 1. SAVARNA DIRGHA (6.1.101)
-        savarna_pairs = {
-            ('अ', 'अ'): 'आ', ('अ', 'आ'): 'आ', ('आ', 'अ'): 'आ', ('आ', 'आ'): 'आ',
-            ('इ', 'इ'): 'ई', ('इ', 'ई'): 'ई', ('ई', 'इ'): 'ई', ('ई', 'ई'): 'ई',
-            ('उ', 'उ'): 'ऊ', ('उ', 'ऊ'): 'ऊ', ('ऊ', 'उ'): 'ऊ', ('ऊ', 'ऊ'): 'ऊ',
-            ('ऋ', 'ऋ'): 'ॠ', ('ऋ', 'ॠ'): 'ॠ'
-        }
-        if (v1, v2) in savarna_pairs:
-            res[idx].char = savarna_pairs[(v1, v2)]
-            del res[idx+1]
-            return res, "6.1.101 Akah Savarne Dirghah"
-
-        # 2. GUNA (6.1.87)
-        guna_map = {'इ': 'ए', 'ई': 'ए', 'उ': 'ओ', 'ऊ': 'ओ', 'ऋ': 'अर्', 'ॠ': 'अर्'}
-        if v1 in ['अ', 'आ'] and v2 in guna_map:
-            res_char = guna_map[v2]
-            if 'र्' in res_char:
-                res[idx].char = 'अ'
-                res[idx+1].char = 'र्' 
-                return res, "6.1.87 Adgunah"
-            else:
-                res[idx].char = res_char
-                del res[idx+1]
-                return res, "6.1.87 Adgunah"
-
-        # 3. VRIDDHI (6.1.88)
-        vriddhi_map = {'ए': 'ऐ', 'ऐ': 'ऐ', 'ओ': 'औ', 'औ': 'औ'}
-        if v1 in ['अ', 'आ'] and v2 in vriddhi_map:
-            res[idx].char = vriddhi_map[v2]
-            del res[idx+1]
-            return res, "6.1.88 Vriddhir-eci"
-
-        # 4. YAN SANDHI (6.1.77)
-        yan_map = {'इ': 'य्', 'ई': 'य्', 'उ': 'व्', 'ऊ': 'व्', 'ऋ': 'र्', 'ॠ': 'र्'}
-        if v1 in yan_map:
-            res[idx].char = yan_map[v1]
-            return res, "6.1.77 Iko Yanachi"
-
-        # 5. AYADI (6.1.78)
-        ayadi_map = {'ए': ['अ', 'य्'], 'ओ': ['अ', 'व्'], 'ऐ': ['आ', 'य्'], 'औ': ['आ', 'व्']}
-        if v1 in ayadi_map:
-            expansion = ayadi_map[v1]
-            res[idx].char = expansion[0]
-            semivowel_list = ad(expansion[1]) 
-            res.insert(idx+1, semivowel_list[0])
-            return res, "6.1.78 Eco'yavayavah"
-
-        return res, None
-
-    @staticmethod
-    def apply_natva(varnas):
-        r_sh_found = False
-        ALLOWED_BASE = [
-            'अ', 'आ', 'इ', 'ई', 'उ', 'ऊ', 'ऋ', 'ॠ', 'ए', 'ऐ', 'ओ', 'औ',
-            'ा', 'ि', 'ी', 'ु', 'ू', 'ृ', 'ॄ', 'े', 'ै', 'ो', 'ौ',
-            'ं', 'ह', 'य', 'व', 'र', 'क', 'ख', 'ग', 'घ', 'ङ', 'प', 'फ', 'ब', 'भ', 'म'
-        ]
-        ALLOWED_SET = set(ALLOWED_BASE)
-        for char in ALLOWED_BASE: ALLOWED_SET.add(char + '्')
-        ALLOWED_SET.update(['क्', 'ख्', 'ग्', 'घ्', 'ङ्', 'प्', 'फ्', 'ब्', 'भ्', 'म्', 'य्', 'व्', 'र्', 'ह्'])
-
-        res = varnas[:] 
-        for i in range(len(res)):
-            char = res[i].char
-            if char in ['र्', 'ष्', 'ऋ', 'ॠ', 'ृ', 'ॄ', 'र', 'ष']:
-                r_sh_found = True
-                continue
-            if char in ['न', 'न्'] and r_sh_found:
-                if i == len(res) - 1: continue
-                if '्' in char: res[i].char = 'ण्'
-                else: res[i].char = 'ण'
-            if r_sh_found:
-                if char in ['न', 'न्']: pass
-                elif char not in ALLOWED_SET: r_sh_found = False
-        return res, "8.4.1 Rashabhyam No Nah"
-
-    @staticmethod
-    def apply_shatva(varnas):
-        IN_BASE = {
-            'इ', 'ई', 'उ', 'ऊ', 'ऋ', 'ॠ', 'ए', 'ऐ', 'ओ', 'औ', 
-            'ि', 'ी', 'ु', 'ू', 'ृ', 'ॄ', 'े', 'ै', 'ो', 'ौ',
-            'ह', 'य', 'व', 'र', 'ल'
-        }
-        KU_BASE = {'क', 'ख', 'ग', 'घ', 'ङ'}
-        TRIGGER_SET = set()
-        for c in IN_BASE | KU_BASE:
-            TRIGGER_SET.add(c)
-            TRIGGER_SET.add(c + '्')
-        TRIGGER_SET.update(['क्', 'ख्', 'ग्', 'घ्', 'ङ्', 'य्', 'व्', 'र्', 'ल्', 'ह्'])
-
-        res = varnas[:]
-        for i in range(1, len(res)):
-            curr = res[i].char
-            prev = res[i-1].char
-            if curr in ['स', 'स्']:
-                if i == len(res) - 1: continue
-                if prev in TRIGGER_SET:
-                    if '्' in curr: res[i].char = 'ष्'
-                    else: res[i].char = 'ष'
-        return res, "8.3.59 Adesha-pratyayayoh"
+        return stem_varnas + suffix_varnas, None
 
     @staticmethod
     def run_tripadi(varnas, logger=None):
-        if not varnas: return []
-        res = varnas[:]
-        if res[-1].char == 'स्':
-            res[-1].char = 'र्'
+        res = list(varnas)
+        # RUTVA (8.2.66)
+        if res and res[-1].char in ['स्', 's']:
+            res[-1].char = 'र्';
             if logger: logger.log("8.2.66", "Sasajusho Ruh", sanskrit_varna_samyoga(res), res, "Maharshi Pāṇini")
-        if res[-1].char == 'र्':
-             res[-1].char = 'ः'
-             if logger: logger.log("8.3.15", "Kharavasanayo Visarjaniyah", sanskrit_varna_samyoga(res), res, "Maharshi Pāṇini")
-        res, _ = SandhiProcessor.apply_natva(res)
-        res, _ = SandhiProcessor.apply_shatva(res)
+
+        # SHATVA (8.3.59)
+        for i, v in enumerate(res):
+            clean_char = v.char.replace('्', '')
+            if clean_char in ['स', 'स्', 's']:
+                if i > 0:
+                    prev = res[i-1].char
+                    check_char = prev
+                    if prev == '्' and i > 1: check_char = res[i-2].char
+
+                    check_clean = check_char.replace('्', '')
+                    in_set = SandhiProcessor.IN_PRATYAHARA.union(SandhiProcessor.MATRAS)
+
+                    # [SIDDHA CHECK]: Combined check for In-set or Ku-varga
+                    is_trigger = (check_clean in in_set) or (check_char in in_set) or (check_clean in SandhiProcessor.KU_VARGA) or (check_char in SandhiProcessor.KU_VARGA)
+
+                    if is_trigger:
+                        res[i].char = 'ष्'
+                        if logger: logger.log("8.3.59", "Adeshapratyayoh", sanskrit_varna_samyoga(res), res, "Maharshi Pāṇini")
+
+        # VISARGA (8.3.15)
+        if res and res[-1].char == 'र्':
+            res[-1].char = 'ः';
+            if logger: logger.log("8.3.15", "Kharavasanayo Visarjaniyah", sanskrit_varna_samyoga(res), res, "Maharshi Pāṇini")
+
+        # NATVA (8.4.2)
+        cause_found = False; cause_index = -1
+        for i, v in enumerate(res):
+            c = v.char.replace('्', '')
+            if c in ['र्', 'ष्', 'r', 'ṣ', 'र', 'ष']: cause_found=True; cause_index=i; continue
+            if cause_found and v.char in ['न', 'न्']:
+                is_valid = True
+                for k in range(cause_index + 1, i):
+                    mid = res[k].char.replace('्', '')
+                    if res[k].char == '्': continue
+                    if mid not in SandhiProcessor.ALLOWED_NATVA_INTERVENERS: is_valid=False; break
+                is_padanta = (i == len(res)-1) or (i == len(res)-2 and res[-1].char == '्')
+                if is_valid and not is_padanta:
+                    res[i].char = 'ण्' if v.char == 'न्' else 'ण'
+                    if logger: logger.log("8.4.2", "Atkupvangnumvyavaye'pi", sanskrit_varna_samyoga(res), res, "Maharshi Pāṇini")
         return res

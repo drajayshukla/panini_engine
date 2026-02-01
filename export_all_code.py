@@ -2,72 +2,60 @@ import os
 from pathlib import Path
 
 # Configuration
-OUTPUT_FILE = "all_source_code.txt"
+OUTPUT_FILE = "essential_logic_snapshot.txt"
 
-# 1. Names of directories to skip anywhere they appear in the project
+# 1. Directories to skip entirely
 EXCLUDE_DIR_NAMES = {
-    'scripts',  # Added this to exclude the scripts folder and its contents
-    'data', 'venv', '__pycache__',
-    '.pytest_cache', '.git', '.venv', '.vscode', 'node_modules',
-    'logs', 'temp', 'backup', 'dist', 'build'
+    'tests', 'venv', '__pycache__', '.pytest_cache', '.git',
+    '.venv', '.vscode', 'node_modules', 'logs', 'temp',
+    'backup', 'dist', 'build', 'scripts'
 }
 
-# 2. Specific relative paths to skip (useful for nested subfolders)
-EXCLUDE_RELATIVE_PATHS = {
-    'panini_engine/core/sutra_store',
-    'core/sutra_store',
-}
-
-INCLUDE_EXT = {'.py'}
-
+# 2. Files to explicitly skip (Debugging and runner scripts)
 SKIP_FILES = {
-    'export_all_code.py',
-    'requirements.txt',
-    'README.md',
-    'panini_engine.log',
-    'streamline.py'
+    'export_all_code.py', 'export_essential_code.py', 'requirements.txt',
+    'README.md', 'panini_engine.log', 'streamline.py', 'master_runner.py',
+    'verify_fix.py', 'verify_final.py', 'verify_explicit.py',
+    'verify_final_strict.py', 'verify_maheshwara.py', 'verify_fix.py',
+    'verify_explicit.py', 'verify_final_strict.py', 'verify_final.py',
+    'audit_knowledge_base.py', 'benchmark_coverage.py', 'engine_main.py',
+    'verify_maheshwara.py', 'debug_sandhi_failures.py'
 }
 
+# Only include python files
+INCLUDE_EXT = {'.py'}
 
 def main():
     root = Path.cwd().resolve()
     output_path = root / OUTPUT_FILE
 
-    print(f"🚀 Scanning project root: {root}")
+    print(f"🚀 Filtering for Essential Pāṇinian Logic in: {root}")
 
     try:
         with open(output_path, 'w', encoding='utf-8') as out:
             file_count = 0
 
-            # os.walk allows us to prune directories on the fly
             for current_root, dirs, files in os.walk(root):
                 curr_path = Path(current_root)
 
-                # PRUNING LOGIC: Remove dirs so os.walk doesn't even enter them
+                # Prune excluded directories
                 for d in list(dirs):
-                    # Get the relative path of this directory
-                    rel_dir_path = (curr_path / d).relative_to(root).as_posix()
-
-                    # Criteria for exclusion:
-                    # - Name matches EXCLUDE_DIR_NAMES
-                    # - Is a hidden folder (starts with .)
-                    # - Matches a specific relative path string
-                    is_excluded = (
-                            d in EXCLUDE_DIR_NAMES or
-                            d.startswith('.') or
-                            any(rel_dir_path.startswith(ex.strip('/')) for ex in EXCLUDE_RELATIVE_PATHS)
-                    )
-
-                    if is_excluded:
+                    if d in EXCLUDE_DIR_NAMES or d.startswith('.'):
                         dirs.remove(d)
 
-                # FILE PROCESSING
+                # Process only the core logic files
                 for file in files:
                     file_path = curr_path / file
                     rel_file_path = file_path.relative_to(root)
 
-                    # Check extension and skip list
-                    if file_path.suffix.lower() in INCLUDE_EXT and file not in SKIP_FILES:
+                    # Logic to identify if it's an essential file based on our discussion
+                    is_essential = (
+                        file_path.suffix.lower() in INCLUDE_EXT and
+                        file not in SKIP_FILES and
+                        not any(file.startswith(prefix) for prefix in ['fix_', 'debug_', 'test_', 'verify_'])
+                    )
+
+                    if is_essential:
                         try:
                             content = file_path.read_text(encoding='utf-8')
                             out.write(f"{'=' * 80}\n")
@@ -76,16 +64,16 @@ def main():
                             out.write(content)
                             out.write("\n\n\n")
                             file_count += 1
-                            print(f" ✅ Added: {rel_file_path}")
+                            print(f" ✅ Essential Content Added: {rel_file_path}")
                         except Exception as e:
                             print(f" ❌ Error reading {rel_file_path}: {e}")
 
-        print(f"\n✨ Done! {file_count} files written to {OUTPUT_FILE}")
-        print(f" 📊 Size: {output_path.stat().st_size / 1024:.1f} KB")
+        print(f"\n✨ Success! {file_count} essential files written to {OUTPUT_FILE}")
+        print(f" 📊 Final Logic Snapshot Size: {output_path.stat().st_size / 1024:.1f} KB")
+        print(f"👉 Please copy the contents of {OUTPUT_FILE} and paste it here.")
 
     except PermissionError:
         print(f"🚨 Error: Permission denied writing to {OUTPUT_FILE}.")
-
 
 if __name__ == '__main__':
     main()

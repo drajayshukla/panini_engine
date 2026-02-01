@@ -38,7 +38,6 @@ class SubantaProcessor:
                 except: pass
             if logger: logger.log("1.2.45", "Arthavad... Pratipadikam", f"✅ '{stem_str}'", stem, "Maharshi Pāṇini")
 
-        # --- CLASSIFICATION ---
         last_char = stem[-1].char
         is_at = (last_char == 'अ')   
         is_aa = (last_char == 'आ')   
@@ -52,60 +51,65 @@ class SubantaProcessor:
         # --- SELECTION ---
         sup_data = KnowledgeBase.get_sup(vibhakti, vacana)
         if not sup_data: return "?"
-        raw_sup, tags = sup_data; suffix = ad(raw_sup)
+        raw_sup, tags = sup_data
         
-        if logger: logger.log("4.1.2", "Svaujasmaut...", f"Selecting '{raw_sup}'", stem + suffix, "Maharshi Pāṇini")
+        if logger: logger.log("4.1.2", "Svaujasmaut...", f"Selecting '{raw_sup}'", stem, "Maharshi Pāṇini")
         
-        # 2.3.49 SAMBUDDHI SANJNA
-        is_sambuddhi = False
-        if vibhakti == 8 and vacana == 1:
-            is_sambuddhi = True
-            if logger: logger.log("2.3.49", "Ekavacanam Sambuddhih", "Su gets Sambuddhi Sanjna", stem + suffix, "Maharshi Pāṇini")
+        clean_suffix = []
+        rule_applied = ""
+        
+        # DEBUG: Print inputs
+        # print(f"DEBUG: V={vibhakti} Vc={vacana} Stem={stem_str} Raw={raw_sup}")
 
-        clean_suffix, trace = SanjnaController.run_it_prakaran(suffix, UpadeshaType.VIBHAKTI)
-        if clean_suffix: clean_suffix[0].sanjnas.update(tags)
-        if logger and trace: logger.log(trace[-1], "It-Lopa", sanskrit_varna_samyoga(stem + clean_suffix), stem + clean_suffix, "Maharshi Pāṇini")
+        # Hardcoded Cleaning
+        if vibhakti == 1 and vacana == 1: clean_suffix = ad("स्"); rule_applied = "1.3.2 Upadeshe Aj"
+        elif vibhakti == 1 and vacana == 2: clean_suffix = ad("औ") 
+        elif vibhakti == 1 and vacana == 3: 
+            if is_at and is_sarvanama: clean_suffix = ad("ई"); rule_applied = "7.1.17 Jasah Shee"
+            else: clean_suffix = ad("अस्"); rule_applied = "1.3.7 Chutu"
+        elif vibhakti == 2 and vacana == 1: clean_suffix = ad("अम्")
+        elif vibhakti == 2 and vacana == 2: clean_suffix = ad("औ")
+        elif vibhakti == 2 and vacana == 3: clean_suffix = ad("अस्"); rule_applied = "1.3.8 Lashakvataddhite"
+        elif vibhakti == 3 and vacana == 1: clean_suffix = ad("आ"); rule_applied = "1.3.7 Chutu"
+        elif vibhakti == 4 and vacana == 1: clean_suffix = ad("ए"); rule_applied = "1.3.8 Lashakvataddhite"
+        elif vibhakti == 5 and vacana == 1: clean_suffix = ad("अस्"); rule_applied = "1.3.8 Lashakvataddhite"
+        elif vibhakti == 6 and vacana == 1: clean_suffix = ad("अस्"); rule_applied = "1.3.8 Lashakvataddhite"
+        elif vibhakti == 7 and vacana == 1: clean_suffix = ad("इ"); rule_applied = "1.3.8 Lashakvataddhite"
+        elif vibhakti == 7 and vacana == 3: clean_suffix = ad("सु"); rule_applied = "1.3.3 Halantyam"
+        elif vibhakti == 8 and vacana == 1: clean_suffix = ad("स्"); rule_applied = "1.3.2 Upadeshe Aj"
+        elif vibhakti == 8 and vacana == 3: clean_suffix = ad("अस्"); rule_applied = "1.3.7 Chutu"
+        
+        if not clean_suffix:
+            clean_suffix, trace = SanjnaController.run_it_prakaran(ad(raw_sup), UpadeshaType.VIBHAKTI)
+            if trace: rule_applied = ", ".join(trace)
 
-        # --- 8.1 SAMBUDDHI OPERATION (Shared Logic) ---
+        if logger and rule_applied:
+            logger.log(rule_applied, "It-Lopa", sanskrit_varna_samyoga(stem + clean_suffix), stem + clean_suffix, "Maharshi Pāṇini")
+        
+        is_sambuddhi = (vibhakti == 8 and vacana == 1)
+        if is_sambuddhi and logger: 
+            logger.log("2.3.49", "Ekavacanam Sambuddhih", "Su -> Sambuddhi", stem + clean_suffix, "Maharshi Pāṇini")
+
+        # --- SAMBUDDHI OPERATIONS ---
         if is_sambuddhi:
-            # 1. Guna for Ghi/Hrasva (7.3.108)
-            # Hari -> Hare, Guru -> Guro
             if is_ghi_any: 
-                # Determine Guna
                 if is_it: stem[-1].char = 'ए'
                 if is_ut: stem[-1].char = 'ओ'
                 if logger: logger.log("7.3.108", "Hrasvasya Gunah", sanskrit_varna_samyoga(stem+clean_suffix), stem, "Maharshi Pāṇini")
-            
-            # Rama (At) - No Guna needed, already 'a' (Hrasva).
-            # Ramaa (Aa) - 7.3.106 Sambuddhau Ca (e) -> Rame
             if is_aa:
                 stem[-1].char = 'ए'
                 if logger: logger.log("7.3.106", "Sambuddhau Ca", sanskrit_varna_samyoga(stem+clean_suffix), stem, "Maharshi Pāṇini")
-
-            # 2. Deletion (6.1.69 Eng-hrasvat Sambuddheh)
-            # Condition: Stem ends in Eng (e, o) OR Hrasva (a, i, u).
-            # Suffix is 'Hal' (Consonant).
+            
             last = stem[-1].char
-            eng = ['ए', 'ओ']
-            hrasva = ['अ', 'इ', 'उ', 'ऋ']
-            
-            if (last in eng or last in hrasva) and clean_suffix:
-                # Check if suffix is Hal (Consonant)
-                # 's' is Hal.
+            if (last in ['ए', 'ओ', 'अ', 'इ', 'उ', 'ऋ']) and clean_suffix:
                 if clean_suffix[0].char not in SandhiProcessor.AC:
-                    # DELETE SUFFIX
                     clean_suffix = []
-                    if logger: logger.log("6.1.69", "Eng-hrasvat Sambuddheh", f"Deleted 's' from {sanskrit_varna_samyoga(stem)}", stem, "Maharshi Pāṇini")
-            
+                    if logger: logger.log("6.1.69", "Eng-hrasvat Sambuddheh", f"Deleted 's'", stem, "Maharshi Pāṇini")
             return SubantaProcessor._finalize(stem + clean_suffix, vibhakti, vacana, logger)
 
-
-        # --- SARVANAMA SPECIALS ---
+        # --- SARVANAMA ---
         if is_at and is_sarvanama:
-            if vibhakti == 1 and vacana == 3:
-                clean_suffix = ad("ई") 
-                if logger: logger.log("7.1.17", "Jasah Shee", "सर्वे", stem+clean_suffix, "Maharshi Pāṇini")
-            elif vibhakti == 4 and vacana == 1:
+            if vibhakti == 4 and vacana == 1:
                 clean_suffix = ad("स्मै")
                 if logger: logger.log("7.1.14", "Sarvanamnah Smai", "सर्वस्मै", stem+clean_suffix, "Maharshi Pāṇini")
                 return SubantaProcessor._finalize(stem + clean_suffix, vibhakti, vacana, logger)
@@ -124,11 +128,13 @@ class SubantaProcessor:
                 if logger: logger.log("7.3.103", "Bahuvacane Jhalyet", "सर्वेसाम्", stem+clean_suffix, "Maharshi Pāṇini")
                 return SubantaProcessor._finalize(stem + clean_suffix, vibhakti, vacana, logger)
 
-        # --- RAMA (At) RULES ---
+        # --- RAMA (At) ---
         if is_at:
-            if vibhakti == 1 and vacana == 1: 
-                return SubantaProcessor._finalize(stem + clean_suffix, vibhakti, vacana, logger)
-            
+            if vibhakti == 2 and vacana == 1:
+                if clean_suffix and clean_suffix[0].char == 'अ':
+                    del clean_suffix[0]
+                    if logger: logger.log("6.1.107", "Ami Purvah", sanskrit_varna_samyoga(stem+clean_suffix), stem + clean_suffix, "Maharshi Pāṇini")
+                    return SubantaProcessor._finalize(stem + clean_suffix, vibhakti, vacana, logger)
             if vibhakti == 3 and vacana == 1: 
                 clean_suffix = ad("इन")
                 if logger: logger.log("7.1.12", "Ta-ngasi... -> Ina", "इन", stem + clean_suffix, "Maharshi Pāṇini")
@@ -138,7 +144,7 @@ class SubantaProcessor:
             elif vibhakti == 6 and vacana == 1: clean_suffix = ad("स्य")
             elif vibhakti == 6 and vacana == 3 and not is_sarvanama: 
                 clean_suffix = ad("न्") + clean_suffix; stem[-1].char = 'आ'
-        
+            
             if clean_suffix:
                 f = clean_suffix[0].char
                 if vacana == 3 and f in ['भ्', 'स्']: 
@@ -149,32 +155,22 @@ class SubantaProcessor:
                 elif f in ['भ्', 'य', 'व्', 'य्', 'व']: 
                     if AdhikaraController.is_rule_in_scope("7.3.102", "ANGASYA"): stem[-1].char = 'आ'
 
-        # --- PRE-CHECKS ---
-        if (is_at or is_ghi_any or is_aa) and vibhakti == 2 and vacana == 1:
-            return stem_str + "म्"
-
         # --- GHI ---
         if is_ghi_any:
             guna_char = 'ए' if is_it else 'ओ'
             dirgha_char = 'ई' if is_it else 'ऊ'
             
-            if (vibhakti in [1,2] and vacana == 2) or (vibhakti == 2 and vacana == 3):
-                stem[-1].char = dirgha_char # Purva Savarna Dirgha (6.1.102)
-                
-                if vacana == 2: 
-                    clean_suffix = []
-                    return sanskrit_varna_samyoga(stem)
-                
-                if vacana == 3: 
-                    if not is_fem_ghi:
-                        clean_suffix = ad("न्") # 6.1.103 Shaso Nah
-                        if logger: logger.log("6.1.103", "Tasmacchaso Nah Pumsi", "न्", stem+clean_suffix, "Maharshi Pāṇini")
-                    else:
-                        clean_suffix = ad("स्")
+            if vibhakti == 2 and vacana == 1:
+                 if clean_suffix and clean_suffix[0].char == 'अ':
+                    del clean_suffix[0]
+                    if logger: logger.log("6.1.107", "Ami Purvah", sanskrit_varna_samyoga(stem+clean_suffix), stem + clean_suffix, "Maharshi Pāṇini")
+                    return SubantaProcessor._finalize(stem + clean_suffix, vibhakti, vacana, logger)
 
+            if (vibhakti in [1,2] and vacana == 2) or (vibhakti == 2 and vacana == 3):
+                pass
+            
             elif vibhakti == 3 and vacana == 1:
                 if not is_fem_ghi: clean_suffix = ad("ना")
-            
             elif vibhakti in [4, 5, 6, 7] and vacana == 1:
                 stem_a = stem[:]; stem_a[-1].char = guna_char
                 suffix_a = clean_suffix[:]
@@ -186,7 +182,6 @@ class SubantaProcessor:
                 stem_b = stem[:]
                 suffix_b_str = "्यै" if vibhakti==4 else "्याः" if vibhakti in [5,6] else "्याम्"
                 return f"{res_a_final} / {stem_str[:-1] + suffix_b_str}"
-
             elif (vibhakti == 1 or vibhakti == 8) and vacana == 3: stem[-1].char = guna_char
             elif vibhakti == 6 and vacana == 3: clean_suffix = ad("नाम्"); stem[-1].char = dirgha_char
 
@@ -202,16 +197,28 @@ class SubantaProcessor:
                 if vibhakti==7: clean_suffix=ad("याम्"); return "रमायाम्"
             if vibhakti==6 and vacana==3: clean_suffix=ad("नाम्")
 
-        # --- PRIORITY SANDHI (6.1.102) ---
+        # --- 6.1.102 & 6.1.103 PRIORITY SANDHI ---
         should_run_102 = False
-        if clean_suffix and (vibhakti==1 or vibhakti==2 or vibhakti==8) and vacana==3:
-            stem_end = stem[-1].char
-            suffix_start = clean_suffix[0].char
-            if (is_at or is_ghi_any) and suffix_start == 'अ':
-                if is_ghi_any and (vibhakti==1 or vibhakti==8):
-                    should_run_102 = False 
-                else:
-                    should_run_102 = True 
+        if clean_suffix:
+            # Applies for 1.2, 2.2, 1.3, 2.3
+            if (vibhakti in [1, 2] or vibhakti == 8) and (vacana in [2, 3]):
+                suffix_start = clean_suffix[0].char
+                
+                if is_ghi_any:
+                    if (vibhakti == 1 or vibhakti == 8) and vacana == 3:
+                        should_run_102 = False
+                    else:
+                        should_run_102 = True
+                
+                elif is_at:
+                    if vacana == 2:
+                        should_run_102 = False # Na Dici
+                    else:
+                        # Sarve (1.3 Sarva) - Na Dici (i)
+                        if suffix_start in ['इ', 'ई', 'उ', 'ऊ', 'ऋ', 'ॠ', 'ऌ']:
+                            should_run_102 = False
+                        else:
+                            should_run_102 = True
 
         if should_run_102:
             if is_at: stem[-1].char = 'आ'
@@ -219,13 +226,14 @@ class SubantaProcessor:
             if is_ut: stem[-1].char = 'ऊ'
             
             if logger: logger.log("6.1.102", "Prathamayoh Purvasavarnah", sanskrit_varna_samyoga(stem+clean_suffix), stem, "Maharshi Pāṇini")
-            if clean_suffix and clean_suffix[0].char == 'अ':
+            
+            if clean_suffix and clean_suffix[0].is_vowel:
                 del clean_suffix[0]
             
-            if vibhakti == 2:
+            if vibhakti == 2 and vacana == 3:
                 if clean_suffix and (clean_suffix[0].char == 'स्' or clean_suffix[0].char == 'ः'):
                     clean_suffix[0].char = 'न्'
-                    if logger: logger.log("6.1.103", "Tasmacchaso Nah Pumsi", sanskrit_varna_samyoga(stem+clean_suffix), stem, "Maharshi Pāṇini")
+                    if logger: logger.log("6.1.103", "Tasmacchaso Nah Pumsi", "न्", stem+clean_suffix, "Maharshi Pāṇini")
 
             return SubantaProcessor._finalize(stem + clean_suffix, vibhakti, vacana, logger)
 
