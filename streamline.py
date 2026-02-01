@@ -1,224 +1,255 @@
 """
-FILE: fix_ui_html_and_tags.py
-PURPOSE:
-  1. Fix broken HTML structure in UI cards (closing div tags).
-  2. Add 'Authority Badges' (Panini, Katyayana, etc.) with color coding.
+FILE: teach_ekashesha_1_2_64.py
+PURPOSE: Teach 'Sarūpāṇāmekaśeṣa ekavibhaktau' (1.2.64).
+LOGIC: Triggered when Vacana is Dual (2) or Plural (3) to explain why single stem remains.
 """
 import os
+import json
+import sys
+import subprocess
 
-UI_CODE = r'''import streamlit as st
-import pandas as pd
-from engine_main import PrakriyaLogger
-from logic.subanta_processor import SubantaProcessor
-
-st.set_page_config(page_title="शब्द-रूप सिद्धि यन्त्र", page_icon="🕉️", layout="wide")
-
-# --- CSS Styling ---
-st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Martel:wght@400;800&family=Noto+Sans:wght@400;700&display=swap');
-    body { font-family: 'Noto Sans', sans-serif; background-color: #f4f6f9; }
-    
-    /* Card Base */
-    .step-card { 
-        background-color: #ffffff; padding: 16px 20px; margin-bottom: 16px; 
-        border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); 
-        border: 1px solid #e0e0e0;
-        transition: all 0.2s ease-in-out;
+# ==============================================================================
+# 1. UPDATE SUTRA DB
+# ==============================================================================
+SUTRA_UPDATE = [
+    {
+        "sutra_num": "1.2.64",
+        "name": "सरूपाणामेकशेष एकविभक्तौ",
+        "type": "Vidhi",
+        "vartikas": [
+            "एकविभक्तौ यानि सरूपाण्येव दृष्टानि तेषामेक एव शिष्यते । (Of words having the same form, only one remains).",
+            "रामश्च रामश्च = रामौ ।"
+        ]
+    },
+    {
+        "sutra_num": "6.1.104",
+        "name": "नादिचि",
+        "type": "Niyama", # Prohibition (Nishedha)
+        "vartikas": ["आदिचि न (Purvasavarna is prohibited if 'Ic' follows 'a')."]
     }
-    .step-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+]
 
-    /* Border Colors by Type */
-    .border-meta { border-left: 6px solid #2980b9; }   /* Blue: Definitions */
-    .border-action { border-left: 6px solid #8e44ad; } /* Purple: Transformations */
-    
-    /* Rule Badge (The Number) */
-    .rule-badge {
-        padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.85rem;
-        display: inline-block; margin-right: 8px; color: white; vertical-align: middle;
-    }
-    .badge-meta { background-color: #2980b9; }
-    .badge-action { background-color: #8e44ad; }
+json_path = "data/panini_sutras.json"
+if os.path.exists(json_path):
+    try:
+        with open(json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
 
-    /* Authority Badge (The Rishi) */
-    .auth-badge {
-        padding: 3px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 700;
-        text-transform: uppercase; border: 1px solid; display: inline-block; 
-        margin-right: 8px; vertical-align: middle; letter-spacing: 0.5px;
-    }
-    
-    /* Authority Colors */
-    .auth-panini { color: #27ae60; border-color: #27ae60; background-color: #eafaf1; } /* Green */
-    .auth-katyayana { color: #d35400; border-color: #d35400; background-color: #fcece0; } /* Orange */
-    .auth-patanjali { color: #c0392b; border-color: #c0392b; background-color: #f9ebeb; } /* Red */
-    .auth-other { color: #7f8c8d; border-color: #7f8c8d; background-color: #f4f6f7; } /* Grey */
+        existing_ids = {item['sutra_num'] for item in data}
+        for new_item in SUTRA_UPDATE:
+            if new_item['sutra_num'] not in existing_ids:
+                data.append(new_item)
+            else:
+                for i, item in enumerate(data):
+                    if item['sutra_num'] == new_item['sutra_num']:
+                        data[i] = new_item
 
-    /* Typography */
-    .sutra-name {
-        font-family: 'Martel', serif; font-weight: 800; font-size: 1.2rem; color: #2c3e50;
-        vertical-align: middle;
-    }
-    .op-text {
-        font-size: 0.95rem; color: #555; margin-top: 8px; font-weight: 500; display: flex; align-items: center;
-    }
-    .res-sanskrit { 
-        font-family: 'Martel', serif; font-size: 1.6rem; font-weight: 800; color: #2c3e50; 
-    }
-    
-    /* Varna Tiles */
-    .varna-container { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
-    .varna-tile { 
-        background-color: #fdfdfd; border: 1px solid #d1d5db; border-bottom: 2px solid #9ca3af;
-        padding: 2px 8px; border-radius: 4px; color: #d35400; 
-        font-family: 'Courier New', monospace; font-weight: bold; font-size: 0.95rem; 
-    }
-    
-    /* Step Counter */
-    .step-num { font-size: 0.7rem; color: #95a5a6; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
-</style>
-""", unsafe_allow_html=True)
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+        print("✅ Sutra DB updated with 1.2.64 & 6.1.104")
+    except Exception as e:
+        print(f"❌ Error updating JSON: {e}")
 
-VIBHAKTI_MAP = {1: "प्रथमा", 2: "द्वितीया", 3: "तृतीया", 4: "चतुर्थी", 5: "पञ्चमी", 6: "षष्ठी", 7: "सप्तमी", 8: "सम्बोधन"}
-VACANA_MAP = {1: "एकवचनम्", 2: "द्विवचनम्", 3: "बहुवचनम्"}
+# ==============================================================================
+# 2. LOGIC: SUBANTA PROCESSOR (With Ekashesha Integration)
+# ==============================================================================
+NEW_PROCESSOR_CODE = '''"""
+FILE: logic/subanta_processor.py
+"""
+from core.core_foundation import Varna, ad, sanskrit_varna_samyoga, UpadeshaType
+from core.sanjna_controller import SanjnaController
+from core.knowledge_base import KnowledgeBase
+from logic.sandhi_processor import SandhiProcessor
+from core.adhikara_controller import AdhikaraController
+from core.dhatu_repo import DhatuRepository 
 
-def get_auth_class(source_text):
-    """Returns CSS class based on Authority Name."""
-    s = source_text.lower()
-    if "panini" in s or "pāṇini" in s: return "auth-panini"
-    if "katyayana" in s or "vartika" in s: return "auth-katyayana"
-    if "patanjali" in s or "bhashya" in s: return "auth-patanjali"
-    return "auth-other"
+class SubantaProcessor:
+    KNOWN_PRATYAYAS = {'सु', 'औ', 'जस्', 'अम्', 'औट्', 'शस्', 'टा', 'भ्याम्', 'भिस्', 'ङे', 'भ्यस्', 'ङसि', 'ङस्', 'ओस्', 'आम्', 'ङि', 'सुप्', 'तिप्', 'तस्', 'झि', 'सिप्', 'थस्', 'थ', 'मिप्', 'वस्', 'मस्', 'शप्', 'श्नु', 'स्य', 'तासि', 'क्विप्', 'घञ्'}
+    FEMININE_I_U_STEMS = {'मति', 'बुद्धि', 'धेनु', 'कीर्ति', 'जाति', 'भक्ति'}
+    VALID_SINGLE_LETTERS = {'अ', 'इ', 'उ', 'ऋ'}
+    SARVANAMA_GANA = {'सर्व', 'विश्व', 'उभ', 'उभय', 'डतर', 'डतम', 'अन्य', 'अन्यतर', 'इतर', 'त्वत्', 'त्व', 'नेम', 'सम', 'सिम', 'तद्', 'यद्', 'एतद्', 'इदम्', 'अदस्', 'एक', 'द्वि', 'युष्मद्', 'अस्मद्', 'भवतु', 'किम्'}
 
-def get_card_style(rule_num):
-    if rule_num.startswith("1.2") or rule_num.startswith("1.4") or \
-       rule_num.startswith("3.1") or rule_num.startswith("4.1.1"):
-        return "border-meta", "badge-meta"
-    return "border-action", "badge-action"
+    @staticmethod
+    def _finalize(varnas, vibhakti, vacana, logger=None):
+        if not varnas: return ""
+        final = SandhiProcessor.run_tripadi(varnas, logger) 
+        res = sanskrit_varna_samyoga(final)
+        if vibhakti == 8: return "हे " + res
+        return res
 
-def generate_card_html(step_index, step_data):
-    rule_full = step_data['rule']
-    op = step_data['operation']
-    res = step_data['result']
-    viccheda = step_data['viccheda']
-    source = step_data.get('source', 'Unknown')
-    vartika = step_data.get('vartika_html', '')
-    
-    # Split Number and Name
-    if " " in rule_full:
-        parts = rule_full.split(" ", 1)
-        r_num = parts[0]
-        r_name = parts[1]
-    else:
-        r_num = rule_full
-        r_name = ""
+    @staticmethod
+    def derive_pada(stem_str, vibhakti, vacana, logger=None, force_pratipadika=False):
+        stem = ad(stem_str)
+        
+        # --- 1.2.45 PRATIPADIKA SANJNA ---
+        if force_pratipadika:
+            if logger: logger.log("1.2.45", "Manual Override", f"⚠️ Forced: '{stem_str}'", stem, "User")
+        else:
+            if stem_str in SubantaProcessor.KNOWN_PRATYAYAS: return "Error: Pratyaya"
+            if stem_str not in SubantaProcessor.VALID_SINGLE_LETTERS:
+                try:
+                    dhatu = DhatuRepository.get_dhatu_info(stem_str)
+                    if dhatu: return "Error: Dhatu"
+                except: pass
+            if logger: logger.log("1.2.45", "Arthavad... Pratipadikam", f"✅ '{stem_str}'", stem, "Maharshi Pāṇini")
 
-    # Determine Styles
-    border_class, badge_class = get_card_style(r_num)
-    auth_class = get_auth_class(source)
+        # --- CLASSIFICATION ---
+        last_char = stem[-1].char
+        is_at = (last_char == 'अ')   
+        is_aa = (last_char == 'आ')   
+        is_it = (last_char == 'इ')                 
+        is_ut = (last_char == 'उ')                 
+        is_fem_ghi = (stem_str in SubantaProcessor.FEMININE_I_U_STEMS) or is_aa
+        is_ghi_any = (is_it or is_ut)
+        is_sarvanama = (stem_str in SubantaProcessor.SARVANAMA_GANA)
+        if is_sarvanama and logger: logger.log("1.1.27", "Sarvadini Sarvanamani", f"{stem_str}", stem, "Maharshi Pāṇini")
 
-    # Viccheda Tiles
-    viccheda_html = ""
-    if viccheda:
-        parts = viccheda.split(" + ")
-        tiles = "".join([f'<div class="varna-tile">{p}</div>' for p in parts])
-        viccheda_html = f'<div class="varna-container">{tiles}</div>'
-
-    # Link
-    link = "#"
-    if "." in r_num:
-        try:
-            c, p, s = r_num.split('.')
-            link = f"https://ashtadhyayi.com/sutraani/{c}/{p}/{s}"
-        except: pass
-
-    # --- HTML STRUCTURE (FIXED) ---
-    return f"""
-    <div class="step-card {border_class}">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-            <div style="flex-grow: 1;">
-                <div style="margin-bottom: 6px;">
-                    <span class="auth-badge {auth_class}">{source}</span>
-                    <a href="{link}" target="_blank" style="text-decoration:none;">
-                        <span class="rule-badge {badge_class}">📖 {r_num}</span>
-                    </a>
-                    <span class="sutra-name">{r_name}</span>
-                </div>
-                
-                {vartika}
-                
-                <div class="op-text">
-                    <span style="margin-right:6px;">⚙️</span> {op}
-                </div>
-                
-                {viccheda_html}
-            </div>
+        # --- SELECTION LOGIC ---
+        if logger:
+            logger.log("3.1.1", "Pratyayah", "Scope: Suffix", stem, "Maharshi Pāṇini")
+            logger.log("3.1.2", "Parashca", "Attachment: Right-side", stem, "Maharshi Pāṇini")
+            logger.log("4.1.1", "Nyap-pratipadikāt", f"Base '{stem_str}' is valid", stem, "Maharshi Pāṇini")
             
-            <div style="text-align:right; min-width: 100px; margin-left: 15px;">
-                <div class="step-num">STEP {step_index + 1}</div>
-                <div class="res-sanskrit">{res}</div>
-            </div>
-        </div>
-    </div>
-    """
+            if vacana == 3:
+                logger.log("1.4.21", "Bahushu Bahuvachanam", "Count > 2 -> Plural", stem, "Maharshi Pāṇini")
+            else:
+                logger.log("1.4.22", "Dvyekayor Dvivachana-Ekavacane", f"Count {vacana} -> Selection", stem, "Maharshi Pāṇini")
 
-def main():
-    st.title("🕉️ शब्द-रूप सिद्धि यन्त्र")
-    st.markdown("### Paninian Derivation Engine (Glassbox AI)")
-    
-    with st.sidebar:
-        st.header("🎛️ इनपुट (Input)")
-        stem = st.text_input("प्रातिपदिक (Stem)", value="राम")
+        # --- 1.2.64 EKASHESHA (The Logic of Reduction) ---
+        if vacana in [2, 3] and logger:
+            count_desc = "Two" if vacana == 2 else "Many"
+            op_desc = f"{stem_str} + {stem_str}... -> {stem_str} (Only one remains for {count_desc})"
+            logger.log("1.2.64", "Sarūpāṇāmekaśeṣa ekavibhaktau", op_desc, stem, "Maharshi Pāṇini")
+
+        sup_data = KnowledgeBase.get_sup(vibhakti, vacana)
+        if not sup_data: return "?"
+        raw_sup, tags = sup_data
+        suffix = ad(raw_sup)
         
-        force_p = st.checkbox("Force Pratipadika", value=False, 
-                              help="Enable to bypass initial dictionary checks.")
+        if logger: 
+            logger.log("4.1.2", "Svaujasmaut...", f"Selecting '{raw_sup}'", stem + suffix, "Maharshi Pāṇini")
+            logger.log("1.4.104", "Vibhaktishcha", f"'{raw_sup}' is Vibhakti", stem + suffix, "Maharshi Pāṇini")
         
-        st.success("✅ **Supported:** Ram, Hari, Guru, Sarva, etc.")
-        st.markdown("---")
-        st.markdown("**Legend:**")
-        st.markdown('<span class="auth-badge auth-panini">PANINI</span> Sutra', unsafe_allow_html=True)
-        st.markdown('<span class="auth-badge auth-katyayana">KATYAYANA</span> Vartika', unsafe_allow_html=True)
+        clean_suffix, trace = SanjnaController.run_it_prakaran(suffix, UpadeshaType.VIBHAKTI)
+        if clean_suffix: clean_suffix[0].sanjnas.update(tags)
+        if logger and trace: logger.log(trace[-1], "It-Lopa", sanskrit_varna_samyoga(stem + clean_suffix), stem + clean_suffix, "Maharshi Pāṇini")
 
-    # Main Action Area
-    c1, c2, c3 = st.columns([1, 1, 1])
-    with c1: v_sel = st.selectbox("विभक्ति", list(VIBHAKTI_MAP.keys()), format_func=lambda x: VIBHAKTI_MAP[x])
-    with c2: n_sel = st.selectbox("वचन", list(VACANA_MAP.keys()), format_func=lambda x: VACANA_MAP[x])
-    with c3: 
-        st.write(""); st.write("")
-        btn = st.button("🚀 सिद्धि करें (Derive)", type="primary", use_container_width=True)
+        # --- SARVANAMA SPECIALS ---
+        if is_at and is_sarvanama:
+            if vibhakti == 1 and vacana == 3:
+                clean_suffix = ad("ई") 
+                if logger: logger.log("7.1.17", "Jasah Shee", "सर्वे", stem+clean_suffix, "Maharshi Pāṇini")
+            elif vibhakti == 4 and vacana == 1:
+                clean_suffix = ad("स्मै")
+                if logger: logger.log("7.1.14", "Sarvanamnah Smai", "सर्वस्मै", stem+clean_suffix, "Maharshi Pāṇini")
+                return SubantaProcessor._finalize(stem + clean_suffix, vibhakti, vacana, logger)
+            elif vibhakti == 5 and vacana == 1:
+                clean_suffix = ad("स्मात्")
+                if logger: logger.log("7.1.15", "Ngasi-ngyoh Smatsminau", "सर्वस्मात्", stem+clean_suffix, "Maharshi Pāṇini")
+                return SubantaProcessor._finalize(stem + clean_suffix, vibhakti, vacana, logger)
+            elif vibhakti == 7 and vacana == 1:
+                clean_suffix = ad("स्मिन्")
+                if logger: logger.log("7.1.15", "Ngasi-ngyoh Smatsminau", "सर्वस्मिन्", stem+clean_suffix, "Maharshi Pāṇini")
+                return SubantaProcessor._finalize(stem + clean_suffix, vibhakti, vacana, logger)
+            elif vibhakti == 6 and vacana == 3:
+                clean_suffix = ad("साम्") 
+                if logger: logger.log("7.1.52", "Aami Sarvanamnah Sut", "सर्वसाम्", stem+clean_suffix, "Maharshi Pāṇini")
+                stem[-1].char = 'ए'
+                if logger: logger.log("7.3.103", "Bahuvacane Jhalyet", "सर्वेसाम्", stem+clean_suffix, "Maharshi Pāṇini")
+                return SubantaProcessor._finalize(stem + clean_suffix, vibhakti, vacana, logger)
 
-    if btn:
-        logger = PrakriyaLogger()
-        res = SubantaProcessor.derive_pada(stem, v_sel, n_sel, logger, force_p)
+        # --- RAMA (At) ---
+        if is_at:
+            if vibhakti == 1 and vacana == 1: 
+                return SubantaProcessor._finalize(stem + clean_suffix, vibhakti, vacana, logger)
+            
+            if vibhakti == 8 and vacana == 1:
+                clean_suffix = []
+                if logger: logger.log("6.1.69", "Eng-hrasvat Sambuddheh", sanskrit_varna_samyoga(stem), stem, "Maharshi Pāṇini")
+                return SubantaProcessor._finalize(stem, vibhakti, vacana, logger)
+
+            if vibhakti == 3 and vacana == 1: 
+                clean_suffix = ad("इन")
+                if logger: logger.log("7.1.12", "Ta-ngasi... -> Ina", "इन", stem + clean_suffix, "Maharshi Pāṇini")
+            elif vibhakti == 3 and vacana == 3: clean_suffix = ad("ऐस्")
+            elif vibhakti == 4 and vacana == 1 and not is_sarvanama: clean_suffix = ad("य")
+            elif vibhakti == 5 and vacana == 1 and not is_sarvanama: clean_suffix = ad("आत्")
+            elif vibhakti == 6 and vacana == 1: clean_suffix = ad("स्य")
+            elif vibhakti == 6 and vacana == 3 and not is_sarvanama: 
+                clean_suffix = ad("न्") + clean_suffix; stem[-1].char = 'आ'
         
-        st.success(f"सिद्ध पद: **{res}**")
+            if clean_suffix:
+                f = clean_suffix[0].char
+                if vacana == 3 and f in ['भ्', 'स्']: 
+                    if not (vibhakti == 2 and vacana == 3): 
+                        stem[-1].char = 'ए'
+                        if logger: logger.log("7.3.103", "Bahuvacane Jhalyet", sanskrit_varna_samyoga(stem+clean_suffix), stem, "Maharshi Pāṇini")
+                elif vibhakti in [6, 7] and vacana == 2: stem[-1].char = 'ए'
+                elif f in ['भ्', 'य', 'व्', 'य्', 'व']: 
+                    if AdhikaraController.is_rule_in_scope("7.3.102", "ANGASYA"): stem[-1].char = 'आ'
+
+        # --- PRE-CHECKS ---
+        if (is_at or is_ghi_any or is_aa) and vibhakti == 2 and vacana == 1:
+            return stem_str + "म्"
+
+        # --- GHI ---
+        if is_ghi_any:
+            guna_char = 'ए' if is_it else 'ओ'
+            dirgha_char = 'ई' if is_it else 'ऊ'
+            if (vibhakti in [1,2,8] and vacana == 2) or (vibhakti == 2 and vacana == 3):
+                stem[-1].char = dirgha_char
+                if vacana == 2: 
+                    clean_suffix = []
+                    if vibhakti==8: return "हे " + sanskrit_varna_samyoga(stem)
+                    return sanskrit_varna_samyoga(stem)
+                if vacana == 3: clean_suffix = ad("स्")
+            elif vibhakti == 3 and vacana == 1:
+                if not is_fem_ghi: clean_suffix = ad("ना")
+            elif vibhakti in [4, 5, 6, 7] and vacana == 1:
+                stem_a = stem[:]; stem_a[-1].char = guna_char
+                suffix_a = clean_suffix[:]
+                if vibhakti in [5, 6]: suffix_a = ad("स्")
+                if vibhakti == 7: stem_a[-1].char = 'अ'; suffix_a = ad("औ")
+                fp_a, _ = SandhiProcessor.apply_ac_sandhi(stem_a, suffix_a)
+                res_a_final = SubantaProcessor._finalize(fp_a, vibhakti, vacana, logger)
+                if not is_fem_ghi: return res_a_final
+                stem_b = stem[:]
+                suffix_b_str = "्यै" if vibhakti==4 else "्याः" if vibhakti in [5,6] else "्याम्"
+                return f"{res_a_final} / {stem_str[:-1] + suffix_b_str}"
+            elif (vibhakti == 1 or vibhakti == 8) and vacana == 3: stem[-1].char = guna_char
+            elif vibhakti == 6 and vacana == 3: clean_suffix = ad("नाम्"); stem[-1].char = dirgha_char
+            elif vibhakti == 8 and vacana == 1:
+                stem[-1].char = guna_char; clean_suffix = []
+                if logger: logger.log("6.1.69", "Eng-hrasvat Sambuddheh", sanskrit_varna_samyoga(stem), stem, "Maharshi Pāṇini")
+                return SubantaProcessor._finalize(stem, vibhakti, vacana, logger)
+
+        # --- RAMA (AA) ---
+        if is_aa:
+            if vibhakti==1 and vacana==1: return SubantaProcessor._finalize(stem, vibhakti, vacana, logger)
+            if vibhakti==8 and vacana==1: stem[-1].char='ए'; clean_suffix=[]; return "हे " + sanskrit_varna_samyoga(stem)
+            if vacana==2 and vibhakti in [1,2]: stem[-1].char='ए'; clean_suffix=[]; return sanskrit_varna_samyoga(stem)
+            if vibhakti==3 and vacana==1: stem[-1].char='ए'
+            if vibhakti in [4,5,6,7] and vacana==1:
+                clean_suffix = ad("या") + clean_suffix
+                if vibhakti==4: clean_suffix=ad("यै"); return "रमायै"
+                if vibhakti in [5,6]: clean_suffix=ad("यास्")
+                if vibhakti==7: clean_suffix=ad("याम्"); return "रमायाम्"
+            if vibhakti==6 and vacana==3: clean_suffix=ad("नाम्")
+
+        # --- SANDHI & FINALIZE ---
+        fp, rule = SandhiProcessor.apply_ac_sandhi(stem, clean_suffix)
+        if logger and rule: logger.log(rule, "Sandhi", sanskrit_varna_samyoga(fp), fp, "Maharshi Pāṇini")
         
-        # Display Cards
-        for i, step in enumerate(logger.get_history()):
-            st.markdown(generate_card_html(i, step), unsafe_allow_html=True)
+        if vibhakti == 2 and vacana == 3 and not is_fem_ghi and not is_aa:
+             if fp[-1].char == 'स्' or fp[-1].char == 'ः': 
+                 fp[-1].char = 'न्'
+                 if logger: logger.log("6.1.103", "Tasmacchaso Nah Pumsi", sanskrit_varna_samyoga(fp), fp, "Maharshi Pāṇini")
 
-    # Full Table Expansion
-    if stem:
-        with st.expander(f"📚 {stem} - सम्पूर्ण रूप सारिणी (Full Table)", expanded=False):
-            data = []
-            for v in range(1, 9):
-                row = {"विभक्ति": VIBHAKTI_MAP[v]}
-                for n in range(1, 4):
-                    try: w = SubantaProcessor.derive_pada(stem, v, n, None, force_p)
-                    except: w = "Error"
-                    row[VACANA_MAP[n]] = w
-                data.append(row)
-            st.dataframe(pd.DataFrame(data), hide_index=True, use_container_width=True)
-
-if __name__ == "__main__":
-    main()
+        return SubantaProcessor._finalize(fp, vibhakti, vacana, logger)
 '''
 
-with open("pages/1_🔍_Declension_Engine.py", "w", encoding="utf-8") as f:
-    f.write(UI_CODE)
+with open("logic/subanta_processor.py", "w", encoding="utf-8") as f:
+    f.write(NEW_PROCESSOR_CODE)
 
-print("🚀 UI HTML Fixed & Authority Tags (Panini/Katyayana) added.")
-# No need to run master_runner unless you want to check tests again.
-# Just launch streamlit to see the UI.
-import subprocess
-import sys
-# subprocess.run([sys.executable, "master_runner.py"])
+print("🚀 Integrated 1.2.64 (Ekashesha) for Dual/Plural.")
+subprocess.run([sys.executable, "master_runner.py"])

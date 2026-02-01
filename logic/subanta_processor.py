@@ -49,28 +49,31 @@ class SubantaProcessor:
         is_sarvanama = (stem_str in SubantaProcessor.SARVANAMA_GANA)
         if is_sarvanama and logger: logger.log("1.1.27", "Sarvadini Sarvanamani", f"{stem_str}", stem, "Maharshi Pāṇini")
 
-        # --- SELECTION LOGIC (1.4.x) ---
+        # --- SELECTION LOGIC ---
         if logger:
-            # 3.1.1 / 3.1.2 / 4.1.1
             logger.log("3.1.1", "Pratyayah", "Scope: Suffix", stem, "Maharshi Pāṇini")
             logger.log("3.1.2", "Parashca", "Attachment: Right-side", stem, "Maharshi Pāṇini")
             logger.log("4.1.1", "Nyap-pratipadikāt", f"Base '{stem_str}' is valid", stem, "Maharshi Pāṇini")
             
-            # Vacana Selection (1.4.21 / 1.4.22)
             if vacana == 3:
-                logger.log("1.4.21", "Bahushu Bahuvachanam", "Input Count > 2 -> Select Plural", stem, "Maharshi Pāṇini")
+                logger.log("1.4.21", "Bahushu Bahuvachanam", "Count > 2 -> Plural", stem, "Maharshi Pāṇini")
             else:
-                logger.log("1.4.22", "Dvyekayor Dvivachana-Ekavacane", f"Input Count {vacana} -> Select Vacana", stem, "Maharshi Pāṇini")
+                logger.log("1.4.22", "Dvyekayor Dvivachana-Ekavacane", f"Count {vacana} -> Selection", stem, "Maharshi Pāṇini")
+
+        # --- 1.2.64 EKASHESHA (The Logic of Reduction) ---
+        if vacana in [2, 3] and logger:
+            count_desc = "Two" if vacana == 2 else "Many"
+            op_desc = f"{stem_str} + {stem_str}... -> {stem_str} (Only one remains for {count_desc})"
+            logger.log("1.2.64", "Sarūpāṇāmekaśeṣa ekavibhaktau", op_desc, stem, "Maharshi Pāṇini")
 
         sup_data = KnowledgeBase.get_sup(vibhakti, vacana)
         if not sup_data: return "?"
         raw_sup, tags = sup_data
         suffix = ad(raw_sup)
         
-        # 4.1.2 Attachment
         if logger: 
-            logger.log("4.1.2", "Svaujasmaut...", f"Selecting '{raw_sup}' from List", stem + suffix, "Maharshi Pāṇini")
-            logger.log("1.4.104", "Vibhaktishcha", f"'{raw_sup}' gets Vibhakti Sanjna", stem + suffix, "Maharshi Pāṇini")
+            logger.log("4.1.2", "Svaujasmaut...", f"Selecting '{raw_sup}'", stem + suffix, "Maharshi Pāṇini")
+            logger.log("1.4.104", "Vibhaktishcha", f"'{raw_sup}' is Vibhakti", stem + suffix, "Maharshi Pāṇini")
         
         clean_suffix, trace = SanjnaController.run_it_prakaran(suffix, UpadeshaType.VIBHAKTI)
         if clean_suffix: clean_suffix[0].sanjnas.update(tags)
@@ -132,13 +135,12 @@ class SubantaProcessor:
 
         # --- PRE-CHECKS ---
         if (is_at or is_ghi_any or is_aa) and vibhakti == 2 and vacana == 1:
-            return stem_str + "म्" # Ami Purvah
+            return stem_str + "म्"
 
         # --- GHI ---
         if is_ghi_any:
             guna_char = 'ए' if is_it else 'ओ'
             dirgha_char = 'ई' if is_it else 'ऊ'
-            
             if (vibhakti in [1,2,8] and vacana == 2) or (vibhakti == 2 and vacana == 3):
                 stem[-1].char = dirgha_char
                 if vacana == 2: 
@@ -146,10 +148,8 @@ class SubantaProcessor:
                     if vibhakti==8: return "हे " + sanskrit_varna_samyoga(stem)
                     return sanskrit_varna_samyoga(stem)
                 if vacana == 3: clean_suffix = ad("स्")
-
             elif vibhakti == 3 and vacana == 1:
                 if not is_fem_ghi: clean_suffix = ad("ना")
-            
             elif vibhakti in [4, 5, 6, 7] and vacana == 1:
                 stem_a = stem[:]; stem_a[-1].char = guna_char
                 suffix_a = clean_suffix[:]
@@ -161,7 +161,6 @@ class SubantaProcessor:
                 stem_b = stem[:]
                 suffix_b_str = "्यै" if vibhakti==4 else "्याः" if vibhakti in [5,6] else "्याम्"
                 return f"{res_a_final} / {stem_str[:-1] + suffix_b_str}"
-
             elif (vibhakti == 1 or vibhakti == 8) and vacana == 3: stem[-1].char = guna_char
             elif vibhakti == 6 and vacana == 3: clean_suffix = ad("नाम्"); stem[-1].char = dirgha_char
             elif vibhakti == 8 and vacana == 1:

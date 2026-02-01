@@ -1326,14 +1326,11 @@
     },
     {
         "sutra_num": "1.2.64",
-        "kaumudi_num": 188,
         "name": "सरूपाणामेकशेष एकविभक्तौ",
-        "adhyaya": 1,
-        "pada": 2,
-        "order": 64,
         "type": "Vidhi",
         "vartikas": [
-            "विरूपाणामपि समानार्थकानामेकशेषो वक्तव्यः ।"
+            "एकविभक्तौ यानि सरूपाण्येव दृष्टानि तेषामेक एव शिष्यते । (Of words having the same form, only one remains).",
+            "रामश्च रामश्च = रामौ ।"
         ]
     },
     {
@@ -24317,12 +24314,11 @@
     },
     {
         "sutra_num": "6.1.104",
-        "kaumudi_num": 165,
         "name": "नादिचि",
-        "adhyaya": 6,
-        "pada": 1,
-        "order": 104,
-        "type": "Vidhi"
+        "type": "Niyama",
+        "vartikas": [
+            "आदिचि न (Purvasavarna is prohibited if 'Ic' follows 'a')."
+        ]
     },
     {
         "sutra_num": "6.1.105",
