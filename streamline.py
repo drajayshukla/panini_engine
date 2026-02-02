@@ -1,83 +1,43 @@
-import streamlit as st
-import pandas as pd
-from logic.dhatu_processor import DhatuDiagnostic
-from core.core_foundation import sanskrit_varna_samyoga
-
-st.set_page_config(page_title="धातु-प्रयोगशाला (Dhātu Lab)", page_icon="🔬", layout="wide")
-
-# --- UI Styling ---
-st.markdown("""
-<style>
-    .reportview-container { background: #fdfbfb; }
-    .phase-card {
-        background-color: white; border: 1px solid #e0e0e0;
-        border-left: 5px solid #d35400; padding: 15px;
-        border-radius: 10px; margin-bottom: 20px;
-    }
-    .rule-id { color: #d35400; font-weight: bold; font-family: 'Martel', serif; }
-    .varna-badge {
-        background-color: #fef5e7; border: 1px solid #f5c06b;
-        padding: 2px 8px; border-radius: 5px; color: #b7950b; font-weight: bold;
-    }
-    .final-res { font-size: 2.5rem; font-family: 'Martel', serif; color: #1e8449; text-align: center; }
-</style>
-""", unsafe_allow_html=True)
+"""
+REVISED logic/dhatu_processor.py
+Focus: Correcting 1.3.5 (Adir-nyitudavah) and 1.3.3 (Halantyam)
+"""
 
 
-def main():
-    st.title("🔬 धातु-प्रयोगशाला: Upadeśa to Action")
-    st.markdown("### Task 2: Functional Root Transformation Engine")
+def run_diagnostic(self):
+    # 1.3.5 (आदिर्ञिटुडवः) MUST run before other vowel checks
+    self._apply_1_3_5_adir_nit_tu_du()
 
-    with st.sidebar:
-        st.header("🧪 Input Diagnostic")
-        raw_input = st.text_input("Enter Upadeśa (Raw Root)", value="डुकृञ्")
-        st.info("Examples: डुकृञ्, ष्मिँ, णीञ्, भिदिँर्, नदिँ")
+    # 1.3.2 (उपदेशेऽजनुनासिक इत्)
+    self._apply_1_3_2_upadeshe_aj_it()
 
-    if raw_input:
-        # Run the Task 2 Logic
-        diag = DhatuDiagnostic(raw_input)
+    # 1.3.3 (हलन्त्यम्)
+    self._apply_1_3_3_halantyam()
 
-        c1, c2 = st.columns([1, 2])
+    # Vartika: इँर इत्संज्ञा वाच्या
+    self._apply_ir_it_vartika()
 
-        with c1:
-            st.subheader("📋 Root Identity")
-            st.metric("Input (Upadeśa)", diag.raw)
-            st.metric("Output (Functional)", diag.get_final_root())
-
-            st.write("**Active Anubandha Markers:**")
-            if diag.it_tags:
-                for tag in diag.it_tags:
-                    st.markdown(f'<span class="varna-badge">{tag}</span>', unsafe_allow_html=True)
-            else:
-                st.write("None")
-
-        with c2:
-            st.subheader("⚙️ Transformation Timeline (Prakriyā)")
-
-            for step in diag.history:
-                rule, desc = step.split(": ", 1)
-                st.markdown(f"""
-                <div class="phase-card">
-                    <span class="rule-id">📖 Sūtra {rule}</span><br>
-                    {desc}
-                </div>
-                """, unsafe_allow_html=True)
-
-        st.divider()
-
-        # --- PHASE 6: Classification Table ---
-        st.subheader("📊 Dhātu Classification Matrix")
-        final_root = diag.get_final_root()
-
-        # Simple Logic to detect group for UI display
-        category = "Ajanta" if final_root[-1] in "अआइईउऊऋॠएऐओऔ" else "Halanta"
-
-        data = {
-            "Parameter": ["Action Form", "Category", "Voice (Pada)", "It-Status"],
-            "Value": [final_root, category, "Pending Task 3", "Seṭ (per DB)"]
-        }
-        st.table(pd.DataFrame(data))
+    # Phase 3 & 4 (Standardization & Augmentation)
+    self._apply_6_1_64_shatva_vidhi()
+    self._apply_6_1_65_natva_vidhi()
 
 
-if __name__ == "__main__":
-    main()
+def _apply_1_3_5_adir_nit_tu_du(self):
+    """
+    1.3.5: आदिर्ञिटुडवः - Initial Ñi, Ṭu, Ḍu are It.
+    Example: Ḍu-kṛ-ñ -> kṛ-ñ
+    """
+    if len(self.varnas) < 2: return
+
+    # Get the first two varnas to check for combinations like 'ḍ' + 'u'
+    v1 = self.varnas[0].char  # e.g., 'ड्'
+    v2 = self.varnas[1].char  # e.g., 'उ'
+
+    combined_prefix = v1.replace('्', '') + v2.replace('्', '')  # Normalizes to 'डु'
+
+    target_prefixes = ['ञि', 'टु', 'डु']
+
+    if combined_prefix in target_prefixes:
+        self.it_tags.add(f"{combined_prefix}-It (1.3.5)")
+        self.log("1.3.5", f"Removed initial {combined_prefix}")
+        self.varnas = self.varnas[2:]  # Strip the first two varnas
