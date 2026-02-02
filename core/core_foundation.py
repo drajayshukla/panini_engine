@@ -1,5 +1,5 @@
 """
-FILE: core/core_foundation.py - PAS-v7.7 (Absolute Authoritative Restoration)
+FILE: core/core_foundation.py - PAS-v8.9 (Merged Modifiers Fix)
 """
 import re
 
@@ -11,7 +11,6 @@ STHANA_MAP = {
 }
 
 VOWELS_MAP = {'ा': 'आ', 'ि': 'इ', 'ी': 'ई', 'ु': 'उ', 'ू': 'ऊ', 'ृ': 'ऋ', 'ॄ': 'ॠ', 'ॢ': 'ऌ', 'ॣ': 'ॡ', 'े': 'ए', 'ै': 'ऐ', 'ो': 'ओ', 'ौ': 'औ'}
-REVERSE_VOWELS_MAP = {v: k for k, v in VOWELS_MAP.items()}
 INDEPENDENT_VOWELS = 'अआइईउऊऋॠऌॡएऐओऔ'
 
 class Varna:
@@ -21,12 +20,12 @@ class Varna:
         self.sanjnas = set()
         self.trace = []
 
-        # Identity Checks
+        # Identity
         self.is_vowel = any(v in raw_unit for v in INDEPENDENT_VOWELS) or '३' in raw_unit
-        self.is_anunasika = 'ँ' in raw_unit
+        self.is_anunasika = 'ँ' in raw_unit or 'ं' in raw_unit
         self.is_consonant = not self.is_vowel and '्' in raw_unit
 
-        # Phonetic Anatomy
+        # Anatomy
         base = self.char[0]
         self.sthana = [k for k, v in STHANA_MAP.items() if base in v]
         if self.is_anunasika and "नासिका" not in self.sthana: self.sthana.append("नासिका")
@@ -34,12 +33,12 @@ class Varna:
     def add_samjna(self, label, rule=""):
         self.sanjnas.add(label)
         if rule: self.trace.append(f"{label} [{rule}]")
-
     def __repr__(self): return self.char
 
 def sanskrit_varna_vichhed(text, return_objects=True):
     """
-    R2: AUTHORITATIVE TOKENIZATION (Restored from your high-precision logic)
+    R2: AUTHORITATIVE TOKENIZATION (Merged Modifiers)
+    Ensures 'i' + '~' becomes 'i~', not ['i', '~'].
     """
     if not text: return []
     if text == "ॐ": res = ["अ", "उ", "म्"]
@@ -56,30 +55,49 @@ def sanskrit_varna_vichhed(text, return_objects=True):
             if char in INDEPENDENT_VOWELS:
                 unit = char
                 if i+1 < len(text) and text[i+1] == '३': unit += '३'; i+=1
-                res.append(unit)
+                # MERGE MODIFIERS INTO VOWEL
                 while i+1 < len(text) and text[i+1] in 'ंःँ':
-                    if text[i+1] == 'ं' and (i+2==len(text) or text[i+2]==' '): res.append('म्')
-                    else: res.append(text[i+1])
+                    unit += text[i+1]
                     i+=1
+                res.append(unit)
+
             elif '\u0915' <= char <= '\u0939' or char == 'ळ':
-                res.append(char + '्')
+                current_cons = char + '्'
+                res.append(current_cons)
                 found_vowel = False
+
                 if i+1 < len(text):
                     nxt = text[i+1]
-                    if nxt == '्': i+=1; found_vowel = True
+                    if nxt == '्': 
+                        i+=1; found_vowel = True
                     elif nxt in VOWELS_MAP:
-                        res.append(VOWELS_MAP[nxt]); i+=1; found_vowel = True
+                        # Vowel Sign found
+                        v_unit = VOWELS_MAP[nxt]
+                        i+=1; found_vowel = True
+
+                        # MERGE MODIFIERS INTO MATRA-DERIVED VOWEL
                         while i+1 < len(text) and text[i+1] in 'ंःँ':
-                            if text[i+1] == 'ं' and (i+2==len(text) or text[i+2]==' '): res.append('म्')
-                            else: res.append(text[i+1]); i+=1
+                            v_unit += text[i+1]
+                            i+=1
+                        res.append(v_unit)
+
                     elif nxt in 'ंःँ':
+                        # Implicit 'A' with modifier
+                        v_unit = 'अ' + nxt
+                        i+=1
+                        # Check for more modifiers
+                        while i+1 < len(text) and text[i+1] in 'ंःँ':
+                            v_unit += text[i+1]; i+=1
+                        res.append(v_unit)
+                        found_vowel = True
+
+                    elif nxt == ' ': 
                         res.append('अ'); found_vowel = True
-                        if nxt == 'ं' and (i+2==len(text) or text[i+2]==' '): res.append('म्')
-                        else: res.append(nxt); i+=1
-                    elif nxt == ' ': res.append('अ'); found_vowel = True
+
                 if not found_vowel: res.append('अ')
             elif char in 'ᳲᳳ': res.append(char)
             i+=1
+
     return [Varna(s) for s in res] if return_objects else res
 
 ad = sanskrit_varna_vichhed
@@ -91,16 +109,26 @@ def sanskrit_varna_samyoga(varna_list):
     for char in text_list:
         if not res: res = char; continue
         if res.endswith('्') and any(v in char for v in INDEPENDENT_VOWELS):
-            matra = REVERSE_VOWELS_MAP.get(char[0], "") if char[0] != 'अ' else ""
-            res = res[:-1] + matra
-            if len(char) > 1: res += char[1:]
-        else: res += char
+            matra = VOWELS_MAP.get(char, "") # Try exact char first
+            if not matra:
+                # If char has modifiers (e.g. 'इँ'), strip them to find matra
+                clean_v = char[0]
+                matra = {v: k for k, v in VOWELS_MAP.items()}.get(clean_v, "")
+
+            # Re-attach modifiers
+            modifiers = char[1:] if len(char) > 1 else ""
+
+            if char.startswith('अ'):
+                res = res[:-1] + modifiers # Remove virama, add modifiers
+            else:
+                res = res[:-1] + matra + modifiers
+        else:
+            res += char
     return res
 
 class PratyaharaEngine:
     def __init__(self): self._cache = {}
     def get_varnas(self, name): return [] 
-
 pe = PratyaharaEngine()
 
 class UpadeshaType:

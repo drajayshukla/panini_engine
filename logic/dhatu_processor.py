@@ -1,83 +1,76 @@
 """
-FILE: logic/dhatu_processor.py - PAS-v8.1
-TASK 2: Validation of Dhātu Upadeśa → Dhātu-in-Action
+FILE: logic/dhatu_processor.py - PAS-v9.2
 """
 from core.core_foundation import Varna, ad, sanskrit_varna_samyoga
-from core.dhatu_repo import DhatuRepository
 
 class DhatuDiagnostic:
     def __init__(self, raw_upadesha):
         self.raw = raw_upadesha
-        # Convert raw text to Varna Objects for processing
         self.varnas = ad(raw_upadesha)
         self.it_tags = set()
         self.history = []
-
-        # Start Diagnostic Flow
-        self.run_diagnostic()
+        self.process()
 
     def log(self, rule, desc):
         self.history.append(f"{rule}: {desc}")
 
-    def run_diagnostic(self):
-        # PHASE 2: It-Kārya Factory
-        self._apply_1_3_2_upadeshe_aj_it()
-        self._apply_1_3_3_halantyam()
-        self._apply_1_3_5_adir_nit_tu_du()
-        self._apply_ir_it_vartika()
-
-        # PHASE 3: Standardization
-        self._apply_6_1_64_shatva_vidhi()
-        self._apply_6_1_65_natva_vidhi()
-
-    def _apply_1_3_2_upadeshe_aj_it(self):
-        """1.3.2: उपदेशेऽजनुनासिक इत् - Nasalized vowels are It."""
-        for v in list(self.varnas):
-            if v.is_anunasika:
-                self.it_tags.add("Anunāsika-It (1.3.2)")
-                self.log("1.3.2", f"Removed nasalized vowel {v.char}")
-                self.varnas.remove(v)
-
-    def _apply_1_3_3_halantyam(self):
-        """1.3.3: हलन्त्यम् - Final consonant is It."""
-        if self.varnas and self.varnas[-1].is_consonant:
-            # Note: 1.3.4 (Na Vibhaktau Tusmah) only applies to Vibhakti, not Dhatu
-            last_char = self.varnas[-1].char
-            self.it_tags.add(f"{last_char}-It (1.3.3)")
-            self.log("1.3.3", f"Removed final consonant {last_char}")
-            self.varnas.pop()
-
-    def _apply_1_3_5_adir_nit_tu_du(self):
-        """1.3.5: आदिर्ञिटुडवः - Initial ñi, ṭu, ḍu are It."""
-        if len(self.varnas) >= 2:
-            prefix = self.varnas[0].char + self.varnas[1].char.replace('्', '')
-            if prefix in ['ञि', 'टु', 'डु']:
-                self.it_tags.add(f"{prefix}-It (1.3.5)")
-                self.log("1.3.5", f"Removed initial {prefix}")
-                self.varnas = self.varnas[2:]
-
-    def _apply_ir_it_vartika(self):
-        """Vartika: इँर इत्संज्ञा वाच्या - ir is It at the end."""
-        text = sanskrit_varna_samyoga(self.varnas)
-        if text.endswith('इर्'):
+    def process(self):
+        # 1. Vartika: ir-it (Aggressive Check)
+        # Check raw string ending because tokenization might split modifiers
+        if self.raw.endswith("इर्") or self.raw.endswith("इँर्"):
             self.it_tags.add("ir-It (Vartika)")
-            self.log("Vartika", "Removed final ir")
-            self.varnas = self.varnas[:-2]
+            # Remove the last Varna (r) and the one before it (i~)
+            # We assume ad() tokenized correctly as [... 'i~', 'r']
+            if len(self.varnas) >= 2:
+                self.varnas = self.varnas[:-2]
+                self.log("Vartika", "Removed final 'ir'")
 
-    def _apply_6_1_64_shatva_vidhi(self):
-        """6.1.64: धात्वादेः षः सः - Initial ṣ -> s."""
-        if self.varnas and self.varnas[0].char.startswith('ष्'):
-            # Exception: sthivu, svashka (R8: Baliyah)
-            current_text = sanskrit_varna_samyoga(self.varnas)
-            if current_text not in ['ष्ठिवु', 'ष्वष्क']:
-                self.varnas[0].char = 'स्'
-                self.log("6.1.64", "Changed initial ṣ to s")
+        # 2. 1.3.5: Initial ñi, tu, du
+        if len(self.varnas) >= 2:
+            c1 = self.varnas[0].char.replace('्', '')
+            c2 = self.varnas[1].char
+            if c1 in ['ञ', 'ट', 'ड'] and any(v in c2 for v in ['इ', 'उ', 'ि', 'ु']):
+                 marker = c1 + c2
+                 self.it_tags.add(f"{marker}-It (1.3.5)")
+                 self.varnas = self.varnas[2:]
+                 self.log("1.3.5", f"Removed initial {marker}")
 
-    def _apply_6_1_65_natva_vidhi(self):
-        """6.1.65: णो नः - Initial ṇ -> n."""
+        # 3. 1.3.3: Final Consonant
+        if self.varnas and self.varnas[-1].is_consonant:
+            last = self.varnas[-1].char
+            self.it_tags.add(f"{last}-It (1.3.3)")
+            self.varnas.pop()
+            self.log("1.3.3", f"Removed final {last}")
+
+        # 4. 1.3.2: Nasal Vowels
+        to_remove = []
+        for v in self.varnas:
+            if v.is_anunasika:
+                # If we have ir-It tag, ensure we don't double count if something remains
+                # But typically ir-It removal handles it.
+                tag = "इँ-It" if any(x in v.char for x in 'इिईी') else "अँ-It"
+                self.it_tags.add(f"{tag} (1.3.2)")
+                to_remove.append(v)
+                self.log("1.3.2", f"Removed nasal {v.char}")
+
+        for v in to_remove:
+            self.varnas.remove(v)
+
+        # 5. Phonology
+        text = sanskrit_varna_samyoga(self.varnas)
+        if text.startswith('ष्') and not any(text.startswith(x) for x in ['ष्ठिव्', 'ष्वष्क्']):
+            self.varnas[0].char = 'स्'
         if self.varnas and self.varnas[0].char.startswith('ण्'):
             self.varnas[0].char = 'न्'
-            self.log("6.1.65", "Changed initial ṇ to n")
+
+        # 6. 7.1.58: Num-agama
+        # CRITICAL: Do NOT fire if 'ir-It' is present (it overrides Idit)
+        if any("इँ-It" in t for t in self.it_tags) and "ir-It (Vartika)" not in self.it_tags:
+            v_indices = [i for i, v in enumerate(self.varnas) if v.is_vowel]
+            if v_indices:
+                idx = v_indices[-1] + 1
+                self.varnas.insert(idx, Varna("न्"))
+                self.log("7.1.58", "Added Num (n)")
 
     def get_final_root(self):
         return sanskrit_varna_samyoga(self.varnas)
