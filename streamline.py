@@ -1,251 +1,143 @@
 import os
+import sys
 from pathlib import Path
 
 
-def migrate_to_multipage_app():
-    # 1. Create Directory
-    os.makedirs("pages", exist_ok=True)
+def fix_missing_tinanta_module():
+    # 1. Ensure 'logic' package exists
+    os.makedirs("logic", exist_ok=True)
+    Path("logic/__init__.py").touch()
 
-    # ---------------------------------------------------------
-    # 2. FILE: app.py (The Landing Page)
-    # ---------------------------------------------------------
-    app_path = Path("app.py")
-    app_code = r'''"""
-FILE: app.py (Home Dashboard)
+    # 2. CREATE THE MISSING FILE: logic/tinanta_processor.py
+    tinanta_path = Path("logic/tinanta_processor.py")
+    tinanta_code = r'''"""
+FILE: logic/tinanta_processor.py - PAS-v18.0 (The Conjugation Engine)
 """
-import streamlit as st
-
-st.set_page_config(
-    page_title="Panini Engine",
-    layout="wide",
-    page_icon="🕉️",
-    initial_sidebar_state="expanded"
-)
-
-st.title("🕉️ Pāṇinian Engine: The Digital Ashtadhyayi")
-st.markdown("### *Yena dhautaṁ giraḥ puṁsāṁ vimalaiḥ śabdavāribhiḥ...*")
-st.markdown("---")
-
-col1, col2 = st.columns(2)
-
-with col1:
-    st.info("### 🧪 Dhātu Lab")
-    st.markdown("""
-    **Status:** ✅ 100% Siddha
-    * **Roots Analyzed:** 2000+
-    * **Phonology:** Shatva, Natva, Upadha-Dirgha
-    * **Features:** Database Validator, Upadesha Decoder
-    """)
-
-with col2:
-    st.info("### ⚡ Tiṅanta Lab")
-    st.markdown("""
-    **Status:** 🚧 Prototype (Phase 1)
-    * **Lakāras:** Laṭ (Present)
-    * **Operations:** Vikarana (Śap), Guna, Ayadi
-    * **Output:** Simple Conjugation (e.g. Bhavati)
-    """)
-
-st.success("👈 Select a Laboratory from the Sidebar to begin.")
-'''
-    app_path.write_text(app_code, encoding='utf-8')
-
-    # ---------------------------------------------------------
-    # 3. FILE: pages/1_🧪_Dhatu_Lab.py
-    # ---------------------------------------------------------
-    dhatu_path = Path("pages/1_🧪_Dhatu_Lab.py")
-    dhatu_code = r'''"""
-PAGE: Dhātu Laboratory
-"""
-import streamlit as st
-import pandas as pd
-import json
-import os
+from core.core_foundation import Varna, ad, sanskrit_varna_samyoga
 from logic.dhatu_processor import DhatuDiagnostic
 
-st.set_page_config(page_title="Dhātu Lab", page_icon="🧪", layout="wide")
+# --- The 18 Tiṅ Suffixes (3.4.78) ---
+TIN_PRATYAYA = {
+    "Parasmaipada": [
+        ["तिप्", "तस्", "झि"],   # Prathama (3rd Person)
+        ["सिप्", "थस्", "थ"],    # Madhyama (2nd Person)
+        ["मिप्", "वस्", "मस्"]   # Uttama (1st Person)
+    ],
+    "Atmanepada": [
+        ["त", "आताम्", "झ"],     # Prathama
+        ["थास्", "आथाम्", "ध्वम्"], # Madhyama
+        ["इड्", "वहि", "महिङ्"]   # Uttama
+    ]
+}
 
-# --- CSS Styling ---
-st.markdown("""
-<style>
-    .sanskrit { font-family: 'Sanskrit 2003', 'Adobe Devanagari', sans-serif; font-size: 1.1em; }
-    .tag-badge { 
-        background-color: #e3f2fd; color: #1565c0; padding: 2px 8px; 
-        border-radius: 12px; font-size: 0.8em; border: 1px solid #90caf9; margin-right: 4px;
-    }
-    .match-success { color: #2e7d32; font-weight: bold; }
-    .match-fail { color: #c62828; font-weight: bold; }
-    .metric-card {
-        background-color: #f8f9fa; border-left: 4px solid #673ab7;
-        padding: 15px; border-radius: 8px; margin-bottom: 10px;
-    }
-</style>
-""", unsafe_allow_html=True)
+class TinantaDiagnostic:
+    def __init__(self, upadesha, lakara="Lat", purusha=1, vacana=1):
+        """
+        upadesha: Raw root (e.g. 'डुकृञ्')
+        lakara: Tense/Mood (e.g. 'Lat')
+        purusha: 1=Prathama, 2=Madhyama, 3=Uttama (Paninian Indexing)
+        vacana: 1=Eka, 2=Dvi, 3=Bahu
+        """
+        self.raw_root = upadesha
+        self.lakara = lakara
+        self.purusha = purusha - 1 # 0-indexed
+        self.vacana = vacana - 1   # 0-indexed
 
-st.title("🧪 Dhātu Prakriyā Laboratory")
+        self.history = []
+        self.derivation = []
 
-mode = st.radio("Mode", ["Single Analysis", "Master Database Validator"], horizontal=True)
+        # Step 1: Process Root (Dhātu-Pāṭha Logic)
+        self.dhatu_obj = DhatuDiagnostic(upadesha)
+        self.root = self.dhatu_obj.get_final_root()
+        self.pada_type = self.dhatu_obj.pada # Parasmai/Atmane
 
-if mode == "Single Analysis":
-    col1, col2 = st.columns([1, 2])
-    with col1:
-        raw_root = st.text_input("Enter Upadesha (e.g. डुकृञ्, षण्मुखाय)", value="डुकृञ्")
-        is_sub = st.checkbox("Is Subdhātu (Nāmadhātu)?")
+        self.log(f"Root Prepared: {self.root} ({self.pada_type})")
 
-        if st.button("Run Diagnostics", type="primary"):
-            diag = DhatuDiagnostic(raw_root, is_subdhatu=is_sub)
+        # Step 2: Select Suffix (Tiṅ Selection)
+        self.suffix = self._select_tin()
+        self.log(f"Suffix Selected: {self.suffix} ({self.lakara})")
 
-            st.markdown(f"""
-            <div class="metric-card">
-                <h4>Diagnosis</h4>
-                <p>Input: <b>{diag.raw}</b></p>
-                <p>Root: <b class="sanskrit" style="color:#d32f2f; font-size:1.5em;">{diag.get_final_root()}</b></p>
-                <p>Voice: {diag.pada}</p>
-            </div>
-            """, unsafe_allow_html=True)
+        # Step 3: Run Prakriya
+        self.final_form = self._run_prakriya()
 
-            st.subheader("🧬 It-Tags")
-            st.write(diag.it_tags)
+    def log(self, message):
+        self.history.append(message)
 
-            st.session_state['dhatu_trace'] = diag.history
+    def _select_tin(self):
+        # 1.3.12/78: Determine Voice
+        voice = "Atmanepada" if "Atmanepada" in self.pada_type else "Parasmaipada"
+        selection = TIN_PRATYAYA[voice][self.purusha][self.vacana]
 
-    with col2:
-        if 'dhatu_trace' in st.session_state:
-            st.subheader("📜 Step-by-Step Trace")
-            trace_df = pd.DataFrame([s.split(": ", 1) for s in st.session_state['dhatu_trace']], columns=["Rule", "Operation"])
-            st.table(trace_df)
+        # Basic IT removal for suffixes (P in Tip/Mip/Sip is It)
+        if selection.endswith("प्") and len(selection) > 1:
+            selection = selection[:-2] + "ि" # Tip -> Ti
 
-elif mode == "Master Database Validator":
-    # Load Data
-    @st.cache_data
-    def load_data():
-        paths = ["data/dhatu_master_structured.json", "dhatu_master_structured.json"]
-        for p in paths:
-            if os.path.exists(p):
-                with open(p, "r", encoding="utf-8") as f: return json.load(f)
-        return []
+        return selection
 
-    raw_db = load_data()
+    def _run_prakriya(self):
+        """
+        The Core Assembly Line:
+        Root + Vikarana + Suffix -> Anga-Karya -> Sandhi -> Pada
+        """
+        # A. Current State
+        curr_root = self.root
+        curr_suffix = self.suffix
 
-    if not raw_db:
-        st.error("Database not found in 'data/' folder.")
-    else:
-        st.caption(f"Loaded {len(raw_db)} roots.")
+        # B. Vikarana (Infix) Selection - Hardcoded Śap (a) for now
+        vikarana = "अ" 
+        self.log("3.1.68: Added Vikaraṇa 'Śap' (a)")
 
-        # Filters
-        with st.expander("🔍 Filters"):
-            col_f1, col_f2 = st.columns(2)
-            sel_gana = col_f1.multiselect("Gana", sorted(list(set([x.get('gana') for x in raw_db if x.get('gana')]))))
-            sel_pada = col_f2.multiselect("Pada", sorted(list(set([x.get('pada') for x in raw_db if x.get('pada')]))))
+        # C. Guna (7.3.84 Sārvadhātukārdhadhātukayoḥ)
+        root_varnas = ad(curr_root)
+        if root_varnas:
+            last_char = root_varnas[-1].char
+            if last_char in ['इ', 'ई']:
+                curr_root = curr_root[:-1] + "ए" # i -> e
+                self.log("7.3.84: Guna (i -> e)")
+            elif last_char in ['उ', 'ऊ']:
+                curr_root = curr_root[:-1] + "ओ" # u -> o
+                self.log("7.3.84: Guna (u -> o)")
+            elif last_char in ['ऋ', 'ॠ']:
+                curr_root = curr_root[:-1] + "अर्" # r -> ar
+                self.log("7.3.84: Guna (ṛ -> ar)")
 
-        # Process
-        processed_rows = []
-        # Optimization: Limit to first 100 if no filter, or all if filtered
-        limit = 100 if not (sel_gana or sel_pada) else 5000
+        # D. Ayadi Sandhi (6.1.78)
+        if curr_root.endswith("ए"):
+            curr_root = curr_root[:-1] + "अय्"
+            self.log("6.1.78: Ayadi (e -> ay)")
+        elif curr_root.endswith("ओ"):
+            curr_root = curr_root[:-1] + "अव्"
+            self.log("6.1.78: Ayadi (o -> av)")
 
-        count = 0
-        for entry in raw_db:
-            if sel_gana and entry.get('gana') not in sel_gana: continue
-            if sel_pada and entry.get('pada') not in sel_pada: continue
-
-            upadesha = entry.get('upadesha', '')
-            if not upadesha: upadesha = entry.get('mula_dhatu', '')
-            target = entry.get('mula_dhatu', '')
-
-            diag = DhatuDiagnostic(upadesha)
-            derived = diag.get_final_root()
-
-            match = derived == target
-            status = "✅" if match else "❌"
-
-            # Voice Match Logic
-            trad_voice = entry.get('pada', '')
-            eng_voice = diag.pada
-            voice_ok = "⚠️"
-            if "Atmanepada" in eng_voice and "आत्मने" in trad_voice: voice_ok = "✅"
-            elif "Parasmaipada" in eng_voice and "परस्मै" in trad_voice: voice_ok = "✅"
-            elif "Ubhayapada" in eng_voice and "उभय" in trad_voice: voice_ok = "✅"
-
-            processed_rows.append({
-                "ID": entry.get('identifier', ''),
-                "Upadesha": f"<span class='sanskrit'>{upadesha}</span>",
-                "Target": f"<span class='sanskrit'>{target}</span>",
-                "Output": f"<span class='sanskrit {'match-success' if match else 'match-fail'}'>{derived}</span>",
-                "Status": status,
-                "Voice (Engine)": f"{voice_ok} {eng_voice}",
-                "Voice (JSON)": f"<span class='sanskrit'>{trad_voice}</span>",
-                "Meaning": entry.get('artha_sanskrit', '')
-            })
-            count += 1
-            if count >= limit: break
-
-        df = pd.DataFrame(processed_rows)
-
-        tab1, tab2 = st.tabs(["📊 Data Table", "❌ Mismatches Only"])
-        with tab1:
-            st.write(df.to_html(escape=False, index=False), unsafe_allow_html=True)
-        with tab2:
-            mismatches = df[df["Status"] == "❌"]
-            if not mismatches.empty:
-                st.write(mismatches.to_html(escape=False, index=False), unsafe_allow_html=True)
-            else:
-                st.success("No mismatches in this selection!")
-'''
-    dhatu_path.write_text(dhatu_code, encoding='utf-8')
-
-    # ---------------------------------------------------------
-    # 4. FILE: pages/2_⚡_Tinanta_Lab.py
-    # ---------------------------------------------------------
-    tinanta_path = Path("pages/2_⚡_Tinanta_Lab.py")
-    tinanta_code = r'''"""
-PAGE: Tiṅanta Laboratory
-"""
-import streamlit as st
-from logic.tinanta_processor import TinantaDiagnostic
-
-st.set_page_config(page_title="Tiṅanta Lab", page_icon="⚡", layout="wide")
-
-st.title("⚡ Tiṅanta Prakriyā (Verb Conjugation)")
-st.caption("Phase 1: Laṭ Lakāra Generator")
-
-col1, col2 = st.columns([1, 2])
-
-with col1:
-    with st.form("tin_form"):
-        root_input = st.text_input("Root (Upadesha)", value="भू")
-        lakara = st.selectbox("Lakāra", ["Lat (Present)", "Lit (Perfect)", "Lrt (Future)"])
-        purusha = st.selectbox("Purusha", ["Prathama (3rd)", "Madhyama (2nd)", "Uttama (1st)"])
-        vacana = st.selectbox("Vacana", ["Eka (Singular)", "Dvi (Dual)", "Bahu (Plural)"])
-
-        submitted = st.form_submit_button("Generate Form")
-
-if submitted:
-    # Map inputs to indices
-    p_map = {"Prathama (3rd)": 1, "Madhyama (2nd)": 2, "Uttama (1st)": 3}
-    v_map = {"Eka (Singular)": 1, "Dvi (Dual)": 2, "Bahu (Plural)": 3}
-
-    tin = TinantaDiagnostic(root_input, lakara.split()[0], p_map[purusha], v_map[vacana])
-
-    with col2:
-        st.markdown(f"""
-        <div style="background:#e8f5e9;padding:20px;border-radius:10px;border-left:5px solid #2e7d32;">
-            <h3>🏁 Final Form: <span style="color:#d32f2f;font-size:2em;">{tin.final_form}</span></h3>
-            <p><strong>Root:</strong> {tin.root} | <strong>Voice:</strong> {tin.pada_type}</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-        st.divider()
-        st.subheader("📜 Prakriyā Trace")
-        for step in tin.history:
-            st.code(step, language="text")
+        # E. Assembly
+        return f"{curr_root}{vikarana}{curr_suffix}" # Example: Bhav + a + ti
 '''
     tinanta_path.write_text(tinanta_code, encoding='utf-8')
+    print("✅ Created missing file: logic/tinanta_processor.py")
 
-    print("✅ Multipage Architecture Deployed.")
-    print("   - Created pages/1_🧪_Dhatu_Lab.py")
-    print("   - Created pages/2_⚡_Tinanta_Lab.py")
-    print("   - Updated app.py")
+    # 3. Add Path Fix to Pages
+    # We prepend a sys.path hack to the top of the page files so they find 'logic'
+    path_hack = r'''import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+'''
+
+    # Update Page 1
+    p1 = Path("pages/1_🧪_Dhatu_Lab.py")
+    if p1.exists():
+        content = p1.read_text(encoding='utf-8')
+        if "sys.path.append" not in content:
+            p1.write_text(path_hack + content, encoding='utf-8')
+            print("✅ Patched Page 1 with system path fix.")
+
+    # Update Page 2
+    p2 = Path("pages/2_⚡_Tinanta_Lab.py")
+    if p2.exists():
+        content = p2.read_text(encoding='utf-8')
+        if "sys.path.append" not in content:
+            p2.write_text(path_hack + content, encoding='utf-8')
+            print("✅ Patched Page 2 with system path fix.")
 
 
 if __name__ == "__main__":
-    migrate_to_multipage_app()
+    fix_missing_tinanta_module()
