@@ -1,6 +1,6 @@
 """
 FILE: app.py
-PAS-v12.1 (Master Data Integration)
+PAS-v12.2 (Comparative Analytics & Filtering)
 """
 import streamlit as st
 import pandas as pd
@@ -12,127 +12,134 @@ st.set_page_config(page_title="Panini Engine", layout="wide", page_icon="🕉️
 # --- CSS Styling ---
 st.markdown("""
 <style>
-    .sanskrit { font-family: 'Sanskrit 2003', 'Adobe Devanagari', sans-serif; font-size: 1.15em; }
+    .sanskrit { font-family: 'Sanskrit 2003', 'Adobe Devanagari', sans-serif; font-size: 1.1em; }
     .tag-badge { 
-        background-color: #e3f2fd; 
-        color: #1565c0; 
-        padding: 2px 8px; 
-        border-radius: 12px; 
-        font-size: 0.85em; 
-        border: 1px solid #90caf9;
-        margin-right: 4px;
+        background-color: #e3f2fd; color: #1565c0; padding: 2px 8px; 
+        border-radius: 12px; font-size: 0.8em; border: 1px solid #90caf9; margin-right: 4px;
     }
-    .action-root { color: #d32f2f; font-weight: bold; }
-    .voice-match { color: #2e7d32; font-weight: bold; }
-    .voice-mismatch { color: #c62828; font-weight: bold; }
-    .metric-box {
-        background: #f8f9fa;
-        padding: 15px;
-        border-radius: 8px;
-        border-left: 4px solid #673ab7;
+    .match-success { color: #2e7d32; font-weight: bold; }
+    .match-fail { color: #c62828; font-weight: bold; }
+    .metric-card {
+        background-color: #f8f9fa; border-left: 4px solid #673ab7;
+        padding: 15px; border-radius: 8px; margin-bottom: 10px;
     }
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🕉️ Pāṇinian Engine: Master Data Validator")
+st.title("🕉️ Pāṇinian Engine: Master Analytics Dashboard")
 st.markdown("---")
 
-# --- Load & Cache Data ---
+# --- Load Data ---
 @st.cache_data
-def load_and_process_db():
+def load_data():
     try:
-        # Load the Master JSON
         with open("data/Dhatu_master_structured.json", "r", encoding="utf-8") as f:
-            raw_data = json.load(f)
-
-        # Process Logic for ALL roots (Batch Processing)
-        processed_data = []
-        for entry in raw_data:
-            # Run the Engine
-            upadesha = entry.get('upadesha', '')
-            diag = DhatuDiagnostic(upadesha)
-
-            # Derived Properties
-            derived_root = diag.get_final_root()
-            derived_voice = diag.pada
-
-            # Format Tags for UI
-            tags_str = " ".join([f"<span class='tag-badge'>{t.split('-')[0]}</span>" for t in diag.it_tags])
-
-            # Traditional vs Derived Check
-            trad_voice = entry.get('pada', 'Unknown')
-            # Normalize strings for comparison (simple check)
-            match_status = "✅" if (("Atmanepada" in derived_voice and "आत्मने" in trad_voice) or 
-                                   ("Parasmaipada" in derived_voice and "परस्मै" in trad_voice) or
-                                   ("Ubhayapada" in derived_voice and "उभय" in trad_voice)) else "⚠️"
-
-            processed_data.append({
-                "ID": entry.get('identifier', entry.get('kaumudi_index')),
-                "Upadesha (Input)": f"<span class='sanskrit'>{upadesha}</span>",
-                "Meaning": f"<span class='sanskrit'>{entry.get('artha_sanskrit', '')}</span>",
-                "Gana": entry.get('gana', ''),
-                "Engine Output": f"<span class='sanskrit action-root'>{derived_root}</span>",
-                "Genetic Tags": tags_str,
-                "Voice (Tradition)": f"<span class='sanskrit'>{trad_voice}</span>",
-                "Voice (Engine)": f"{match_status} {derived_voice}"
-            })
-
-        return pd.DataFrame(processed_data)
-
+            return json.load(f)
     except FileNotFoundError:
-        st.error("File 'data/Dhatu_master_structured.json' not found. Please ensure data exists.")
-        return pd.DataFrame()
+        return []
 
-# --- Main Layout ---
-mode = st.sidebar.radio("Select Laboratory", ["Master Database", "Surgical Analysis"])
+raw_db = load_data()
 
-if mode == "Master Database":
-    df = load_and_process_db()
+if not raw_db:
+    st.error("Database not found in 'data/Dhatu_master_structured.json'")
+    st.stop()
 
-    if not df.empty:
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            st.header("📚 Dhātu-Pāṭha Ledger")
-            st.caption(f"Loaded {len(df)} roots. The Engine has calculated derivations for ALL of them.")
+# --- Sidebar Filters ---
+st.sidebar.header("🔍 Filter Database")
 
-        with col2:
-            query = st.text_input("🔍 Search (Root/ID/Meaning)", "")
+# 1. Gana Filter
+all_ganas = sorted(list(set([item.get('gana', 'Unknown') for item in raw_db])))
+selected_gana = st.sidebar.multiselect("Select Gana", all_ganas, default=all_ganas[:1])
 
-        # Filtering
-        if query:
-            mask = df.astype(str).apply(lambda x: x.str.contains(query, case=False)).any(axis=1)
-            display_df = df[mask]
+# 2. Pada Filter
+all_padas = sorted(list(set([item.get('pada', 'Unknown') for item in raw_db])))
+selected_pada = st.sidebar.multiselect("Select Pada", all_padas, default=all_padas)
+
+# 3. It-Type Filter
+all_it_types = sorted(list(set([item.get('it_type', 'Unknown') for item in raw_db])))
+selected_it = st.sidebar.multiselect("Select It-Type", all_it_types, default=all_it_types)
+
+# --- Processing & Logic ---
+processed_rows = []
+
+# Apply Filters First (Optimization)
+filtered_db = [
+    item for item in raw_db 
+    if (not selected_gana or item.get('gana') in selected_gana) and
+       (not selected_pada or item.get('pada') in selected_pada) and
+       (not selected_it or item.get('it_type') in selected_it)
+]
+
+st.caption(f"Analyzing {len(filtered_db)} roots based on selection...")
+
+progress_bar = st.progress(0)
+
+for i, entry in enumerate(filtered_db):
+    upadesha = entry.get('upadesha', '')
+    expected_root = entry.get('mula_dhatu', '') # The JSON's "Functional Output"
+
+    # Run Engine
+    diag = DhatuDiagnostic(upadesha)
+    derived_root = diag.get_final_root()
+    derived_voice = diag.pada
+
+    # Comparison Logic
+    root_match = derived_root == expected_root
+
+    # Voice Matching (Soft Match)
+    trad_voice = entry.get('pada', '')
+    voice_match = False
+    if "Atmanepada" in derived_voice and "आत्मने" in trad_voice: voice_match = True
+    elif "Parasmaipada" in derived_voice and "परस्मै" in trad_voice: voice_match = True
+    elif "Ubhayapada" in derived_voice and "उभय" in trad_voice: voice_match = True
+
+    # Tags Formatting
+    tags_html = "".join([f"<span class='tag-badge'>{t.split('-')[0]}</span>" for t in diag.it_tags])
+
+    processed_rows.append({
+        "ID": entry.get('identifier', entry.get('kaumudi_index')),
+        "Upadesha (Input)": f"<span class='sanskrit'>{upadesha}</span>",
+        "Target (JSON)": f"<span class='sanskrit'>{expected_root}</span>",
+        "Engine Output": f"<span class='sanskrit {'match-success' if root_match else 'match-fail'}'>{derived_root}</span>",
+        "Status": "✅" if root_match else "❌",
+        "Voice (Engine)": f"{'✅' if voice_match else '⚠️'} {derived_voice}",
+        "Voice (JSON)": f"<span class='sanskrit'>{trad_voice}</span>",
+        "It-Tags": tags_html,
+        "Meaning": f"<span class='sanskrit'>{entry.get('artha_sanskrit', '')}</span>"
+    })
+
+    if i % 50 == 0: progress_bar.progress(min(i / len(filtered_db), 1.0))
+
+progress_bar.empty()
+
+# --- Visualization & Stats ---
+df = pd.DataFrame(processed_rows)
+
+if not df.empty:
+    col1, col2, col3 = st.columns(3)
+
+    total = len(df)
+    passed = len(df[df["Status"] == "✅"])
+    accuracy = (passed / total) * 100
+
+    col1.metric("Total Roots", total)
+    col2.metric("Accuracy", f"{accuracy:.1f}%")
+    col3.metric("Mismatches", total - passed)
+
+    # Tabs for Detail
+    tab1, tab2 = st.tabs(["📊 Data Table", "❌ Mismatches Only"])
+
+    with tab1:
+        st.write(df.to_html(escape=False, index=False), unsafe_allow_html=True)
+
+    with tab2:
+        mismatches = df[df["Status"] == "❌"]
+        if not mismatches.empty:
+            st.warning("These roots differ from the JSON expectation. Check logic or JSON accuracy.")
+            st.write(mismatches.to_html(escape=False, index=False), unsafe_allow_html=True)
         else:
-            display_df = df
+            st.success("No mismatches found in this selection! 🎉")
 
-        # Render HTML Table
-        st.write(display_df.to_html(escape=False, index=False), unsafe_allow_html=True)
-    else:
-        st.info("Please place your 'Dhatu_master_structured.json' in the 'data/' folder.")
+else:
+    st.info("No data matches your filters.")
 
-elif mode == "Surgical Analysis":
-    st.header("🧪 Single Root Diagnostics")
-
-    col1, col2 = st.columns([1, 2])
-    with col1:
-        raw_root = st.text_input("Enter Upadesha (e.g. डुकृञ्)", value="डुकृञ्")
-        if st.button("Run Prakriyā", type="primary"):
-            diag = DhatuDiagnostic(raw_root)
-
-            st.markdown(f"""
-            <div class="metric-box">
-                <h4>Diagnosis</h4>
-                <p>Input: <b>{diag.raw}</b></p>
-                <p>Root: <b class="sanskrit" style="color:#d32f2f; font-size:1.5em;">{diag.get_final_root()}</b></p>
-                <p>Voice: {diag.pada}</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-            st.subheader("🧬 It-Tags Detected")
-            st.write(diag.it_tags)
-
-    with col2:
-        if 'diag' in locals():
-            st.subheader("📜 Step-by-Step Trace")
-            trace = pd.DataFrame([s.split(": ", 1) for s in diag.history], columns=["Rule", "Operation"])
-            st.table(trace)
