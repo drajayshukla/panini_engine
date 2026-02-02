@@ -19,10 +19,12 @@ class TestYanSandhi(unittest.TestCase):
             ("ऌ", "आकृतिः", "लाकृतिः", "Ḷ + ākṛtiḥ -> Lākṛtiḥ"),
             ("नदी", "इयम्", "नदीयम्", "Nadī + iyam -> Nadīyam (Savarna Block)"),
             ("गुरु", "उपदेशः", "गुरूपदेशः", "Guru + upadeśaḥ -> Gurūpadeśaḥ"),
-            # Pragrhya returns separated string
-            ("धेनू", "इमे", "धेनूइमे", "Dhenū (Dual) + ime -> No Sandhi (Just Join)"), # Adjusted expectation for list join
-            ("हरी", "एतौ", "हरीएतौ", "Harī (Dual) + etau -> No Sandhi"),
-            ("पचेते", "इमौ", "पचेतेइमौ", "Pacete (Dual Verb) + imau -> No Sandhi")
+
+            # Pragrhya returns separated string (Prakrti-Bhava)
+            # The Engine v24.2 inserts a Space.
+            ("धेनू", "इमे", "धेनू इमे", "Dhenū (Dual) + ime -> No Sandhi (Space)"), 
+            ("हरी", "एतौ", "हरी एतौ", "Harī (Dual) + etau -> No Sandhi (Space)"),
+            ("पचेते", "इमौ", "पचेते इमौ", "Pacete (Dual Verb) + imau -> No Sandhi (Space)")
         ]
 
     def test_sandhi_logic(self):
@@ -33,12 +35,7 @@ class TestYanSandhi(unittest.TestCase):
                 if t1 in ["धेनू", "हरी", "पचेते"]:
                     context.append("Dual")
 
-                # Explicitly request String output for easy comparison
                 actual = self.engine.join(t1, t2, context_tags=context, return_as_str=True)
-
-                # Special handling for Pragrhya test expectation if needed
-                # v20.4 logic joins them. If space needed, logic can be tweaked.
-                # For now we check raw concatenation for blocked sandhi.
 
                 status = "✅ PASS" if actual == expected else f"❌ FAIL (Got '{actual}')"
                 print(f"   {status}: {t1} + {t2} -> {expected}")
