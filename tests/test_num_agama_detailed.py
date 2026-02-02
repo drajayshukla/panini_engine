@@ -1,11 +1,4 @@
-import os
-from pathlib import Path
-
-
-def fix_ivi_test_case():
-    test_path = Path("tests/test_num_agama_detailed.py")
-
-    code = r'''"""
+"""
 FILE: tests/test_num_agama_detailed.py
 PURPOSE: Verify 7.1.58 (Num Insertion) & Internal Sandhi (Parasavarna/Anusvara)
 """
@@ -59,10 +52,3 @@ class TestNumAgamaDetailed(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-'''
-    test_path.write_text(code, encoding='utf-8')
-    print("✅ Test Corrected: 'Ivi' -> 'Ivi~' (Marked as Idit).")
-
-
-if __name__ == "__main__":
-    fix_ivi_test_case()

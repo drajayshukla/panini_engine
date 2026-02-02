@@ -195,178 +195,167 @@ if __name__ == "__main__":
 FILE: app.py
 ================================================================================
 
+"""
+FILE: app.py
+PAS-v12.3 (Path Correction)
+"""
 import streamlit as st
+import pandas as pd
+import json
+import os
+from logic.dhatu_processor import DhatuDiagnostic
 
-# --- 1. पेज कॉन्फ़िगरेशन ---
-st.set_page_config(
-    page_title="Pāṇinian Engine",
-    page_icon="🕉️",
-    layout="wide"
-)
+st.set_page_config(page_title="Panini Engine", layout="wide", page_icon="🕉️")
 
-# --- 2. CSS स्टाइलिंग (Premium Look) ---
+# --- CSS Styling ---
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Martel:wght@400;800&family=Noto+Sans:wght@400;700&display=swap');
-    
-    body { font-family: 'Noto Sans', sans-serif; background-color: #fcfcfc; }
-    
-    .big-title { 
-        font-family: 'Martel', serif; 
-        font-size: 3.5rem; 
-        font-weight: 800; 
-        color: #8e44ad; 
-        text-align: center; 
-        margin-bottom: 0px;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    .sanskrit { font-family: 'Sanskrit 2003', 'Adobe Devanagari', sans-serif; font-size: 1.1em; }
+    .tag-badge { 
+        background-color: #e3f2fd; color: #1565c0; padding: 2px 8px; 
+        border-radius: 12px; font-size: 0.8em; border: 1px solid #90caf9; margin-right: 4px;
     }
-    
-    .subtitle { 
-        font-size: 1.4rem; 
-        text-align: center; 
-        color: #555; 
-        margin-top: -10px; 
-        font-weight: 300;
-        letter-spacing: 1px;
-    }
-    
-    .pillar-card {
-        background-color: white;
-        padding: 15px;
-        border-radius: 8px;
-        border-left: 4px solid #8e44ad;
-        margin-bottom: 10px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        transition: transform 0.2s;
-    }
-    .pillar-card:hover {
-        transform: translateX(5px);
-        background-color: #fdfbff;
-    }
-    
-    .pillar-id {
-        font-weight: bold;
-        color: #8e44ad;
-        margin-right: 8px;
-    }
-    
-    .pillar-desc {
-        color: #2c3e50;
-        font-weight: 500;
-    }
-
-    .auth-box {
-        background: linear-gradient(135deg, #f3e5f5, #e1bee7);
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-        border: 1px solid #d1c4e9;
+    .match-success { color: #2e7d32; font-weight: bold; }
+    .match-fail { color: #c62828; font-weight: bold; }
+    .metric-card {
+        background-color: #f8f9fa; border-left: 4px solid #673ab7;
+        padding: 15px; border-radius: 8px; margin-bottom: 10px;
     }
 </style>
 """, unsafe_allow_html=True)
 
-def main():
-    # --- हेडर ---
-    st.markdown('<p class="big-title">🕉️ The Pāṇinian Engine</p>', unsafe_allow_html=True)
-    st.markdown('<p class="subtitle">A "Glassbox" Computational Approach to Sanskrit Grammar</p>', unsafe_allow_html=True)
-    
-    st.divider()
+st.title("🕉️ Pāṇinian Engine: Master Analytics Dashboard")
+st.markdown("---")
 
-    # --- मिशन सेक्शन ---
-    c1, c2 = st.columns([2, 1])
-    with c1:
-        st.subheader("🎯 Mission Statement")
-        st.markdown("""
-        This project is a precision-engineered implementation of **Maharshi Pāṇini's Aṣṭādhyāyī**. 
-        Unlike "Blackbox" AI models that guess patterns based on statistics, this engine strictly follows the 
-        **4,000 algorithmic rules** encoded 2,500 years ago.
-        
-        It currently masters the **Subanta (Nominal Declension)** process for *Rāma-shabda*, achieving **100% SIDDHA status** (verified by 29/29 regression tests).
-        """)
-        
-        st.info("👈 **To start using the tool:** Select **'🔍 Declension_Engine'** from the sidebar.")
+# --- Load Data (Robust) ---
+@st.cache_data
+def load_data():
+    # List of probable filenames to check
+    possible_paths = [
+        "data/dhatu_master_structured.json",  # Lowercase (User provided)
+        "data/Dhatu_master_structured.json",  # Uppercase
+        "dhatu_master_structured.json"        # Root dir fallback
+    ]
 
-    with c2:
-        # Placeholder for Panini Image or Logo
-        st.markdown(
-            """
-            <div style="text-align: center; background-color: #f9f9f9; padding: 20px; border-radius: 10px;">
-                <div style="font-size: 4rem;">📜</div>
-                <div style="margin-top: 10px; font-weight: bold; color: #555;">Sutra-Siddha Code</div>
-            </div>
-            """, unsafe_allow_html=True
-        )
+    for path in possible_paths:
+        if os.path.exists(path):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                st.error(f"Error reading {path}: {e}")
+                return []
 
-    st.divider()
+    return []
 
-    # --- 34 STRATEGIC PILLARS ---
-    st.subheader("🏛️ The 34 Strategic Pillars (Architecture)")
-    st.markdown("The engine's kernel is grounded in these immutable axioms:")
+raw_db = load_data()
 
-    with st.expander("📜 View All 34 Pillars (A1-A2, R1-R32)", expanded=True):
-        
-        # --- Authority (Axioms) ---
-        st.markdown("### 👑 Authority (Pramāṇa)")
-        st.markdown("""
-        <div class="auth-box">
-            <div><span class="pillar-id">A1:</span> <b>Follow Pāṇini, Kātyāyana, Patañjali, Bhartṛhari, Bhaṭṭojī Dīkṣita, and Nāgeśa Bhaṭṭa mathematically.</b></div>
-            <div style="margin-top:10px;"><span class="pillar-id">A2:</span> <b>If confusion, read A1 again.</b></div>
-        </div>
-        """, unsafe_allow_html=True)
+if not raw_db:
+    st.error("❌ Database Not Found! Please ensure 'data/dhatu_master_structured.json' exists.")
+    # Debug info
+    st.text(f"Current Working Directory: {os.getcwd()}")
+    st.text(f"Files in 'data' folder: {os.listdir('data') if os.path.exists('data') else 'Data folder missing'}")
+    st.stop()
 
-        # --- Rules (R1-R32) ---
-        st.markdown("### ⚙️ Algorithmic Rules (Sūtra-Tantra)")
-        
-        col_a, col_b = st.columns(2)
-        
-        pillars_left = [
-            ("R1", "Upadeśa (Data Initialization)"),
-            ("R2", "Varṇaviccheda (Atomic Tokenization)"),
-            ("R3", "Saṃjñā (Class Tagging/OOP)"),
-            ("R4", "Anubandha (Metadata IT-Flags)"),
-            ("R5", "Anuvṛtti (Recursive Persistence)"),
-            ("R6", "Sthānyādeśa (Substitution Mapping)"),
-            ("R7", "Paribhāṣā (Spatial Logic/Context)"),
-            ("R8", "Balīyaḥ (Conflict Resolution)"),
-            ("R9", "Asiddhatvam (Tripādī Isolation)"),
-            ("R10", "Sūtra-bheda (Taxonomy)"),
-            ("R11", "Niyama (Constraint Validation)"),
-            ("R12", "Adhikāra (Governing Headers)"),
-            ("R13", "Sthānivadbhāva (Property Inheritance)"),
-            ("R14", "Antaraṅga-Bahiraṅga (Proximity Logic)"),
-            ("R15", "Jñāpaka (Inference from Redundancy)"),
-            ("R16", "Yogavibhāga (Rule Refactoring)")
-        ]
-        
-        pillars_right = [
-            ("R17", "Lakṣya-Lakṣaṇa (Empirical Validation/TDD)"),
-            ("R18", "Kārakānvaya (Semantic Dependency)"),
-            ("R19", "Vivakṣā (User Intent/Runtime Params)"),
-            ("R20", "Arthabheda (Context-Aware Middleware)"),
-            ("R21", "Sannipāta (Consistency/Non-Destruction)"),
-            ("R22", "Pratyaya-Lopa (Ghost-Metadata Persistence)"),
-            ("R23", "Tad-anta-Vidhi (Extension Logic)"),
-            ("R24", "Sthāna-Antaratamya (Physics of Phonetics)"),
-            ("R25", "Paratva (Chronological Priority)"),
-            ("R26", "Ekādeśa (Fusion/Morphing)"),
-            ("R27", "Bahiraṅga (External-Weight Logic)"),
-            ("R28", "Lakṣaṇa-Pratipado-kta (Specificity Principle)"),
-            ("R29", "Anuvṛtti-Sthiti (State Memory)"),
-            ("R30", "Sthānivad-bhāva (Property-Parity Check)"),
-            ("R31", "Nivṛtti (De-activation/Boundary Logic)"),
-            ("R32", "Pratyākhyāna (Redundancy-Rejection)")
-        ]
+# --- Sidebar Filters ---
+st.sidebar.header("🔍 Filter Database")
 
-        with col_a:
-            for pid, pdesc in pillars_left:
-                st.markdown(f'<div class="pillar-card"><span class="pillar-id">{pid}:</span><span class="pillar-desc">{pdesc}</span></div>', unsafe_allow_html=True)
+# 1. Gana Filter
+all_ganas = sorted(list(set([item.get('gana', 'Unknown') for item in raw_db])))
+selected_gana = st.sidebar.multiselect("Select Gana", all_ganas, default=all_ganas[:1] if all_ganas else None)
 
-        with col_b:
-            for pid, pdesc in pillars_right:
-                st.markdown(f'<div class="pillar-card"><span class="pillar-id">{pid}:</span><span class="pillar-desc">{pdesc}</span></div>', unsafe_allow_html=True)
+# 2. Pada Filter
+all_padas = sorted(list(set([item.get('pada', 'Unknown') for item in raw_db])))
+selected_pada = st.sidebar.multiselect("Select Pada", all_padas, default=all_padas)
 
-if __name__ == "__main__":
-    main()
+# 3. It-Type Filter
+all_it_types = sorted(list(set([item.get('it_type', 'Unknown') for item in raw_db])))
+selected_it = st.sidebar.multiselect("Select It-Type", all_it_types, default=all_it_types)
+
+# --- Processing & Logic ---
+processed_rows = []
+
+# Apply Filters
+filtered_db = [
+    item for item in raw_db 
+    if (not selected_gana or item.get('gana') in selected_gana) and
+       (not selected_pada or item.get('pada') in selected_pada) and
+       (not selected_it or item.get('it_type') in selected_it)
+]
+
+if filtered_db:
+    st.caption(f"Analyzing {len(filtered_db)} roots based on selection...")
+    progress_bar = st.progress(0)
+
+    for i, entry in enumerate(filtered_db):
+        upadesha = entry.get('upadesha', '')
+        # Fallback to 'mula_dhatu' if 'upadesha' is missing, or vice versa
+        if not upadesha: upadesha = entry.get('mula_dhatu', '')
+
+        expected_root = entry.get('mula_dhatu', '') 
+
+        # Run Engine
+        diag = DhatuDiagnostic(upadesha)
+        derived_root = diag.get_final_root()
+        derived_voice = diag.pada
+
+        # Comparison Logic
+        root_match = derived_root == expected_root
+
+        # Voice Matching
+        trad_voice = entry.get('pada', '')
+        voice_match = False
+        if "Atmanepada" in derived_voice and "आत्मने" in trad_voice: voice_match = True
+        elif "Parasmaipada" in derived_voice and "परस्मै" in trad_voice: voice_match = True
+        elif "Ubhayapada" in derived_voice and "उभय" in trad_voice: voice_match = True
+
+        # Tags Formatting
+        tags_html = "".join([f"<span class='tag-badge'>{t.split('-')[0]}</span>" for t in diag.it_tags])
+
+        processed_rows.append({
+            "ID": entry.get('identifier', entry.get('kaumudi_index')),
+            "Upadesha (Input)": f"<span class='sanskrit'>{upadesha}</span>",
+            "Target (JSON)": f"<span class='sanskrit'>{expected_root}</span>",
+            "Engine Output": f"<span class='sanskrit {'match-success' if root_match else 'match-fail'}'>{derived_root}</span>",
+            "Status": "✅" if root_match else "❌",
+            "Voice (Engine)": f"{'✅' if voice_match else '⚠️'} {derived_voice}",
+            "Voice (JSON)": f"<span class='sanskrit'>{trad_voice}</span>",
+            "It-Tags": tags_html,
+            "Meaning": f"<span class='sanskrit'>{entry.get('artha_sanskrit', '')}</span>"
+        })
+
+        if i % 50 == 0: progress_bar.progress(min(i / len(filtered_db), 1.0))
+
+    progress_bar.empty()
+
+    # --- Visualization & Stats ---
+    df = pd.DataFrame(processed_rows)
+
+    col1, col2, col3 = st.columns(3)
+
+    total = len(df)
+    passed = len(df[df["Status"] == "✅"])
+    accuracy = (passed / total) * 100 if total > 0 else 0
+
+    col1.metric("Total Roots", total)
+    col2.metric("Accuracy", f"{accuracy:.1f}%")
+    col3.metric("Mismatches", total - passed)
+
+    tab1, tab2 = st.tabs(["📊 Data Table", "❌ Mismatches Only"])
+
+    with tab1:
+        st.write(df.to_html(escape=False, index=False), unsafe_allow_html=True)
+
+    with tab2:
+        mismatches = df[df["Status"] == "❌"]
+        if not mismatches.empty:
+            st.warning("These roots differ from the JSON expectation.")
+            st.write(mismatches.to_html(escape=False, index=False), unsafe_allow_html=True)
+        else:
+            st.success("No mismatches found! 🎉")
+
+else:
+    st.info("No data matches your filters.")
 
 
 
@@ -613,7 +602,7 @@ FILE: core/core_foundation.py
 ================================================================================
 
 """
-FILE: core/core_foundation.py - PAS-v7.7 (Absolute Authoritative Restoration)
+FILE: core/core_foundation.py - PAS-v8.9 (Merged Modifiers Fix)
 """
 import re
 
@@ -625,7 +614,6 @@ STHANA_MAP = {
 }
 
 VOWELS_MAP = {'ा': 'आ', 'ि': 'इ', 'ी': 'ई', 'ु': 'उ', 'ू': 'ऊ', 'ृ': 'ऋ', 'ॄ': 'ॠ', 'ॢ': 'ऌ', 'ॣ': 'ॡ', 'े': 'ए', 'ै': 'ऐ', 'ो': 'ओ', 'ौ': 'औ'}
-REVERSE_VOWELS_MAP = {v: k for k, v in VOWELS_MAP.items()}
 INDEPENDENT_VOWELS = 'अआइईउऊऋॠऌॡएऐओऔ'
 
 class Varna:
@@ -635,12 +623,12 @@ class Varna:
         self.sanjnas = set()
         self.trace = []
 
-        # Identity Checks
+        # Identity
         self.is_vowel = any(v in raw_unit for v in INDEPENDENT_VOWELS) or '३' in raw_unit
-        self.is_anunasika = 'ँ' in raw_unit
+        self.is_anunasika = 'ँ' in raw_unit or 'ं' in raw_unit
         self.is_consonant = not self.is_vowel and '्' in raw_unit
 
-        # Phonetic Anatomy
+        # Anatomy
         base = self.char[0]
         self.sthana = [k for k, v in STHANA_MAP.items() if base in v]
         if self.is_anunasika and "नासिका" not in self.sthana: self.sthana.append("नासिका")
@@ -648,12 +636,12 @@ class Varna:
     def add_samjna(self, label, rule=""):
         self.sanjnas.add(label)
         if rule: self.trace.append(f"{label} [{rule}]")
-
     def __repr__(self): return self.char
 
 def sanskrit_varna_vichhed(text, return_objects=True):
     """
-    R2: AUTHORITATIVE TOKENIZATION (Restored from your high-precision logic)
+    R2: AUTHORITATIVE TOKENIZATION (Merged Modifiers)
+    Ensures 'i' + '~' becomes 'i~', not ['i', '~'].
     """
     if not text: return []
     if text == "ॐ": res = ["अ", "उ", "म्"]
@@ -670,30 +658,49 @@ def sanskrit_varna_vichhed(text, return_objects=True):
             if char in INDEPENDENT_VOWELS:
                 unit = char
                 if i+1 < len(text) and text[i+1] == '३': unit += '३'; i+=1
-                res.append(unit)
+                # MERGE MODIFIERS INTO VOWEL
                 while i+1 < len(text) and text[i+1] in 'ंःँ':
-                    if text[i+1] == 'ं' and (i+2==len(text) or text[i+2]==' '): res.append('म्')
-                    else: res.append(text[i+1])
+                    unit += text[i+1]
                     i+=1
+                res.append(unit)
+
             elif '\u0915' <= char <= '\u0939' or char == 'ळ':
-                res.append(char + '्')
+                current_cons = char + '्'
+                res.append(current_cons)
                 found_vowel = False
+
                 if i+1 < len(text):
                     nxt = text[i+1]
-                    if nxt == '्': i+=1; found_vowel = True
+                    if nxt == '्': 
+                        i+=1; found_vowel = True
                     elif nxt in VOWELS_MAP:
-                        res.append(VOWELS_MAP[nxt]); i+=1; found_vowel = True
+                        # Vowel Sign found
+                        v_unit = VOWELS_MAP[nxt]
+                        i+=1; found_vowel = True
+
+                        # MERGE MODIFIERS INTO MATRA-DERIVED VOWEL
                         while i+1 < len(text) and text[i+1] in 'ंःँ':
-                            if text[i+1] == 'ं' and (i+2==len(text) or text[i+2]==' '): res.append('म्')
-                            else: res.append(text[i+1]); i+=1
+                            v_unit += text[i+1]
+                            i+=1
+                        res.append(v_unit)
+
                     elif nxt in 'ंःँ':
+                        # Implicit 'A' with modifier
+                        v_unit = 'अ' + nxt
+                        i+=1
+                        # Check for more modifiers
+                        while i+1 < len(text) and text[i+1] in 'ंःँ':
+                            v_unit += text[i+1]; i+=1
+                        res.append(v_unit)
+                        found_vowel = True
+
+                    elif nxt == ' ': 
                         res.append('अ'); found_vowel = True
-                        if nxt == 'ं' and (i+2==len(text) or text[i+2]==' '): res.append('म्')
-                        else: res.append(nxt); i+=1
-                    elif nxt == ' ': res.append('अ'); found_vowel = True
+
                 if not found_vowel: res.append('अ')
             elif char in 'ᳲᳳ': res.append(char)
             i+=1
+
     return [Varna(s) for s in res] if return_objects else res
 
 ad = sanskrit_varna_vichhed
@@ -705,16 +712,26 @@ def sanskrit_varna_samyoga(varna_list):
     for char in text_list:
         if not res: res = char; continue
         if res.endswith('्') and any(v in char for v in INDEPENDENT_VOWELS):
-            matra = REVERSE_VOWELS_MAP.get(char[0], "") if char[0] != 'अ' else ""
-            res = res[:-1] + matra
-            if len(char) > 1: res += char[1:]
-        else: res += char
+            matra = VOWELS_MAP.get(char, "") # Try exact char first
+            if not matra:
+                # If char has modifiers (e.g. 'इँ'), strip them to find matra
+                clean_v = char[0]
+                matra = {v: k for k, v in VOWELS_MAP.items()}.get(clean_v, "")
+
+            # Re-attach modifiers
+            modifiers = char[1:] if len(char) > 1 else ""
+
+            if char.startswith('अ'):
+                res = res[:-1] + modifiers # Remove virama, add modifiers
+            else:
+                res = res[:-1] + matra + modifiers
+        else:
+            res += char
     return res
 
 class PratyaharaEngine:
     def __init__(self): self._cache = {}
     def get_varnas(self, name): return [] 
-
 pe = PratyaharaEngine()
 
 class UpadeshaType:
@@ -781,88 +798,191 @@ FILE: logic/dhatu_processor.py
 ================================================================================
 
 """
-FILE: logic/dhatu_processor.py - PAS-v8.1
-TASK 2: Validation of Dhātu Upadeśa → Dhātu-in-Action
+FILE: logic/dhatu_processor.py - PAS-v14.0 (Num-Agama + Internal Sandhi)
 """
 from core.core_foundation import Varna, ad, sanskrit_varna_samyoga
-from core.dhatu_repo import DhatuRepository
 
 class DhatuDiagnostic:
-    def __init__(self, raw_upadesha):
+    def __init__(self, raw_upadesha, is_subdhatu=False):
         self.raw = raw_upadesha
-        # Convert raw text to Varna Objects for processing
+        self.is_subdhatu = is_subdhatu
         self.varnas = ad(raw_upadesha)
+
+        # Snapshot
+        self.originally_halanta = False
+        if self.varnas and self.varnas[-1].is_consonant:
+            self.originally_halanta = True
+
         self.it_tags = set()
         self.history = []
+        self.pada = "Unknown"
 
-        # Start Diagnostic Flow
-        self.run_diagnostic()
+        self.process()
+        self.pada = self.determine_pada()
 
     def log(self, rule, desc):
         self.history.append(f"{rule}: {desc}")
 
-    def run_diagnostic(self):
-        # PHASE 2: It-Kārya Factory
-        self._apply_1_3_2_upadeshe_aj_it()
-        self._apply_1_3_3_halantyam()
+    def process(self):
+        # Phase 1: Cleaning (It-Karya)
+        ir_it_processed = self._apply_ir_it_vartika()
         self._apply_1_3_5_adir_nit_tu_du()
-        self._apply_ir_it_vartika()
+        self._apply_1_3_2_upadeshe_aj_it()
 
-        # PHASE 3: Standardization
+        text = sanskrit_varna_samyoga(self.varnas)
+        is_vartika_exception = any(text.startswith(x) for x in ["ष्वष्क्", "ष्ठिव्"])
+
+        if self.originally_halanta and not ir_it_processed and not is_vartika_exception:
+            self._apply_1_3_3_halantyam()
+
+        # Phase 2: Root Phonology
         self._apply_6_1_64_shatva_vidhi()
         self._apply_6_1_65_natva_vidhi()
 
-    def _apply_1_3_2_upadeshe_aj_it(self):
-        """1.3.2: उपदेशेऽजनुनासिक इत् - Nasalized vowels are It."""
-        for v in list(self.varnas):
-            if v.is_anunasika:
-                self.it_tags.add("Anunāsika-It (1.3.2)")
-                self.log("1.3.2", f"Removed nasalized vowel {v.char}")
-                self.varnas.remove(v)
+        # Phase 3: Augmentation (Num)
+        # 1.1.47: Midaco'ntyāt paraḥ (Place after last vowel)
+        self._apply_7_1_58_num_agama()
 
-    def _apply_1_3_3_halantyam(self):
-        """1.3.3: हलन्त्यम् - Final consonant is It."""
-        if self.varnas and self.varnas[-1].is_consonant:
-            # Note: 1.3.4 (Na Vibhaktau Tusmah) only applies to Vibhakti, not Dhatu
-            last_char = self.varnas[-1].char
-            self.it_tags.add(f"{last_char}-It (1.3.3)")
-            self.log("1.3.3", f"Removed final consonant {last_char}")
-            self.varnas.pop()
+        # Phase 4: Internal Sandhi (Processing the inserted Num)
+        self._apply_internal_sandhi()
 
-    def _apply_1_3_5_adir_nit_tu_du(self):
-        """1.3.5: आदिर्ञिटुडवः - Initial ñi, ṭu, ḍu are It."""
-        if len(self.varnas) >= 2:
-            prefix = self.varnas[0].char + self.varnas[1].char.replace('्', '')
-            if prefix in ['ञि', 'टु', 'डु']:
-                self.it_tags.add(f"{prefix}-It (1.3.5)")
-                self.log("1.3.5", f"Removed initial {prefix}")
-                self.varnas = self.varnas[2:]
+    def _apply_7_1_58_num_agama(self):
+        """
+        7.1.58: Idito num dhātoḥ (Insert 'n')
+        1.1.47: Midaco'ntyāt paraḥ (Insert after last vowel)
+        """
+        if "ir-It (Vartika)" in self.it_tags: return
+
+        # STRICT Check: Only Short 'इँ-It' triggers Num.
+        if any("इँ-It" in t for t in self.it_tags):
+            # Algorithm for 1.1.47
+            v_indices = [i for i, v in enumerate(self.varnas) if v.is_vowel]
+            if v_indices:
+                idx = v_indices[-1] + 1
+                self.varnas.insert(idx, Varna("न्"))
+                self.log("7.1.58", "Added Num (n) after last vowel (1.1.47)")
+
+    def _apply_internal_sandhi(self):
+        """
+        Handles 8.3.24 (Naśchāpadāntasya jhali) -> Anusvara
+        Handles 8.4.58 (Anusvārasya yayi parasavarṇaḥ) -> Class Nasal
+        """
+        # Scan for the inserted 'n' (Num)
+        for i in range(len(self.varnas) - 1):
+            curr = self.varnas[i].char
+            if curr != 'न्': continue
+
+            # Look ahead
+            nxt = self.varnas[i+1].char
+
+            # 1. Check for Parasavarna (Matching Class Nasal)
+            # Kavarga -> ṅ
+            if any(k in nxt for k in ['क', 'ख', 'ग', 'घ']):
+                self.varnas[i].char = 'ङ्'
+                self.log("8.4.58", f"n -> ṅ (before {nxt})")
+
+            # Cavarga -> ñ (e.g., Bhaji -> Bhañj)
+            elif any(c in nxt for c in ['च', 'छ', 'ज', 'झ']):
+                self.varnas[i].char = 'ञ्'
+                self.log("8.4.58", f"n -> ñ (before {nxt})")
+
+            # Ṭavarga -> ṇ (e.g., Kuṭhi -> Kuṇṭh)
+            elif any(t in nxt for t in ['ट', 'ठ', 'ड', 'ढ']):
+                self.varnas[i].char = 'ण्'
+                self.log("8.4.58", f"n -> ṇ (before {nxt})")
+
+            # Tavarga -> n (e.g., Citi -> Cint) - No change needed physically
+
+            # Pavarga -> m (e.g., Jabhi -> Jambh)
+            elif any(p in nxt for p in ['प', 'फ', 'ब', 'भ']):
+                self.varnas[i].char = 'म्'
+                self.log("8.4.58", f"n -> m (before {nxt})")
+
+            # 2. Check for Anusvara (before Śal/Sibilants)
+            # e.g., Trasi -> Traṃs
+            elif any(s in nxt for s in ['श', 'ष', 'स', 'ह']):
+                self.varnas[i].char = 'ं'
+                self.log("8.3.24", f"n -> ṃ (before Jhal {nxt})")
+
+            # 3. Exception: 'v' is NOT Jhal in internal context for this purpose usually,
+            # but strictly, if not Stop and not Sibilant, it might remain 'n' 
+            # (e.g. Ivi -> Inv). Code does nothing, preserving 'n'.
+
+    # --- Standard Helpers (Unchanged) ---
+    def determine_pada(self):
+        raw_tags = [t.split('-')[0] for t in self.it_tags]
+        if any(x in raw_tags for x in ['ङ', 'ङि', 'अँ']): return "Ātmanepada (1.3.12)"
+        if any(x in raw_tags for x in ['ञ', 'ञि']): return "Ubhayapada (1.3.72)"
+        return "Parasmaipada (1.3.78)"
 
     def _apply_ir_it_vartika(self):
-        """Vartika: इँर इत्संज्ञा वाच्या - ir is It at the end."""
-        text = sanskrit_varna_samyoga(self.varnas)
-        if text.endswith('इर्'):
-            self.it_tags.add("ir-It (Vartika)")
-            self.log("Vartika", "Removed final ir")
-            self.varnas = self.varnas[:-2]
+        if len(self.varnas) >= 2:
+            last = self.varnas[-1]
+            penult = self.varnas[-2]
+            if last.char == 'र्' and any(x in penult.char for x in ['इ', 'ि', 'ई', 'ी']):
+                self.it_tags.add("ir-It (Vartika)")
+                self.varnas = self.varnas[:-2]
+                self.log("Vartika", "Removed final 'ir' bundle")
+                return True
+        return False
+
+    def _apply_1_3_5_adir_nit_tu_du(self):
+        if len(self.varnas) >= 2:
+            c1 = self.varnas[0].char.replace('्', '')
+            c2 = self.varnas[1].char
+            marker = None
+            if c1 == 'ञ' and any(v in c2 for v in ['इ', 'ि']): marker = "ञि"
+            elif c1 == 'ट' and any(v in c2 for v in ['उ', 'ु']): marker = "टु"
+            elif c1 == 'ड' and any(v in c2 for v in ['उ', 'ु']): marker = "डु"
+            if marker:
+                 self.it_tags.add(f"{marker}-It (1.3.5)")
+                 self.varnas = self.varnas[2:]
+                 self.log("1.3.5", f"Removed initial {marker}")
+
+    def _apply_1_3_2_upadeshe_aj_it(self):
+        to_remove = []
+        for v in self.varnas:
+            if v.is_anunasika:
+                tag = "Aj-It" 
+                if any(x in v.char for x in ['इ', 'ि']): tag = "इँ-It"
+                elif any(x in v.char for x in ['ई', 'ी']): tag = "ईँ-It"
+                elif any(x in v.char for x in ['उ', 'ु']): tag = "उँ-It"
+                else: tag = "अँ-It"
+                self.it_tags.add(f"{tag} (1.3.2)")
+                to_remove.append(v)
+                self.log("1.3.2", f"Removed nasal {v.char}")
+        for v in to_remove: self.varnas.remove(v)
+
+    def _apply_1_3_3_halantyam(self):
+        if self.varnas and self.varnas[-1].is_consonant:
+            last = self.varnas[-1].char
+            self.it_tags.add(f"{last}-It (1.3.3)")
+            self.varnas.pop()
+            self.log("1.3.3", f"Removed final {last}")
 
     def _apply_6_1_64_shatva_vidhi(self):
-        """6.1.64: धात्वादेः षः सः - Initial ṣ -> s."""
-        if self.varnas and self.varnas[0].char.startswith('ष्'):
-            # Exception: sthivu, svashka (R8: Baliyah)
-            current_text = sanskrit_varna_samyoga(self.varnas)
-            if current_text not in ['ष्ठिवु', 'ष्वष्क']:
-                self.varnas[0].char = 'स्'
-                self.log("6.1.64", "Changed initial ṣ to s")
+        if not self.varnas: return
+        text = sanskrit_varna_samyoga(self.varnas)
+        if self.is_subdhatu: return
+        exceptions = ["ष्ठिव्", "ष्वष्क्", "ष्ठिवु"]
+        if any(text.startswith(ex) for ex in exceptions): return
+        if self.varnas[0].char.startswith('ष्'):
+            self.varnas[0].char = self.varnas[0].char.replace('ष्', 'स्')
+            self.log("6.1.64", "Changed initial ṣ -> s")
+            for i in range(1, min(len(self.varnas), 3)):
+                char = self.varnas[i].char
+                if 'ट' in char: self.varnas[i].char = char.replace('ट', 'त')
+                elif 'ठ' in char: self.varnas[i].char = char.replace('ठ', 'थ')
+                elif 'ण' in char: self.varnas[i].char = char.replace('ण', 'न')
 
     def _apply_6_1_65_natva_vidhi(self):
-        """6.1.65: णो नः - Initial ṇ -> n."""
         if self.varnas and self.varnas[0].char.startswith('ण्'):
-            self.varnas[0].char = 'न्'
-            self.log("6.1.65", "Changed initial ṇ to n")
+            self.varnas[0].char = self.varnas[0].char.replace('ण्', 'न्')
+            self.log("6.1.65", "Changed initial ṇ -> n")
 
     def get_final_root(self):
         return sanskrit_varna_samyoga(self.varnas)
+
 
 
 ================================================================================
@@ -1415,6 +1535,95 @@ class AngaGenerator:
         
         return ad(final_anga_text)
 
+
+
+================================================================================
+FILE: pages/2_🔬_Dhatu_Laboratory.py
+================================================================================
+
+import streamlit as st
+import pandas as pd
+from logic.dhatu_processor import DhatuDiagnostic
+from core.core_foundation import sanskrit_varna_samyoga
+
+st.set_page_config(page_title="धातु-प्रयोगशाला (Dhātu Lab)", page_icon="🔬", layout="wide")
+
+# --- UI Styling ---
+st.markdown("""
+<style>
+    .reportview-container { background: #fdfbfb; }
+    .phase-card {
+        background-color: white; border: 1px solid #e0e0e0;
+        border-left: 5px solid #d35400; padding: 15px;
+        border-radius: 10px; margin-bottom: 20px;
+    }
+    .rule-id { color: #d35400; font-weight: bold; font-family: 'Martel', serif; }
+    .varna-badge {
+        background-color: #fef5e7; border: 1px solid #f5c06b;
+        padding: 2px 8px; border-radius: 5px; color: #b7950b; font-weight: bold;
+    }
+    .final-res { font-size: 2.5rem; font-family: 'Martel', serif; color: #1e8449; text-align: center; }
+</style>
+""", unsafe_allow_html=True)
+
+
+def main():
+    st.title("🔬 धातु-प्रयोगशाला: Upadeśa to Action")
+    st.markdown("### Task 2: Functional Root Transformation Engine")
+
+    with st.sidebar:
+        st.header("🧪 Input Diagnostic")
+        raw_input = st.text_input("Enter Upadeśa (Raw Root)", value="डुकृञ्")
+        st.info("Examples: डुकृञ्, ष्मिँ, णीञ्, भिदिँर्, नदिँ")
+
+    if raw_input:
+        # Run the Task 2 Logic
+        diag = DhatuDiagnostic(raw_input)
+
+        c1, c2 = st.columns([1, 2])
+
+        with c1:
+            st.subheader("📋 Root Identity")
+            st.metric("Input (Upadeśa)", diag.raw)
+            st.metric("Output (Functional)", diag.get_final_root())
+
+            st.write("**Active Anubandha Markers:**")
+            if diag.it_tags:
+                for tag in diag.it_tags:
+                    st.markdown(f'<span class="varna-badge">{tag}</span>', unsafe_allow_html=True)
+            else:
+                st.write("None")
+
+        with c2:
+            st.subheader("⚙️ Transformation Timeline (Prakriyā)")
+
+            for step in diag.history:
+                rule, desc = step.split(": ", 1)
+                st.markdown(f"""
+                <div class="phase-card">
+                    <span class="rule-id">📖 Sūtra {rule}</span><br>
+                    {desc}
+                </div>
+                """, unsafe_allow_html=True)
+
+        st.divider()
+
+        # --- PHASE 6: Classification Table ---
+        st.subheader("📊 Dhātu Classification Matrix")
+        final_root = diag.get_final_root()
+
+        # Simple Logic to detect group for UI display
+        category = "Ajanta" if final_root[-1] in "अआइईउऊऋॠएऐओऔ" else "Halanta"
+
+        data = {
+            "Parameter": ["Action Form", "Category", "Voice (Pada)", "It-Status"],
+            "Value": [final_root, category, "Pending Task 3", "Seṭ (per DB)"]
+        }
+        st.table(pd.DataFrame(data))
+
+
+if __name__ == "__main__":
+    main()
 
 
 ================================================================================
