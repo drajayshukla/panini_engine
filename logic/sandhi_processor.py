@@ -1,109 +1,118 @@
 """
-FILE: logic/sandhi_processor.py
-FINAL Siddha Patch for Guru/Bhanu (Ayadi Logic)
+FILE: logic/sandhi_processor.py - PAS-v23.0 (Hindi Localization)
 """
 from core.core_foundation import Varna, ad, sanskrit_varna_samyoga
-from core.maheshwara_sutras import MaheshwaraSutras
 
 class SandhiProcessor:
-    AC = MaheshwaraSutras.get_pratyahara("अच्")
-    IN_PRATYAHARA = MaheshwaraSutras.get_pratyahara("इण्", force_n2=True)
-    AT_PRATYAHARA = MaheshwaraSutras.get_pratyahara("अट्")
+    AC = set("अआइईउऊऋॠऌएऐओऔ")
+    HAL = set("कखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसह")
 
-    KU_VARGA = set(['क', 'ख', 'ग', 'घ', 'ङ', 'क्', 'ख्', 'ग्', 'घ्', 'ङ्'])
-    PU_VARGA = set(['प', 'फ', 'ब', 'भ', 'म', 'प्', 'फ्', 'ब्', 'भ्', 'म्'])
-    MATRAS = set(['ा', 'ि', 'ी', 'ु', 'ू', 'ृ', 'ॄ', 'ॢ', 'े', 'ै', 'ो', 'ौ', 'ं', 'ः'])
-
-    ALLOWED_NATVA_INTERVENERS = AT_PRATYAHARA.union(KU_VARGA).union(PU_VARGA).union(MATRAS).union({'ं', 'ँ'})
+    def __init__(self):
+        self.yan_map = {'इ': 'य्', 'ई': 'य्', 'उ': 'व्', 'ऊ': 'व्', 'ऋ': 'र्', 'ॠ': 'र्', 'ऌ': 'ल्'}
+        self.guna_map = {
+            ('अ', 'इ'): 'ए', ('अ', 'ई'): 'ए', ('आ', 'इ'): 'ए', ('आ', 'ई'): 'ए',
+            ('अ', 'उ'): 'ओ', ('अ', 'ऊ'): 'ओ', ('आ', 'उ'): 'ओ', ('आ', 'ऊ'): 'ओ',
+            ('अ', 'ऋ'): 'अर्', ('अ', 'ॠ'): 'अर्', ('आ', 'ऋ'): 'अर्', ('आ', 'ॠ'): 'अर्'
+        }
+        self.vriddhi_map = {
+            ('अ', 'ए'): 'ऐ', ('अ', 'ऐ'): 'ऐ', ('आ', 'ए'): 'ऐ', ('आ', 'ऐ'): 'ऐ',
+            ('अ', 'ओ'): 'औ', ('अ', 'औ'): 'औ', ('आ', 'ओ'): 'औ', ('आ', 'औ'): 'औ'
+        }
+        self.ayadi_map = {'ए': 'अय्', 'ओ': 'अव्', 'ऐ': 'आय्', 'औ': 'आव्'}
+        self.savarna_groups = [{'अ', 'आ'}, {'इ', 'ई'}, {'उ', 'ऊ'}, {'ऋ', 'ॠ'}]
+        self.dirgha_map = {'अ': 'आ', 'आ': 'आ', 'इ': 'ई', 'ई': 'ई', 'उ': 'ऊ', 'ऊ': 'ऊ', 'ऋ': 'ॠ', 'ॠ': 'ॠ'}
 
     @staticmethod
-    def apply_ac_sandhi(stem_varnas, suffix_varnas):
-        if not suffix_varnas: return stem_varnas, None
-        s = [v.char for v in stem_varnas]; p = [v.char for v in suffix_varnas]
-        if not s or not p: return stem_varnas + suffix_varnas, None
+    def _normalize_input(term):
+        if isinstance(term, str): return ad(term)
+        elif isinstance(term, list):
+            if term and isinstance(term[0], str): return [Varna(c) for c in term]
+            return term 
+        return []
 
-        last = s[-1]
-        first = p[0]
+    def join(self, term1, term2, context_tags=None, return_as_str=False):
+        if term1 is None: term1 = ""
+        if term2 is None: term2 = ""
+        tags = set(context_tags) if context_tags else set()
 
-        # --- CRITICAL: AC Definition for Ayadi ---
-        # Includes independent vowels, matras, and explicit list
-        all_vowels = SandhiProcessor.AC.union(SandhiProcessor.MATRAS).union(
-            set(['अ','आ','इ','ई','उ','ऊ','ऋ','ॠ','ऌ','ए','ऐ','ओ','औ'])
-        )
-        is_ac = first in all_vowels
+        v1_list = self._normalize_input(term1)
+        v2_list = self._normalize_input(term2)
+        result_list = v1_list + v2_list
 
-        # 1. AYADI (6.1.78) - Priority check to prevent 'Guru + Jas' failure
-        if last == 'ए' and is_ac:
-            s.pop(); return ad("".join(s) + "अय्" + "".join(p)), "6.1.78 H.O.A.V"
-        elif last == 'ओ' and is_ac:
-            s.pop(); return ad("".join(s) + "अव्" + "".join(p)), "6.1.78 H.O.A.V"
-        elif last == 'ऐ' and is_ac:
-            s.pop(); return ad("".join(s) + "आय्" + "".join(p)), "6.1.78 H.O.A.V"
-        elif last == 'औ' and is_ac:
-            s.pop(); return ad("".join(s) + "आाव्" + "".join(p)), "6.1.78 H.O.A.V"
+        if v1_list and v2_list:
+            last = v1_list[-1]
+            first = v2_list[0]
 
-        # 2. VRIDDHI (6.1.88)
-        if last in ['अ', 'आ']:
-            if first in ['ए', 'ऐ']: s.pop(); p[0]='ऐ'; return ad("".join(s)+"".join(p)), "6.1.88 Vriddhirechi"
-            elif first in ['ओ', 'औ']: s.pop(); p[0]='औ'; return ad("".join(s)+"".join(p)), "6.1.88 Vriddhirechi"
+            if last.is_vowel and first.is_vowel:
+                lc, fc = last.char, first.char
+                if "Dual" in tags and lc in ['ई', 'ऊ', 'ए']: pass # Pragrhya
+                elif lc in self.ayadi_map:
+                    res_varnas = ad(self.ayadi_map[lc])
+                    result_list = v1_list[:-1] + res_varnas + v2_list
+                elif self._are_savarna(lc, fc):
+                    long = self.dirgha_map.get(lc, lc)
+                    result_list = v1_list[:-1] + [Varna(long)] + v2_list[1:]
+                elif (lc in ['अ', 'आ']) and (lc, fc) in self.vriddhi_map:
+                    res_char = self.vriddhi_map[(lc, fc)]
+                    result_list = v1_list[:-1] + [Varna(res_char)] + v2_list[1:]
+                elif (lc in ['अ', 'आ']) and (lc, fc) in self.guna_map:
+                    res_varnas = ad(self.guna_map[(lc, fc)])
+                    result_list = v1_list[:-1] + res_varnas + v2_list[1:]
+                elif lc in self.yan_map:
+                    yan = self.yan_map[lc]
+                    result_list = v1_list[:-1] + [Varna(yan)] + v2_list
 
-        # 3. GUNA (6.1.87)
-        if last in ['अ', 'आ']:
-            if first in ['इ', 'ई']: s.pop(); p[0]='ए'; return ad("".join(s)+"".join(p)), "6.1.87 Ad Gunah"
-            elif first in ['उ', 'ऊ']: s.pop(); p[0]='ओ'; return ad("".join(s)+"".join(p)), "6.1.87 Ad Gunah"
-            elif first in ['ऋ', 'ॠ']: s.pop(); p.pop(0); return ad("".join(s)+"अर्"+"".join(p)), "6.1.87 Ad Gunah"
+        if return_as_str: return sanskrit_varna_samyoga(result_list)
+        return result_list
 
-        # 4. YAN (6.1.77)
-        if last in ['इ', 'ई'] and is_ac and first != last:
-            s[-1]='य्'; return ad("".join(s)+"".join(p)), "6.1.77 Iko Yanachi"
-        elif last in ['उ', 'ऊ'] and is_ac and first != last:
-            s[-1]='व्'; return ad("".join(s)+"".join(p)), "6.1.77 Iko Yanachi"
-
-        # 5. SAVARNA DIRGHA (6.1.101)
-        savarna_pairs = [(['अ','आ'],['अ','आ'],'आ'), (['इ','ई'],['इ','ई'],'ई'), (['उ','ऊ'],['उ','ऊ'],'ऊ'), (['ऋ','ॠ'],['ऋ','ॠ'],'ॠ')]
-        for l_set, f_set, res_c in savarna_pairs:
-            if last in l_set and first in f_set:
-                s.pop(); p[0]=res_c; return ad("".join(s)+"".join(p)), "6.1.101 Aka Savarne Dirghah"
-
-        return stem_varnas + suffix_varnas, None
+    @staticmethod
+    def apply_ac_sandhi(term1, term2):
+        engine = SandhiProcessor()
+        res_list = engine.join(term1, term2, return_as_str=False)
+        return res_list, "अच्-सन्धि (यण्/गुण/वृद्धि/अयादि)"
 
     @staticmethod
     def run_tripadi(varnas, logger=None):
-        res = list(varnas)
-        # RUTVA (8.2.66)
-        if res and res[-1].char in ['स्', 's']:
-            res[-1].char = 'र्';
-            if logger: logger.log("8.2.66", "Sasajusho Ruh", sanskrit_varna_samyoga(res), res, "Maharshi Pāṇini")
-        # SHATVA (8.3.59)
-        for i, v in enumerate(res):
-            clean_char = v.char.replace('्', '')
-            if clean_char in ['स', 'स्', 's']:
-                if i > 0:
-                    prev = res[i-1].char
-                    check_char = prev
-                    if prev == '्' and i > 1: check_char = res[i-2].char
-                    check_clean = check_char.replace('्', '')
-                    in_set = SandhiProcessor.IN_PRATYAHARA.union(SandhiProcessor.MATRAS)
-                    if (check_clean in in_set) or (check_clean in SandhiProcessor.KU_VARGA):
-                        res[i].char = 'ष्'
-                        if logger: logger.log("8.3.59", "Adeshapratyayoh", sanskrit_varna_samyoga(res), res, "Maharshi Pāṇini")
-        # VISARGA (8.3.15)
-        if res and res[-1].char == 'र्':
-            res[-1].char = 'ः';
-            if logger: logger.log("8.3.15", "Kharavasanayo Visarjaniyah", sanskrit_varna_samyoga(res), res, "Maharshi Pāṇini")
-        # NATVA (8.4.2)
-        cause_found = False; cause_index = -1
-        for i, v in enumerate(res):
-            c = v.char.replace('्', '')
-            if c in ['र्', 'ष्', 'r', 'ṣ', 'र', 'ष']: cause_found=True; cause_index=i; continue
-            if cause_found and v.char in ['न', 'न्']:
-                is_valid = True
-                for k in range(cause_index + 1, i):
-                    mid = res[k].char.replace('्', '')
-                    if res[k].char == '्': continue
-                    if mid not in SandhiProcessor.ALLOWED_NATVA_INTERVENERS: is_valid=False; break
-                if is_valid and not (i == len(res)-1):
-                    res[i].char = 'ण्' if v.char == 'न्' else 'ण'
-                    if logger: logger.log("8.4.2", "Atkupvangnumvyavaye'pi", sanskrit_varna_samyoga(res), res, "Maharshi Pāṇini")
-        return res
+        if not varnas: return []
+        v_list = SandhiProcessor._normalize_input(varnas)
+        if not v_list: return []
 
+        # 1. Natva
+        trigger = False
+        raw_blockers = set("चछजझञटठडढणतथदधनलशस") 
+        for i, v in enumerate(v_list):
+            c = v.char
+            c_clean = c.replace('्', '')
+            if c in ['र्', 'ष्', 'ऋ', 'ॠ']: trigger = True
+            elif c == 'न्':
+                if trigger:
+                    if i < len(v_list) - 1:
+                        v.char = 'ण्'
+                        if logger and hasattr(logger, 'append'): logger.append("८.४.१ रषाभ्यां नो णः समानपदे (णत्व)")
+            elif c_clean in raw_blockers:
+                trigger = False
+
+        # 2. Satva
+        in_ku_raw = set("इईउऊऋॠएऐओऔकखगघ")
+        for i in range(1, len(v_list)):
+            curr = v_list[i]
+            prev = v_list[i-1]
+            if curr.char == 'स्':
+                if i == len(v_list) - 1: continue 
+                prev_clean = prev.char.replace('्', '')
+                if prev_clean in in_ku_raw or prev.char == 'र्':
+                    curr.char = 'ष्'
+                    if logger and hasattr(logger, 'append'): logger.append("८.३.५९ आदेशप्रत्यययोः (षत्व)")
+
+        # 3. Visarga
+        last = v_list[-1]
+        if last.char in ['स्', 'र्']:
+            v_list[-1] = Varna('ः')
+            if logger and hasattr(logger, 'append'): logger.append("८.३.१५ खरवसानयोर्विसर्जनीयः (विसर्ग)")
+
+        return v_list
+
+    def _are_savarna(self, c1, c2):
+        for group in self.savarna_groups:
+            if c1 in group and c2 in group: return True
+        return False

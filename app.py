@@ -1,37 +1,37 @@
 """
-FILE: app.py (Home Dashboard)
+FILE: app.py (Hindi Localization)
 """
 import streamlit as st
 
 st.set_page_config(
-    page_title="Panini Engine",
+    page_title="पाणिनीय व्याकरण यन्त्र",
     layout="wide",
     page_icon="🕉️",
     initial_sidebar_state="expanded"
 )
 
-st.title("🕉️ Pāṇinian Engine: The Digital Ashtadhyayi")
-st.markdown("### *Yena dhautaṁ giraḥ puṁsāṁ vimalaiḥ śabdavāribhiḥ...*")
+st.title("🕉️ पाणिनीय व्याकरण यन्त्र (Digital Ashtadhyayi)")
+st.markdown("### *येन धौता गिरः पुंसां विमलैः शब्दवारिभिः...*")
 st.markdown("---")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    st.info("### 🧪 Dhātu Lab")
+    st.info("### 🧪 धातु प्रयोगशाला (Dhātu Lab)")
     st.markdown("""
-    **Status:** ✅ 100% Siddha
-    * **Roots Analyzed:** 2000+
-    * **Phonology:** Shatva, Natva, Upadha-Dirgha
-    * **Features:** Database Validator, Upadesha Decoder
+    **स्थिति:** ✅ १००% सिद्ध (Siddha)
+    * **विश्लेषण:** २०००+ धातु
+    * **प्रक्रिया:** षत्व, णत्व, उपधा-दीर्घ
+    * **सुविधा:** उपदेश डिकोडर
     """)
 
 with col2:
-    st.info("### ⚡ Tiṅanta Lab")
+    st.info("### ⚡ तिङन्त प्रयोगशाला (Tiṅanta Lab)")
     st.markdown("""
-    **Status:** 🚧 Prototype (Phase 1)
-    * **Lakāras:** Laṭ (Present)
-    * **Operations:** Vikarana (Śap), Guna, Ayadi
-    * **Output:** Simple Conjugation (e.g. Bhavati)
+    **स्थिति:** 🚧 निर्माणाधीन (Phase 1)
+    * **लकार:** लट् (वर्तमान)
+    * **कार्य:** विकरण (शप्), गुण, अयादि
+    * **परिणाम:** क्रिया रूप (उदा. भवति)
     """)
 
-st.success("👈 Select a Laboratory from the Sidebar to begin.")
+st.success("👈 कृपया साइडबार (Sidebar) से प्रयोगशाला चुनें।")
