@@ -1,5 +1,5 @@
 """
-FILE: core/knowledge_base.py
+FILE: core/knowledge_base.py - Restored with get_sup logic.
 """
 class KnowledgeBase:
     SUP_MAP = {
@@ -10,7 +10,7 @@ class KnowledgeBase:
         5: [("ङसिँ", set()), ("भ्याम्", set()), ("भ्यस्", set())],
         6: [("ङस्", set()), ("ओस्", set()), ("आम्", set())],
         7: [("ङि", set()), ("ओस्", set()), ("सुप्", set())],
-        8: [("सुँ", set()), ("औ", set()), ("जस्", set())] # Sambodhana (Reuse Prathama)
+        8: [("सुँ", set()), ("औ", set()), ("जस्", set())]
     }
     @staticmethod
     def get_sup(vibhakti, vacana):
