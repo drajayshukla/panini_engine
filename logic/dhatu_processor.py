@@ -1,5 +1,5 @@
 """
-FILE: logic/dhatu_processor.py - PAS-v14.0 (Num-Agama + Internal Sandhi)
+FILE: logic/dhatu_processor.py - PAS-v15.0 (Upadhā Dīrgha 8.2.78)
 """
 from core.core_foundation import Varna, ad, sanskrit_varna_samyoga
 
@@ -9,7 +9,6 @@ class DhatuDiagnostic:
         self.is_subdhatu = is_subdhatu
         self.varnas = ad(raw_upadesha)
 
-        # Snapshot
         self.originally_halanta = False
         if self.varnas and self.varnas[-1].is_consonant:
             self.originally_halanta = True
@@ -25,7 +24,7 @@ class DhatuDiagnostic:
         self.history.append(f"{rule}: {desc}")
 
     def process(self):
-        # Phase 1: Cleaning (It-Karya)
+        # 1. Clean Upadesha
         ir_it_processed = self._apply_ir_it_vartika()
         self._apply_1_3_5_adir_nit_tu_du()
         self._apply_1_3_2_upadeshe_aj_it()
@@ -36,78 +35,47 @@ class DhatuDiagnostic:
         if self.originally_halanta and not ir_it_processed and not is_vartika_exception:
             self._apply_1_3_3_halantyam()
 
-        # Phase 2: Root Phonology
+        # 2. Root Phonology
         self._apply_6_1_64_shatva_vidhi()
         self._apply_6_1_65_natva_vidhi()
 
-        # Phase 3: Augmentation (Num)
-        # 1.1.47: Midaco'ntyāt paraḥ (Place after last vowel)
+        # 3. Augmentation
         self._apply_7_1_58_num_agama()
-
-        # Phase 4: Internal Sandhi (Processing the inserted Num)
         self._apply_internal_sandhi()
 
-    def _apply_7_1_58_num_agama(self):
+        # 4. Anga/Stem Operations (Tripadi 8.2.78)
+        self._apply_8_2_78_upadhayam_ca()
+
+    def _apply_8_2_78_upadhayam_ca(self):
         """
-        7.1.58: Idito num dhātoḥ (Insert 'n')
-        1.1.47: Midaco'ntyāt paraḥ (Insert after last vowel)
+        8.2.78 Upadhāyāṁ ca:
+        If Upadhā (penultimate) is 'r' or 'v', followed by a Hal (final consonant),
+        then the preceding Ik vowel becomes Dīrgha.
+        Structure: [Ik] + [r/v] + [Hal] -> [Dīrgha] + [r/v] + [Hal]
         """
-        if "ir-It (Vartika)" in self.it_tags: return
+        if len(self.varnas) < 3: return
 
-        # STRICT Check: Only Short 'इँ-It' triggers Num.
-        if any("इँ-It" in t for t in self.it_tags):
-            # Algorithm for 1.1.47
-            v_indices = [i for i, v in enumerate(self.varnas) if v.is_vowel]
-            if v_indices:
-                idx = v_indices[-1] + 1
-                self.varnas.insert(idx, Varna("न्"))
-                self.log("7.1.58", "Added Num (n) after last vowel (1.1.47)")
+        # Indices
+        last = self.varnas[-1]
+        upadha = self.varnas[-2]
+        pre_upadha = self.varnas[-3]
 
-    def _apply_internal_sandhi(self):
-        """
-        Handles 8.3.24 (Naśchāpadāntasya jhali) -> Anusvara
-        Handles 8.4.58 (Anusvārasya yayi parasavarṇaḥ) -> Class Nasal
-        """
-        # Scan for the inserted 'n' (Num)
-        for i in range(len(self.varnas) - 1):
-            curr = self.varnas[i].char
-            if curr != 'न्': continue
+        # Condition 1: Final is Hal (Consonant)
+        if not last.is_consonant: return
 
-            # Look ahead
-            nxt = self.varnas[i+1].char
+        # Condition 2: Upadhā is Repha ('r') or Vakara ('v')
+        if upadha.char not in ['र्', 'व्']: return
 
-            # 1. Check for Parasavarna (Matching Class Nasal)
-            # Kavarga -> ṅ
-            if any(k in nxt for k in ['क', 'ख', 'ग', 'घ']):
-                self.varnas[i].char = 'ङ्'
-                self.log("8.4.58", f"n -> ṅ (before {nxt})")
+        # Condition 3: Pre-Upadhā is Ik (i, u, ṛ, ḷ) - Short
+        ik_map = {'इ': 'ई', 'उ': 'ऊ', 'ऋ': 'ॠ', 'ऌ': 'ॡ'}
+        # Handle matras too (basic normalization assumed in ad(), but checking char base)
 
-            # Cavarga -> ñ (e.g., Bhaji -> Bhañj)
-            elif any(c in nxt for c in ['च', 'छ', 'ज', 'झ']):
-                self.varnas[i].char = 'ञ्'
-                self.log("8.4.58", f"n -> ñ (before {nxt})")
-
-            # Ṭavarga -> ṇ (e.g., Kuṭhi -> Kuṇṭh)
-            elif any(t in nxt for t in ['ट', 'ठ', 'ड', 'ढ']):
-                self.varnas[i].char = 'ण्'
-                self.log("8.4.58", f"n -> ṇ (before {nxt})")
-
-            # Tavarga -> n (e.g., Citi -> Cint) - No change needed physically
-
-            # Pavarga -> m (e.g., Jabhi -> Jambh)
-            elif any(p in nxt for p in ['प', 'फ', 'ब', 'भ']):
-                self.varnas[i].char = 'म्'
-                self.log("8.4.58", f"n -> m (before {nxt})")
-
-            # 2. Check for Anusvara (before Śal/Sibilants)
-            # e.g., Trasi -> Traṃs
-            elif any(s in nxt for s in ['श', 'ष', 'स', 'ह']):
-                self.varnas[i].char = 'ं'
-                self.log("8.3.24", f"n -> ṃ (before Jhal {nxt})")
-
-            # 3. Exception: 'v' is NOT Jhal in internal context for this purpose usually,
-            # but strictly, if not Stop and not Sibilant, it might remain 'n' 
-            # (e.g. Ivi -> Inv). Code does nothing, preserving 'n'.
+        current_vowel = pre_upadha.char
+        if current_vowel in ik_map:
+            # Apply Lengthening
+            long_vowel = ik_map[current_vowel]
+            pre_upadha.char = long_vowel
+            self.log("8.2.78", f"Upadhā Dīrgha: {current_vowel} -> {long_vowel} (before {upadha.char}{last.char})")
 
     # --- Standard Helpers (Unchanged) ---
     def determine_pada(self):
@@ -180,6 +148,26 @@ class DhatuDiagnostic:
         if self.varnas and self.varnas[0].char.startswith('ण्'):
             self.varnas[0].char = self.varnas[0].char.replace('ण्', 'न्')
             self.log("6.1.65", "Changed initial ṇ -> n")
+
+    def _apply_7_1_58_num_agama(self):
+        if "ir-It (Vartika)" in self.it_tags: return
+        if any("इँ-It" in t for t in self.it_tags):
+            v_indices = [i for i, v in enumerate(self.varnas) if v.is_vowel]
+            if v_indices:
+                idx = v_indices[-1] + 1
+                self.varnas.insert(idx, Varna("न्"))
+                self.log("7.1.58", "Added Num (n)")
+
+    def _apply_internal_sandhi(self):
+        for i in range(len(self.varnas) - 1):
+            curr = self.varnas[i].char
+            if curr != 'न्': continue
+            nxt = self.varnas[i+1].char
+            if any(k in nxt for k in ['क', 'ख', 'ग', 'घ']): self.varnas[i].char = 'ङ्'
+            elif any(c in nxt for c in ['च', 'छ', 'ज', 'झ']): self.varnas[i].char = 'ञ्'
+            elif any(t in nxt for t in ['ट', 'ठ', 'ड', 'ढ']): self.varnas[i].char = 'ण्'
+            elif any(p in nxt for p in ['प', 'फ', 'ब', 'भ']): self.varnas[i].char = 'म्'
+            elif any(s in nxt for s in ['श', 'ष', 'स', 'ह']): self.varnas[i].char = 'ं'
 
     def get_final_root(self):
         return sanskrit_varna_samyoga(self.varnas)
