@@ -1,172 +1,138 @@
+"""
+FILE: app.py
+PAS-v12.1 (Master Data Integration)
+"""
 import streamlit as st
+import pandas as pd
+import json
+from logic.dhatu_processor import DhatuDiagnostic
 
-# --- 1. पेज कॉन्फ़िगरेशन ---
-st.set_page_config(
-    page_title="Pāṇinian Engine",
-    page_icon="🕉️",
-    layout="wide"
-)
+st.set_page_config(page_title="Panini Engine", layout="wide", page_icon="🕉️")
 
-# --- 2. CSS स्टाइलिंग (Premium Look) ---
+# --- CSS Styling ---
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Martel:wght@400;800&family=Noto+Sans:wght@400;700&display=swap');
-    
-    body { font-family: 'Noto Sans', sans-serif; background-color: #fcfcfc; }
-    
-    .big-title { 
-        font-family: 'Martel', serif; 
-        font-size: 3.5rem; 
-        font-weight: 800; 
-        color: #8e44ad; 
-        text-align: center; 
-        margin-bottom: 0px;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    .sanskrit { font-family: 'Sanskrit 2003', 'Adobe Devanagari', sans-serif; font-size: 1.15em; }
+    .tag-badge { 
+        background-color: #e3f2fd; 
+        color: #1565c0; 
+        padding: 2px 8px; 
+        border-radius: 12px; 
+        font-size: 0.85em; 
+        border: 1px solid #90caf9;
+        margin-right: 4px;
     }
-    
-    .subtitle { 
-        font-size: 1.4rem; 
-        text-align: center; 
-        color: #555; 
-        margin-top: -10px; 
-        font-weight: 300;
-        letter-spacing: 1px;
-    }
-    
-    .pillar-card {
-        background-color: white;
+    .action-root { color: #d32f2f; font-weight: bold; }
+    .voice-match { color: #2e7d32; font-weight: bold; }
+    .voice-mismatch { color: #c62828; font-weight: bold; }
+    .metric-box {
+        background: #f8f9fa;
         padding: 15px;
         border-radius: 8px;
-        border-left: 4px solid #8e44ad;
-        margin-bottom: 10px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        transition: transform 0.2s;
-    }
-    .pillar-card:hover {
-        transform: translateX(5px);
-        background-color: #fdfbff;
-    }
-    
-    .pillar-id {
-        font-weight: bold;
-        color: #8e44ad;
-        margin-right: 8px;
-    }
-    
-    .pillar-desc {
-        color: #2c3e50;
-        font-weight: 500;
-    }
-
-    .auth-box {
-        background: linear-gradient(135deg, #f3e5f5, #e1bee7);
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-        border: 1px solid #d1c4e9;
+        border-left: 4px solid #673ab7;
     }
 </style>
 """, unsafe_allow_html=True)
 
-def main():
-    # --- हेडर ---
-    st.markdown('<p class="big-title">🕉️ The Pāṇinian Engine</p>', unsafe_allow_html=True)
-    st.markdown('<p class="subtitle">A "Glassbox" Computational Approach to Sanskrit Grammar</p>', unsafe_allow_html=True)
-    
-    st.divider()
+st.title("🕉️ Pāṇinian Engine: Master Data Validator")
+st.markdown("---")
 
-    # --- मिशन सेक्शन ---
-    c1, c2 = st.columns([2, 1])
-    with c1:
-        st.subheader("🎯 Mission Statement")
-        st.markdown("""
-        This project is a precision-engineered implementation of **Maharshi Pāṇini's Aṣṭādhyāyī**. 
-        Unlike "Blackbox" AI models that guess patterns based on statistics, this engine strictly follows the 
-        **4,000 algorithmic rules** encoded 2,500 years ago.
-        
-        It currently masters the **Subanta (Nominal Declension)** process for *Rāma-shabda*, achieving **100% SIDDHA status** (verified by 29/29 regression tests).
-        """)
-        
-        st.info("👈 **To start using the tool:** Select **'🔍 Declension_Engine'** from the sidebar.")
+# --- Load & Cache Data ---
+@st.cache_data
+def load_and_process_db():
+    try:
+        # Load the Master JSON
+        with open("data/Dhatu_master_structured.json", "r", encoding="utf-8") as f:
+            raw_data = json.load(f)
 
-    with c2:
-        # Placeholder for Panini Image or Logo
-        st.markdown(
-            """
-            <div style="text-align: center; background-color: #f9f9f9; padding: 20px; border-radius: 10px;">
-                <div style="font-size: 4rem;">📜</div>
-                <div style="margin-top: 10px; font-weight: bold; color: #555;">Sutra-Siddha Code</div>
+        # Process Logic for ALL roots (Batch Processing)
+        processed_data = []
+        for entry in raw_data:
+            # Run the Engine
+            upadesha = entry.get('upadesha', '')
+            diag = DhatuDiagnostic(upadesha)
+
+            # Derived Properties
+            derived_root = diag.get_final_root()
+            derived_voice = diag.pada
+
+            # Format Tags for UI
+            tags_str = " ".join([f"<span class='tag-badge'>{t.split('-')[0]}</span>" for t in diag.it_tags])
+
+            # Traditional vs Derived Check
+            trad_voice = entry.get('pada', 'Unknown')
+            # Normalize strings for comparison (simple check)
+            match_status = "✅" if (("Atmanepada" in derived_voice and "आत्मने" in trad_voice) or 
+                                   ("Parasmaipada" in derived_voice and "परस्मै" in trad_voice) or
+                                   ("Ubhayapada" in derived_voice and "उभय" in trad_voice)) else "⚠️"
+
+            processed_data.append({
+                "ID": entry.get('identifier', entry.get('kaumudi_index')),
+                "Upadesha (Input)": f"<span class='sanskrit'>{upadesha}</span>",
+                "Meaning": f"<span class='sanskrit'>{entry.get('artha_sanskrit', '')}</span>",
+                "Gana": entry.get('gana', ''),
+                "Engine Output": f"<span class='sanskrit action-root'>{derived_root}</span>",
+                "Genetic Tags": tags_str,
+                "Voice (Tradition)": f"<span class='sanskrit'>{trad_voice}</span>",
+                "Voice (Engine)": f"{match_status} {derived_voice}"
+            })
+
+        return pd.DataFrame(processed_data)
+
+    except FileNotFoundError:
+        st.error("File 'data/Dhatu_master_structured.json' not found. Please ensure data exists.")
+        return pd.DataFrame()
+
+# --- Main Layout ---
+mode = st.sidebar.radio("Select Laboratory", ["Master Database", "Surgical Analysis"])
+
+if mode == "Master Database":
+    df = load_and_process_db()
+
+    if not df.empty:
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.header("📚 Dhātu-Pāṭha Ledger")
+            st.caption(f"Loaded {len(df)} roots. The Engine has calculated derivations for ALL of them.")
+
+        with col2:
+            query = st.text_input("🔍 Search (Root/ID/Meaning)", "")
+
+        # Filtering
+        if query:
+            mask = df.astype(str).apply(lambda x: x.str.contains(query, case=False)).any(axis=1)
+            display_df = df[mask]
+        else:
+            display_df = df
+
+        # Render HTML Table
+        st.write(display_df.to_html(escape=False, index=False), unsafe_allow_html=True)
+    else:
+        st.info("Please place your 'Dhatu_master_structured.json' in the 'data/' folder.")
+
+elif mode == "Surgical Analysis":
+    st.header("🧪 Single Root Diagnostics")
+
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        raw_root = st.text_input("Enter Upadesha (e.g. डुकृञ्)", value="डुकृञ्")
+        if st.button("Run Prakriyā", type="primary"):
+            diag = DhatuDiagnostic(raw_root)
+
+            st.markdown(f"""
+            <div class="metric-box">
+                <h4>Diagnosis</h4>
+                <p>Input: <b>{diag.raw}</b></p>
+                <p>Root: <b class="sanskrit" style="color:#d32f2f; font-size:1.5em;">{diag.get_final_root()}</b></p>
+                <p>Voice: {diag.pada}</p>
             </div>
-            """, unsafe_allow_html=True
-        )
+            """, unsafe_allow_html=True)
 
-    st.divider()
+            st.subheader("🧬 It-Tags Detected")
+            st.write(diag.it_tags)
 
-    # --- 34 STRATEGIC PILLARS ---
-    st.subheader("🏛️ The 34 Strategic Pillars (Architecture)")
-    st.markdown("The engine's kernel is grounded in these immutable axioms:")
-
-    with st.expander("📜 View All 34 Pillars (A1-A2, R1-R32)", expanded=True):
-        
-        # --- Authority (Axioms) ---
-        st.markdown("### 👑 Authority (Pramāṇa)")
-        st.markdown("""
-        <div class="auth-box">
-            <div><span class="pillar-id">A1:</span> <b>Follow Pāṇini, Kātyāyana, Patañjali, Bhartṛhari, Bhaṭṭojī Dīkṣita, and Nāgeśa Bhaṭṭa mathematically.</b></div>
-            <div style="margin-top:10px;"><span class="pillar-id">A2:</span> <b>If confusion, read A1 again.</b></div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        # --- Rules (R1-R32) ---
-        st.markdown("### ⚙️ Algorithmic Rules (Sūtra-Tantra)")
-        
-        col_a, col_b = st.columns(2)
-        
-        pillars_left = [
-            ("R1", "Upadeśa (Data Initialization)"),
-            ("R2", "Varṇaviccheda (Atomic Tokenization)"),
-            ("R3", "Saṃjñā (Class Tagging/OOP)"),
-            ("R4", "Anubandha (Metadata IT-Flags)"),
-            ("R5", "Anuvṛtti (Recursive Persistence)"),
-            ("R6", "Sthānyādeśa (Substitution Mapping)"),
-            ("R7", "Paribhāṣā (Spatial Logic/Context)"),
-            ("R8", "Balīyaḥ (Conflict Resolution)"),
-            ("R9", "Asiddhatvam (Tripādī Isolation)"),
-            ("R10", "Sūtra-bheda (Taxonomy)"),
-            ("R11", "Niyama (Constraint Validation)"),
-            ("R12", "Adhikāra (Governing Headers)"),
-            ("R13", "Sthānivadbhāva (Property Inheritance)"),
-            ("R14", "Antaraṅga-Bahiraṅga (Proximity Logic)"),
-            ("R15", "Jñāpaka (Inference from Redundancy)"),
-            ("R16", "Yogavibhāga (Rule Refactoring)")
-        ]
-        
-        pillars_right = [
-            ("R17", "Lakṣya-Lakṣaṇa (Empirical Validation/TDD)"),
-            ("R18", "Kārakānvaya (Semantic Dependency)"),
-            ("R19", "Vivakṣā (User Intent/Runtime Params)"),
-            ("R20", "Arthabheda (Context-Aware Middleware)"),
-            ("R21", "Sannipāta (Consistency/Non-Destruction)"),
-            ("R22", "Pratyaya-Lopa (Ghost-Metadata Persistence)"),
-            ("R23", "Tad-anta-Vidhi (Extension Logic)"),
-            ("R24", "Sthāna-Antaratamya (Physics of Phonetics)"),
-            ("R25", "Paratva (Chronological Priority)"),
-            ("R26", "Ekādeśa (Fusion/Morphing)"),
-            ("R27", "Bahiraṅga (External-Weight Logic)"),
-            ("R28", "Lakṣaṇa-Pratipado-kta (Specificity Principle)"),
-            ("R29", "Anuvṛtti-Sthiti (State Memory)"),
-            ("R30", "Sthānivad-bhāva (Property-Parity Check)"),
-            ("R31", "Nivṛtti (De-activation/Boundary Logic)"),
-            ("R32", "Pratyākhyāna (Redundancy-Rejection)")
-        ]
-
-        with col_a:
-            for pid, pdesc in pillars_left:
-                st.markdown(f'<div class="pillar-card"><span class="pillar-id">{pid}:</span><span class="pillar-desc">{pdesc}</span></div>', unsafe_allow_html=True)
-
-        with col_b:
-            for pid, pdesc in pillars_right:
-                st.markdown(f'<div class="pillar-card"><span class="pillar-id">{pid}:</span><span class="pillar-desc">{pdesc}</span></div>', unsafe_allow_html=True)
-
-if __name__ == "__main__":
-    main()
+    with col2:
+        if 'diag' in locals():
+            st.subheader("📜 Step-by-Step Trace")
+            trace = pd.DataFrame([s.split(": ", 1) for s in diag.history], columns=["Rule", "Operation"])
+            st.table(trace)

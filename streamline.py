@@ -2,92 +2,151 @@ import os
 from pathlib import Path
 
 
-def correct_test_expectations():
-    # Target: tests/test_dhatu_factory.py
-    test_path = Path("tests/test_dhatu_factory.py")
+def integrate_master_data():
+    app_path = Path("app.py")
 
     code = r'''"""
-FILE: tests/test_dhatu_factory.py
-COMPLIANCE: unittest.TestCase (Corrected Benchmarks)
+FILE: app.py
+PAS-v12.1 (Master Data Integration)
 """
-import unittest
+import streamlit as st
+import pandas as pd
+import json
 from logic.dhatu_processor import DhatuDiagnostic
 
-class TestDhatuFactory(unittest.TestCase):
+st.set_page_config(page_title="Panini Engine", layout="wide", page_icon="🕉️")
 
-    def setUp(self):
-        # The authoritative benchmark dataset
-        self.benchmarks = [
-            # 1. Complex: Initial Ḍu + Final Ñ
-            ("डुकृञ्", "कृ", ["डु-It (1.3.5)", "ञ्-It (1.3.3)"]),
+# --- CSS Styling ---
+st.markdown("""
+<style>
+    .sanskrit { font-family: 'Sanskrit 2003', 'Adobe Devanagari', sans-serif; font-size: 1.15em; }
+    .tag-badge { 
+        background-color: #e3f2fd; 
+        color: #1565c0; 
+        padding: 2px 8px; 
+        border-radius: 12px; 
+        font-size: 0.85em; 
+        border: 1px solid #90caf9;
+        margin-right: 4px;
+    }
+    .action-root { color: #d32f2f; font-weight: bold; }
+    .voice-match { color: #2e7d32; font-weight: bold; }
+    .voice-mismatch { color: #c62828; font-weight: bold; }
+    .metric-box {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #673ab7;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-            # 2. Simple: Final Ñ
-            ("णीञ्", "नी", ["ञ्-It (1.3.3)"]),
+st.title("🕉️ Pāṇinian Engine: Master Data Validator")
+st.markdown("---")
 
-            # 3. Idit (Num-agama)
-            ("नदिँ", "नन्द्", ["इँ-It (1.3.2)"]),
-            ("विदिँ", "विन्द्", ["इँ-It (1.3.2)"]),
-            ("मुचिँ", "मुन्च्", ["इँ-It (1.3.2)"]),
+# --- Load & Cache Data ---
+@st.cache_data
+def load_and_process_db():
+    try:
+        # Load the Master JSON
+        with open("data/Dhatu_master_structured.json", "r", encoding="utf-8") as f:
+            raw_data = json.load(f)
 
-            # 4. Pure Phonology (No tags)
-            ("ष्मि", "स्मि", []),
+        # Process Logic for ALL roots (Batch Processing)
+        processed_data = []
+        for entry in raw_data:
+            # Run the Engine
+            upadesha = entry.get('upadesha', '')
+            diag = DhatuDiagnostic(upadesha)
 
-            # 5. Halanta formation (Vowel It)
-            ("णदँ", "नद्", ["अँ-It (1.3.2)"]),
+            # Derived Properties
+            derived_root = diag.get_final_root()
+            derived_voice = diag.pada
 
-            # 6. Corrected: ṇidi~ is just Idit + Natva. It is NOT 1.3.5.
-            ("णिदिँ", "निन्द्", ["इँ-It (1.3.2)"]), 
+            # Format Tags for UI
+            tags_str = " ".join([f"<span class='tag-badge'>{t.split('-')[0]}</span>" for t in diag.it_tags])
 
-            # 7. ADDED: True 1.3.5 'Ñi' Test Case
-            ("ञिभी", "भी", ["ञि-It (1.3.5)"]),
+            # Traditional vs Derived Check
+            trad_voice = entry.get('pada', 'Unknown')
+            # Normalize strings for comparison (simple check)
+            match_status = "✅" if (("Atmanepada" in derived_voice and "आत्मने" in trad_voice) or 
+                                   ("Parasmaipada" in derived_voice and "परस्मै" in trad_voice) or
+                                   ("Ubhayapada" in derived_voice and "उभय" in trad_voice)) else "⚠️"
 
-            # 8. Vartika Priority
-            ("भिदिँर्", "भिद्", ["ir-It (Vartika)"])
-        ]
+            processed_data.append({
+                "ID": entry.get('identifier', entry.get('kaumudi_index')),
+                "Upadesha (Input)": f"<span class='sanskrit'>{upadesha}</span>",
+                "Meaning": f"<span class='sanskrit'>{entry.get('artha_sanskrit', '')}</span>",
+                "Gana": entry.get('gana', ''),
+                "Engine Output": f"<span class='sanskrit action-root'>{derived_root}</span>",
+                "Genetic Tags": tags_str,
+                "Voice (Tradition)": f"<span class='sanskrit'>{trad_voice}</span>",
+                "Voice (Engine)": f"{match_status} {derived_voice}"
+            })
 
-    def test_dhatu_prakriya_benchmarks(self):
-        """Validates 1.3.5, 1.3.2, 7.1.58, and Vartika logic."""
-        print("\n   [ Running Dhātu Prakriyā Benchmarks ]")
+        return pd.DataFrame(processed_data)
 
-        for upadesha, expected_root, required_tags in self.benchmarks:
-            with self.subTest(root=upadesha):
-                diag = DhatuDiagnostic(upadesha)
-                actual_root = diag.get_final_root()
+    except FileNotFoundError:
+        st.error("File 'data/Dhatu_master_structured.json' not found. Please ensure data exists.")
+        return pd.DataFrame()
 
-                # 1. Validation of Action Root
-                self.assertEqual(
-                    actual_root, 
-                    expected_root, 
-                    f"❌ {upadesha}: Got '{actual_root}', Expected '{expected_root}'"
-                )
+# --- Main Layout ---
+mode = st.sidebar.radio("Select Laboratory", ["Master Database", "Surgical Analysis"])
 
-                # 2. Validation of Genetic Markers (Tags)
-                if required_tags:
-                    found_tags = [t for t in diag.it_tags]
-                    for req in required_tags:
-                        req_core = req.split()[0] 
-                        match = any(req_core in t for t in found_tags)
-                        self.assertTrue(
-                            match, 
-                            f"❌ {upadesha}: Missing marker '{req_core}'. Found: {found_tags}"
-                        )
+if mode == "Master Database":
+    df = load_and_process_db()
 
-                # Safe access to 'pada' (initialized in v10.2)
-                pada_info = getattr(diag, 'pada', 'Unknown')
-                print(f"    ✅ {upadesha} -> {actual_root} [{pada_info}]")
+    if not df.empty:
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.header("📚 Dhātu-Pāṭha Ledger")
+            st.caption(f"Loaded {len(df)} roots. The Engine has calculated derivations for ALL of them.")
 
-    def test_exception_sthivu(self):
-        """R8 Balīyaḥ: Exception 6.1.64 (Sthivu)"""
-        diag = DhatuDiagnostic("ष्ठिवुँ")
-        self.assertEqual(diag.get_final_root(), "ष्ठिव्")
-        print("    ✅ ष्ठिवुँ -> ष्ठिव् (Exception Preserved)")
+        with col2:
+            query = st.text_input("🔍 Search (Root/ID/Meaning)", "")
 
-if __name__ == "__main__":
-    unittest.main()
+        # Filtering
+        if query:
+            mask = df.astype(str).apply(lambda x: x.str.contains(query, case=False)).any(axis=1)
+            display_df = df[mask]
+        else:
+            display_df = df
+
+        # Render HTML Table
+        st.write(display_df.to_html(escape=False, index=False), unsafe_allow_html=True)
+    else:
+        st.info("Please place your 'Dhatu_master_structured.json' in the 'data/' folder.")
+
+elif mode == "Surgical Analysis":
+    st.header("🧪 Single Root Diagnostics")
+
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        raw_root = st.text_input("Enter Upadesha (e.g. डुकृञ्)", value="डुकृञ्")
+        if st.button("Run Prakriyā", type="primary"):
+            diag = DhatuDiagnostic(raw_root)
+
+            st.markdown(f"""
+            <div class="metric-box">
+                <h4>Diagnosis</h4>
+                <p>Input: <b>{diag.raw}</b></p>
+                <p>Root: <b class="sanskrit" style="color:#d32f2f; font-size:1.5em;">{diag.get_final_root()}</b></p>
+                <p>Voice: {diag.pada}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.subheader("🧬 It-Tags Detected")
+            st.write(diag.it_tags)
+
+    with col2:
+        if 'diag' in locals():
+            st.subheader("📜 Step-by-Step Trace")
+            trace = pd.DataFrame([s.split(": ", 1) for s in diag.history], columns=["Rule", "Operation"])
+            st.table(trace)
 '''
-    test_path.write_text(code, encoding='utf-8')
-    print("✅ Tests Corrected: 'ṇidi~' expectation fixed, 'Ñibhī' added.")
+    app_path.write_text(code, encoding='utf-8')
+    print("✅ App Updated: Linked to 'data/Dhatu_master_structured.json'.")
 
 
 if __name__ == "__main__":
-    correct_test_expectations()
+    integrate_master_data()
