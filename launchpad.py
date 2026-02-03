@@ -1,139 +1,176 @@
 import os
 from pathlib import Path
 
-def fix_visarga_logic():
-    print("🔧 FIXING CORE: Adding Visarga (:) support to Varna-Viccheda...")
+def build_sanjna_prakaran():
+    print("🏷️ BUILDING PHASE 3: SANJNA PRAKARANA (IT-KARYA)...")
 
-    # We rewrite shared/varnas.py with the corrected logic
-    Path("shared/varnas.py").write_text(r'''"""
-FILE: shared/varnas.py
+    # ====================================================
+    # 1. UPGRADE CORE: shared/anubandha.py
+    # ====================================================
+    # We add logic for 1.3.5 (Adirñi...), 1.3.7 (Cutu), 1.3.8 (Lashaku...)
+    Path("shared/anubandha.py").write_text(r'''"""
+FILE: shared/anubandha.py
+PURPOSE: The "It-Sanjna" Engine. Identifies and removes meta-markers.
 """
-import unicodedata
+from shared.varnas import Varna
 
-STHANA_MAP = {"कण्ठ": "अआकखगघङहः", "तालु": "इईचछजझञयश", "मूर्धा": "ऋॠटठडढणरष", "दन्त": "ऌतथदधनलस", "ओष्ठ": "उऊपफबभम", "नासिका": "ङञणनमंँ", "कण्ठतालु": "एऐ", "कण्ठोष्ठ": "ओऔ", "दन्तोष्ठ": "व"}
-VOWELS_MAP = {'ा': 'आ', 'ि': 'इ', 'ी': 'ई', 'ु': 'उ', 'ू': 'ऊ', 'ृ': 'ऋ', 'ॄ': 'ॠ', 'ॢ': 'ौ', 'ॣ': 'ॡ', 'े': 'ए', 'ै': 'ऐ', 'ो': 'ओ', 'ौ': 'औ'}
-INDEPENDENT_VOWELS = 'अआइईउऊऋॠऌॡएऐओऔ'
-
-class Varna:
-    def __init__(self, raw_unit):
-        self.char = raw_unit
-        self.clean = raw_unit.replace('्', '')
-        # Check for Nasalization (Anunāsika)
-        self.is_anunasika = 'ँ' in raw_unit
-        self.is_vowel = any(v in raw_unit for v in INDEPENDENT_VOWELS) or '३' in raw_unit
-        # Check for Visarga or Anusvara
-        self.is_ayogavaha = raw_unit in ['ः', 'ं']
-        self.is_consonant = not self.is_vowel and not self.is_ayogavaha and '्' in raw_unit
-        self.sanjnas = set()
-    def __repr__(self): return self.char
-
-def ad(text):
-    """
-    Atomic Decomposition (Varna-Viccheda).
-    Fix v67.0: Included Visarga (ः) and Anusvara (ं) handling.
-    """
-    if not text: return []
-    text = unicodedata.normalize('NFC', text)
-    res = []
-    i = 0
-    while i < len(text):
-        char = text[i]
+class AnubandhaEngine:
+    @staticmethod
+    def process(varnas, context="General"):
+        """
+        Input: List of Varna objects
+        Output: (Cleaned Varnas, Trace Log)
+        """
+        if not varnas: return [], []
         
-        # 1. Independent Vowel (e.g., 'उ')
-        if char in INDEPENDENT_VOWELS:
-            unit = char
-            # Merge Anunāsika if present (e.g., 'उँ')
-            if i+1 < len(text) and text[i+1] == 'ँ':
-                unit += 'ँ'
-                i += 1
-            res.append(unit)
-            
-        # 2. Consonants (e.g., 'क', 'स')
-        elif '\u0915' <= char <= '\u0939' or char == 'ळ':
-            res.append(char + '्') # Pure Consonant
-            
-            # Look ahead for Vowel/Modifier
-            if i+1 < len(text):
-                nxt = text[i+1]
-                
-                # Case A: Matra (e.g., 'ु' -> 'उ')
-                if nxt in VOWELS_MAP:
-                    vowel = VOWELS_MAP[nxt]
-                    i += 1
-                    # Merge Anunāsika after Matra
-                    if i+1 < len(text) and text[i+1] == 'ँ':
-                        vowel += 'ँ'; i += 1
-                    res.append(vowel)
-                
-                # Case B: Virama (Halanta) -> No Vowel
-                elif nxt == '्':
-                    i += 1
-                
-                # Case C: Explicit Anunāsika on Consonant -> Implicit 'a' + 'ँ'
-                elif nxt == 'ँ':
-                    res.append('अँ')
-                    i += 1
-                
-                # Case D: Space -> Implicit 'a'
-                elif nxt == ' ':
-                    res.append('अ')
-                    i += 1
-
-                # Case E: Visarga/Anusvara follows -> Implicit 'a' first
-                # The Visarga itself will be caught in the NEXT iteration of the main loop
-                elif nxt in ['ः', 'ं']:
-                    res.append('अ')
-                    # Do NOT increment i here. Let the main loop catch the 'ः' next.
-                    
-                # Case F: Next is another Consonant -> Implicit 'a'
-                else:
-                    res.append('अ')
+        # Working copy
+        res = list(varnas)
+        trace = []
+        
+        # --- RULE 1.3.2: Upadeśe'janunāsika it ---
+        # (Nasal Vowels are It)
+        # Note: In our 'ad' function, we merged 'u~' into single units.
+        # We just check for the nasal marker.
+        temp_res = []
+        for v in res:
+            if 'ँ' in v.char:
+                trace.append(f"1.3.2 Upadeśe'janunāsika it: {v.char} is It-Sanjna.")
+                trace.append(f"1.3.9 Tasya Lopaḥ: {v.char} removed.")
+                # Lopa (Do not add to temp_res)
             else:
-                # End of string -> Implicit 'a'
-                res.append('अ')
+                temp_res.append(v)
+        res = temp_res
         
-        # 3. Ayogavaha (Visarga & Anusvara) - NEW HANDLER
-        elif char in ['ः', 'ं']:
-            res.append(char)
+        # --- RULE 1.3.3: Halantyam ---
+        # (Final Consonant is It)
+        if res and res[-1].is_consonant:
+            last = res[-1].char
             
-        # 4. Vedic Accents
-        elif char in 'ᳲᳳ': res.append(char)
-        
-        i += 1
-        
-    return [Varna(s) for s in res]
+            # EXCEPTION 1.3.4: Na Vibhaktau Tusmāḥ
+            # (t, th, d, dh, n, s, m are NOT It in Vibhakti)
+            tusma = ['त्', 'थ्', 'द्', 'ध्', 'न्', 'स्', 'म्']
+            if context == "Vibhakti" and last in tusma:
+                trace.append(f"1.3.4 Na Vibhaktau Tusmāḥ: {last} is SAVED from It-Sanjna.")
+            else:
+                trace.append(f"1.3.3 Halantyam: {last} is It-Sanjna.")
+                trace.append(f"1.3.9 Tasya Lopaḥ: {last} removed.")
+                res.pop() # Remove last
 
-def join(varna_list):
-    if not varna_list: return ""
-    text_list = [v.char for v in varna_list]
-    res = ""
-    for char in text_list:
-        if not res: res = char; continue
-        
-        # Logic to combine Vowel/Modifier back into Consonant
-        if res.endswith('्') and any(v in char for v in INDEPENDENT_VOWELS):
-            matra = VOWELS_MAP.get(char, "") 
-            if not matra:
-                clean_v = char.replace('ँ', '')
-                matra = {v: k for k, v in VOWELS_MAP.items()}.get(clean_v, "")
+        # --- INITIAL RULES (Adi) ---
+        if res:
+            first = res[0].char.replace('्', '') # Remove virama for checking
             
-            if 'ँ' in char and 'ँ' not in matra: matra += 'ँ'
-            
-            if char.startswith('अ'): res = res[:-1] + (char.replace('अ', '')) 
-            else: res = res[:-1] + matra
-        
-        # Logic for Visarga/Anusvara (Just append)
-        elif char in ['ः', 'ं']:
-            res += char
-        else:
-            res += char
-            
-    return res.replace("ष््षु", "ष्षु").replace("धनुष््षु", "धनुष्षु").replace("धनुष्सु", "धनुष्षु")
+            # RULE 1.3.5: Ādirñiṭuḍavaḥ (ñi, ṭu, ḍu at start of Dhatu)
+            if context == "Dhatu":
+                if first == 'ञ' and len(res)>1 and 'इ' in res[1].char:
+                     # e.g., Ñi-Dhrish
+                     trace.append(f"1.3.5 Ādirñiṭuḍavaḥ: Ñi is It-Sanjna.")
+                     res = res[2:] # Remove Ñi
+                elif first == 'ट' and len(res)>1 and 'उ' in res[1].char:
+                     trace.append(f"1.3.5 Ādirñiṭuḍavaḥ: Ṭu is It-Sanjna.")
+                     res = res[2:]
+                elif first == 'ड' and len(res)>1 and 'उ' in res[1].char:
+                     trace.append(f"1.3.5 Ādirñiṭuḍavaḥ: Ḍu is It-Sanjna (e.g. Ḍukṛñ).")
+                     res = res[2:] # Remove Du
+
+            # RULE 1.3.7: Cuṭū (Cu, Tu at start of Pratyaya)
+            elif context == "Pratyaya":
+                # Cu = c, ch, j, jh, ñ
+                # Tu = ṭ, ṭh, ḍ, ḍh, ṇ
+                cu_group = ['च', 'छ', 'ज', 'झ', 'ञ']
+                tu_group = ['ट', 'ठ', 'ड', 'ढ', 'ण']
+                
+                if first in cu_group or first in tu_group:
+                    trace.append(f"1.3.7 Cuṭū: {res[0].char} is It-Sanjna.")
+                    trace.append(f"1.3.9 Tasya Lopaḥ: {res[0].char} removed.")
+                    res.pop(0)
+
+            # RULE 1.3.8: Laśakvataddhite (L, S, K-varga at start of Pratyaya)
+            # Exception: Taddhita pratyayas are excluded (not handled here yet)
+            if context == "Pratyaya" and res:
+                # Re-check first after potential 1.3.7 removal
+                first = res[0].char.replace('्', '')
+                ku_group = ['क', 'ख', 'ग', 'घ', 'ङ']
+                if first == 'ल' or first == 'श' or first in ku_group:
+                    trace.append(f"1.3.8 Laśakvataddhite: {res[0].char} is It-Sanjna.")
+                    trace.append(f"1.3.9 Tasya Lopaḥ: {res[0].char} removed.")
+                    res.pop(0)
+
+        return res, trace
 ''', encoding='utf-8')
+    print("✅ UPDATED: shared/anubandha.py (Added Rules 1.3.4, 1.3.5, 1.3.7, 1.3.8)")
+
+    # ====================================================
+    # 2. CREATE PAGE: pages/3_🏷️_Sanjna_Lab.py
+    # ====================================================
+    page_code = r'''import streamlit as st
+import sys
+import os
+
+# --- PATH HACK ---
+sys.path.append(os.path.abspath('.'))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from shared.varnas import ad, join
+from shared.anubandha import AnubandhaEngine
+
+st.set_page_config(page_title="Sanjna Lab", page_icon="🏷️", layout="wide")
+
+st.markdown("""
+<style>
+    .it-box { background:#ffebee; padding:10px; border-radius:5px; border-left:4px solid #c62828; margin-bottom:5px; }
+    .save-box { background:#e8f5e9; padding:10px; border-radius:5px; border-left:4px solid #2e7d32; margin-bottom:5px; }
+    .final-res { font-size:1.5em; font-weight:bold; color:#2c3e50; }
+</style>
+""", unsafe_allow_html=True)
+
+st.title("🏷️ Sanjñā Prakaraṇa (It-Kārya)")
+st.caption("The Machine that Cleans the Code: It-Tagging & Lopa")
+
+# 1. INPUT
+c1, c2 = st.columns([2, 1])
+with c1:
+    raw_input = st.text_input("Upadeśa (Raw Input)", value="डुकृञ्")
+    st.caption("Examples: डुकृञ् (Dhatu), जस् (Pratyaya), सुँ (Pratyaya), शप् (Vikarna)")
+
+with c2:
+    context = st.selectbox("Context (Sanjna Scope)", 
+                           ["Dhatu", "Pratyaya", "Vibhakti", "General"],
+                           index=0)
+    st.caption("Different rules apply to Dhatus vs Pratyayas.")
+
+if st.button("Run It-Prakriyā", type="primary"):
+    # A. Varna Viccheda
+    varnas = ad(raw_input)
     
-    print("✅ FIXED: shared/varnas.py")
-    print("   - Added logic to catch 'ः' (Visarga) and 'ं' (Anusvara)")
-    print("   - Ensures implicit 'a' is added before Visarga if applicable.")
+    st.subheader("1. Atomic Analysis")
+    st.code(f"{[v.char for v in varnas]}", language="json")
+
+    # B. Run Engine
+    clean_varnas, trace = AnubandhaEngine.process(varnas, context)
+    
+    # C. Display Trace
+    st.subheader("2. Rule Application")
+    if not trace:
+        st.info("No It-Sanjna rules applied.")
+    else:
+        for t in trace:
+            style = "save-box" if "SAVED" in t else "it-box"
+            st.markdown(f'<div class="{style}">{t}</div>', unsafe_allow_html=True)
+
+    # D. Final Result
+    st.subheader("3. Final Result (Nirubandha)")
+    final_str = join(clean_varnas)
+    st.markdown(f'<div class="final-res">{final_str}</div>', unsafe_allow_html=True)
+    
+    if final_str == "कृ":
+        st.success("Correct derivation for Ḍukṛñ!")
+    if final_str == "अ" and raw_input == "जस्":
+        st.success("Correct derivation for Jas (as -> a)!")
+
+'''
+    (Path("pages") / "3_🏷️_Sanjna_Lab.py").write_text(page_code, encoding='utf-8')
+    print("✅ CREATED: pages/3_🏷️_Sanjna_Lab.py")
 
 if __name__ == "__main__":
-    fix_visarga_logic()
+    build_sanjna_prakaran()
