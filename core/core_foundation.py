@@ -1,5 +1,5 @@
 """
-FILE: core/core_foundation.py - PAS-v66.0 (Strict User Logic)
+FILE: core/core_foundation.py - PAS-v21.6 (Siddham Strict)
 """
 import unicodedata
 

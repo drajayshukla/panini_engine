@@ -1,4 +1,3 @@
-
 from logic.dhatu_processor import DhatuDiagnostic
 class TinantaDiagnostic:
     def __init__(self, upadesha):
