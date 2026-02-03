@@ -7,11 +7,18 @@ from shared.varnas import Varna
 class AnubandhaEngine:
     @staticmethod
     def process(varnas, context="General"):
+        """
+        Input: List of Varna objects
+        Context: "Dhatu", "Pratyaya", "Vibhakti", "General"
+        Output: (Cleaned Varnas, Trace Log)
+        """
         if not varnas: return [], []
         res = list(varnas)
         trace = []
         
-        # 1.3.2 Upadeśe'janunāsika it
+        # ---------------------------------------------------------
+        # 1.3.2 Upadeśe'janunāsika it (Nasal Vowels)
+        # ---------------------------------------------------------
         temp_res = []
         for v in res:
             if 'ँ' in v.char:
@@ -20,17 +27,26 @@ class AnubandhaEngine:
             else: temp_res.append(v)
         res = temp_res
         
-        # 1.3.3 Halantyam
+        # ---------------------------------------------------------
+        # 1.3.3 Halantyam (Final Consonant)
+        # ---------------------------------------------------------
         if res and res[-1].is_consonant:
-            last = res[-1].char
+            last_char = res[-1].char
+            
+            # EXCEPTION 1.3.4: Na Vibhaktau Tusmāḥ
+            # Applies ONLY if context is Vibhakti (Sup/Tin endings)
             tusma = ['त्', 'थ्', 'द्', 'ध्', 'न्', 'स्', 'म्']
-            if context == "Vibhakti" and last in tusma:
-                trace.append(f"1.3.4 Na Vibhaktau Tusmāḥ: {last} SAVED.")
+            
+            if context == "Vibhakti" and last_char in tusma:
+                trace.append(f"1.3.4 Na Vibhaktau Tusmāḥ: {last_char} is SAVED from It-Sanjna.")
             else:
-                trace.append(f"1.3.3 Halantyam: {last} is It.")
-                res.pop()
+                trace.append(f"1.3.3 Halantyam: {last_char} is It-Sanjna.")
+                trace.append(f"1.3.9 Tasya Lopaḥ: {last_char} removed.")
+                res.pop() # Lopa
 
+        # ---------------------------------------------------------
         # INITIAL RULES (Adi)
+        # ---------------------------------------------------------
         if res:
             first_char = res[0].char.replace('्', '')
             
@@ -48,7 +64,7 @@ class AnubandhaEngine:
 
             # Context: PRATYAYA
             elif context == "Pratyaya":
-                # 1.3.6 Ṣaḥ Pratyayasya (NEW)
+                # 1.3.6 Ṣaḥ Pratyayasya
                 if first_char == 'ष':
                     trace.append(f"1.3.6 Ṣaḥ Pratyayasya: Initial Ṣa ({res[0].char}) is It.")
                     trace.append(f"1.3.9 Tasya Lopaḥ: {res[0].char} removed.")
@@ -60,9 +76,7 @@ class AnubandhaEngine:
                     res.pop(0)
                     
                 # 1.3.8 Laśakvataddhite
-                # Note: 'L' and 'S' and 'Ku-varga'
                 elif first_char == 'ल' or first_char == 'श' or first_char in ['क', 'ख', 'ग', 'घ', 'ङ']:
-                     # Ensure it's not a Taddhita (This logic requires metadata, assumed False for now)
                      trace.append(f"1.3.8 Laśakvataddhite: {res[0].char} is It.")
                      res.pop(0)
 
