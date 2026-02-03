@@ -1,11 +1,19 @@
 import streamlit as st
+import sys
+import os
+
+# --- PATH HACK (CRITICAL for Streamlit Cloud) ---
+# This allows the page to find the 'logic' and 'engine_main' modules
+sys.path.append(os.path.abspath('.'))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import pandas as pd
 from engine_main import PrakriyaLogger
 from logic.subanta_processor import SubantaProcessor
 
 st.set_page_config(page_title="शब्द-रूप सिद्धि यन्त्र", page_icon="🕉️", layout="wide")
 
-# --- Glassbox CSS Styling (Enhanced for MacBook High-DPI) ---
+# --- Glassbox CSS Styling ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Martel:wght@400;800&family=Noto+Sans:wght@400;700&display=swap');
@@ -17,7 +25,7 @@ st.markdown("""
         border: 1px solid #e0e0e0; transition: all 0.2s ease-in-out;
     }
     .step-card:hover { transform: scale(1.01); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
-    .border-meta { border-left: 8px solid #2980b9; }   /* Logic/Definitions */
+    .border-meta { border-left: 8px solid #2980b9; }    /* Logic/Definitions */
     .border-action { border-left: 8px solid #8e44ad; } /* Phonetic Actions */
     
     .rule-badge {
@@ -50,7 +58,6 @@ VIBHAKTI_MAP = {1: "प्रथमा", 2: "द्वितीया", 3: "त�
 VACANA_MAP = {1: "एकवचनम्", 2: "द्विवचनम्", 3: "बहुवचनम्"}
 
 def get_style_meta(rule_num):
-    """Assigns color coding based on Pāṇinian Rule Domain."""
     if any(rule_num.startswith(x) for x in ["1.1", "1.2", "1.4", "3.1"]):
         return "border-meta", "badge-meta"
     return "border-action", "badge-action"
@@ -58,16 +65,13 @@ def get_style_meta(rule_num):
 def generate_card_html(index, data):
     rule = data.get('rule', '0.0.0')
     name = data.get('name', 'Sūtra')
-    op = data.get('operation', 'Processing')
+    op = data.get('desc', 'Processing') # Fixed key match with Logger
     res = data.get('result', '')
-    viccheda = data.get('viccheda', '')
     source = data.get('source', 'Pāṇini').upper()
 
     border_class, badge_class = get_style_meta(rule)
     auth_class = "auth-panini" if "PANINI" in source else "auth-katyayana"
     link = f"https://ashtadhyayi.com/sutraani/{rule.replace('.', '/')}" if "." in rule else "#"
-
-    tiles = "".join([f'<div class="varna-tile">{p}</div>' for p in viccheda.split(" + ")]) if viccheda else ""
 
     return f"""
     <div class="step-card {border_class}">
@@ -77,7 +81,6 @@ def generate_card_html(index, data):
                 <a href="{link}" target="_blank" class="rule-badge {badge_class}">📖 {rule}</a>
                 <span style="font-family:'Martel'; font-weight:800; font-size:1.2rem; margin-left:10px;">{name}</span>
                 <div style="margin-top:10px; color:#555; font-weight:500;">⚙️ {op}</div>
-                <div style="display:flex; gap:6px; margin-top:8px;">{tiles}</div>
             </div>
             <div style="text-align:right;">
                 <div style="font-size:0.7rem; color:#94a3b8; font-weight:900;">STEP {index+1}</div>
@@ -88,7 +91,7 @@ def generate_card_html(index, data):
     """
 
 def main():
-    st.title("🕉️ शब्द-रूप सिद्धि यन्त्र")
+    st.title("🕉️ शब्द-रूप सिद्धि यन्त्र (Test Mode)")
     st.markdown("### Glassbox AI: Pāṇinian Morphological Derivation")
 
     with st.sidebar:
@@ -105,7 +108,6 @@ def main():
         logger = PrakriyaLogger()
         res = SubantaProcessor.derive_pada(stem, v_sel, n_sel, logger)
         
-        # UI TABS for scannability
         tab1, tab2 = st.tabs(["📊 Summary View", "📜 Deep Vyutpatti"])
         
         with tab1:
@@ -116,18 +118,19 @@ def main():
             }))
         
         with tab2:
+            st.markdown("### Step-by-Step Derivation")
             for i, step in enumerate(logger.get_history()):
                 st.markdown(generate_card_html(i, step), unsafe_allow_html=True)
 
-    # Full Paradigm Table
     with st.expander("📚 View Full Declension Table"):
-        rows = []
-        for v in range(1, 9):
-            row = {"Vibhakti": VIBHAKTI_MAP[v]}
-            for n in range(1, 4):
-                row[VACANA_MAP[n]] = SubantaProcessor.derive_pada(stem, v, n, None)
-            rows.append(row)
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        if st.button("Generate Full Table"):
+            rows = []
+            for v in range(1, 9):
+                row = {"Vibhakti": VIBHAKTI_MAP[v]}
+                for n in range(1, 4):
+                    row[VACANA_MAP[n]] = SubantaProcessor.derive_pada(stem, v, n, None)
+                rows.append(row)
+            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
 if __name__ == "__main__":
     main()
