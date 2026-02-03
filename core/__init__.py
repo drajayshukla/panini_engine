@@ -1,3 +1,1 @@
-# panini_engine/core/__init__.py
-from .core_foundation import ad, Varna, UpadeshaType, pe
-from .sanjna_controller import SanjnaController
+from .core_foundation import Varna, ad, sanskrit_varna_samyoga, UpadeshaType
