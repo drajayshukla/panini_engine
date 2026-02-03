@@ -1,10 +1,15 @@
 """
-FILE: core/core_foundation.py
+FILE: core/core_foundation.py - PAS-v66.0 (Strict User Logic)
 """
 import unicodedata
 
-# Constants
-STHANA_MAP = {"कण्ठ": "अआकखगघङहः", "तालु": "इईचछजझञयश", "मूर्धा": "ऋॠटठडढणरष", "दन्त": "ऌतथदधनलस", "ओष्ठ": "उऊपफबभम", "नासिका": "ङञणनमंँ", "कण्ठतालु": "एऐ", "कण्ठोष्ठ": "ओऔ", "दन्तोष्ठ": "व"}
+# --- Constants ---
+STHANA_MAP = {
+    "कण्ठ": "अआकखगघङहः", "तालु": "इईचछजझञयश", 
+    "मूर्धा": "ऋॠटठडढणरष", "दन्त": "ऌतथदधनलस",
+    "ओष्ठ": "उऊपफबभम", "नासिका": "ङञणनमंँ",
+    "कण्ठतालु": "एऐ", "कण्ठोष्ठ": "ओऔ", "दन्तोष्ठ": "व"
+}
 VOWELS_MAP = {'ा': 'आ', 'ि': 'इ', 'ी': 'ई', 'ु': 'उ', 'ू': 'ऊ', 'ृ': 'ऋ', 'ॄ': 'ॠ', 'ॢ': 'ऌ', 'ॣ': 'ॡ', 'े': 'ए', 'ै': 'ऐ', 'ो': 'ओ', 'ौ': 'औ'}
 INDEPENDENT_VOWELS = 'अआइईउऊऋॠऌॡएऐओऔ'
 
@@ -20,7 +25,7 @@ class Varna:
         self.is_consonant = not self.is_vowel and '्' in raw_unit
     def __repr__(self): return self.char
 
-# STRICT USER LOGIC: Atomic Decomposition
+# --- STRICT USER LOGIC: Atomic Decomposition ---
 def ad(text):
     if not text: return []
     text = unicodedata.normalize('NFC', text)
@@ -58,4 +63,5 @@ def sanskrit_varna_samyoga(varna_list):
             if char.startswith('अ'): res = res[:-1] + modifiers 
             else: res = res[:-1] + matra + modifiers
         else: res += char
-    return res.replace("ष््षु", "ष्षु").replace("धनुष््षु", "धनुष्षु").replace("धनुष्सु", "धनुष्षु")
+    res = res.replace("ष््षु", "ष्षु").replace("धनुष््षु", "धनुष्षु").replace("धनुष्सु", "धनुष्षु")
+    return unicodedata.normalize('NFC', res)
