@@ -1,0 +1,1 @@
+from .declension import SubantaGenerator

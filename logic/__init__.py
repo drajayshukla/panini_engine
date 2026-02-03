@@ -1,2 +1,0 @@
-from .subanta_processor import SubantaProcessor
-from .sandhi_processor import SandhiProcessor
