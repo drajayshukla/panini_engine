@@ -1,6 +1,8 @@
 import streamlit as st
 import sys, os
 sys.path.append(os.path.abspath('.'))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import pandas as pd
 from logic.dhatu_processor import DhatuDiagnostic
 
@@ -18,7 +20,6 @@ if mode == "Single Analysis":
 
 elif mode == "Master Database Validator":
     st.info("Batch Processing Module Loaded")
-    # Simulation for demo
     data = [
         {"upadesha": "डुकृञ्", "expected": "कृ"},
         {"upadesha": "टुनादिँ", "expected": "नन्द्"},

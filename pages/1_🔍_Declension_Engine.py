@@ -1,6 +1,9 @@
 import streamlit as st
 import sys, os
+# CRITICAL PATH HACK
 sys.path.append(os.path.abspath('.'))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from engine_main import PrakriyaLogger
 from logic.subanta_processor import SubantaProcessor
 
