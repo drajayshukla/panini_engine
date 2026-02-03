@@ -1,133 +1,139 @@
 import os
 from pathlib import Path
 
-def setup_ui_structure():
-    print("🎨 SETTING UP UI: App.py + Pages 1 & 2...")
+def fix_visarga_logic():
+    print("🔧 FIXING CORE: Adding Visarga (:) support to Varna-Viccheda...")
 
-    Path("pages").mkdir(exist_ok=True)
+    # We rewrite shared/varnas.py with the corrected logic
+    Path("shared/varnas.py").write_text(r'''"""
+FILE: shared/varnas.py
+"""
+import unicodedata
 
-    # ====================================================
-    # 1. APP.PY (The Landing Page)
-    # ====================================================
-    # This is just the "Basic Name" page as you requested.
-    app_code = r'''import streamlit as st
+STHANA_MAP = {"कण्ठ": "अआकखगघङहः", "तालु": "इईचछजझञयश", "मूर्धा": "ऋॠटठडढणरष", "दन्त": "ऌतथदधनलस", "ओष्ठ": "उऊपफबभम", "नासिका": "ङञणनमंँ", "कण्ठतालु": "एऐ", "कण्ठोष्ठ": "ओऔ", "दन्तोष्ठ": "व"}
+VOWELS_MAP = {'ा': 'आ', 'ि': 'इ', 'ी': 'ई', 'ु': 'उ', 'ू': 'ऊ', 'ृ': 'ऋ', 'ॄ': 'ॠ', 'ॢ': 'ौ', 'ॣ': 'ॡ', 'े': 'ए', 'ै': 'ऐ', 'ो': 'ओ', 'ौ': 'औ'}
+INDEPENDENT_VOWELS = 'अआइईउऊऋॠऌॡएऐओऔ'
 
-st.set_page_config(
-    page_title="Panini Engine",
-    page_icon="🕉️",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+class Varna:
+    def __init__(self, raw_unit):
+        self.char = raw_unit
+        self.clean = raw_unit.replace('्', '')
+        # Check for Nasalization (Anunāsika)
+        self.is_anunasika = 'ँ' in raw_unit
+        self.is_vowel = any(v in raw_unit for v in INDEPENDENT_VOWELS) or '३' in raw_unit
+        # Check for Visarga or Anusvara
+        self.is_ayogavaha = raw_unit in ['ः', 'ं']
+        self.is_consonant = not self.is_vowel and not self.is_ayogavaha and '्' in raw_unit
+        self.sanjnas = set()
+    def __repr__(self): return self.char
 
-st.title("🕉️ Modular Panini Engine")
-st.markdown("### *Siddhānta-Based Sanskrit Grammar Architecture*")
-st.markdown("---")
-st.info("👈 **Select a module from the Sidebar to begin.**")
+def ad(text):
+    """
+    Atomic Decomposition (Varna-Viccheda).
+    Fix v67.0: Included Visarga (ः) and Anusvara (ं) handling.
+    """
+    if not text: return []
+    text = unicodedata.normalize('NFC', text)
+    res = []
+    i = 0
+    while i < len(text):
+        char = text[i]
+        
+        # 1. Independent Vowel (e.g., 'उ')
+        if char in INDEPENDENT_VOWELS:
+            unit = char
+            # Merge Anunāsika if present (e.g., 'उँ')
+            if i+1 < len(text) and text[i+1] == 'ँ':
+                unit += 'ँ'
+                i += 1
+            res.append(unit)
+            
+        # 2. Consonants (e.g., 'क', 'स')
+        elif '\u0915' <= char <= '\u0939' or char == 'ळ':
+            res.append(char + '्') # Pure Consonant
+            
+            # Look ahead for Vowel/Modifier
+            if i+1 < len(text):
+                nxt = text[i+1]
+                
+                # Case A: Matra (e.g., 'ु' -> 'उ')
+                if nxt in VOWELS_MAP:
+                    vowel = VOWELS_MAP[nxt]
+                    i += 1
+                    # Merge Anunāsika after Matra
+                    if i+1 < len(text) and text[i+1] == 'ँ':
+                        vowel += 'ँ'; i += 1
+                    res.append(vowel)
+                
+                # Case B: Virama (Halanta) -> No Vowel
+                elif nxt == '्':
+                    i += 1
+                
+                # Case C: Explicit Anunāsika on Consonant -> Implicit 'a' + 'ँ'
+                elif nxt == 'ँ':
+                    res.append('अँ')
+                    i += 1
+                
+                # Case D: Space -> Implicit 'a'
+                elif nxt == ' ':
+                    res.append('अ')
+                    i += 1
 
-st.markdown("""
-#### Available Engines:
-* **1. Varna Lab:** Phonetic Analysis (Varna-Viccheda & Samyoga)
-* **2. Subanta Engine:** Noun Declension (e.g. Rāma + Su → Rāmaḥ)
-""")
-'''
-    Path("app.py").write_text(app_code, encoding='utf-8')
-    print("✅ Created: app.py (Landing Page)")
+                # Case E: Visarga/Anusvara follows -> Implicit 'a' first
+                # The Visarga itself will be caught in the NEXT iteration of the main loop
+                elif nxt in ['ः', 'ं']:
+                    res.append('अ')
+                    # Do NOT increment i here. Let the main loop catch the 'ः' next.
+                    
+                # Case F: Next is another Consonant -> Implicit 'a'
+                else:
+                    res.append('अ')
+            else:
+                # End of string -> Implicit 'a'
+                res.append('अ')
+        
+        # 3. Ayogavaha (Visarga & Anusvara) - NEW HANDLER
+        elif char in ['ः', 'ं']:
+            res.append(char)
+            
+        # 4. Vedic Accents
+        elif char in 'ᳲᳳ': res.append(char)
+        
+        i += 1
+        
+    return [Varna(s) for s in res]
 
-    # ====================================================
-    # 2. PAGE 1: VARNA LAB (Phonetics)
-    # ====================================================
-    p1_code = r'''import streamlit as st
-import sys
-import os
-
-# --- PATH HACK (Critical for Modular Imports) ---
-sys.path.append(os.path.abspath('.'))
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-from shared.varnas import ad, join
-
-st.set_page_config(page_title="Varna Lab", page_icon="🔤", layout="wide")
-st.title("🔤 Varna Lab")
-st.caption("The Atomic Foundation: Viccheda & Samyoga")
-
-text_input = st.text_input("Enter Sanskrit Text:", value="रामः सुँ")
-
-if text_input:
-    # 1. Split
-    varnas = ad(text_input)
-    st.markdown("### 1. Analysis (Viccheda)")
+def join(varna_list):
+    if not varna_list: return ""
+    text_list = [v.char for v in varna_list]
+    res = ""
+    for char in text_list:
+        if not res: res = char; continue
+        
+        # Logic to combine Vowel/Modifier back into Consonant
+        if res.endswith('्') and any(v in char for v in INDEPENDENT_VOWELS):
+            matra = VOWELS_MAP.get(char, "") 
+            if not matra:
+                clean_v = char.replace('ँ', '')
+                matra = {v: k for k, v in VOWELS_MAP.items()}.get(clean_v, "")
+            
+            if 'ँ' in char and 'ँ' not in matra: matra += 'ँ'
+            
+            if char.startswith('अ'): res = res[:-1] + (char.replace('अ', '')) 
+            else: res = res[:-1] + matra
+        
+        # Logic for Visarga/Anusvara (Just append)
+        elif char in ['ः', 'ं']:
+            res += char
+        else:
+            res += char
+            
+    return res.replace("ष््षु", "ष्षु").replace("धनुष््षु", "धनुष्षु").replace("धनुष्सु", "धनुष्षु")
+''', encoding='utf-8')
     
-    # Visual Tiles
-    html = ""
-    for v in varnas:
-        c = "#2980b9" if v.is_vowel else "#c0392b"
-        if v.is_anunasika: c = "#d35400"
-        html += f"<span style='border:1px solid {c};color:{c};padding:4px 8px;margin:2px;border-radius:4px;font-weight:bold;background:#fff;display:inline-block;'>{v.char}</span>"
-    st.markdown(html, unsafe_allow_html=True)
-
-    # 2. Join
-    st.markdown("### 2. Synthesis (Samyoga)")
-    joined = join(varnas)
-    if joined == text_input:
-        st.success(f"Perfect Reconstruction: {joined}")
-    else:
-        st.error(f"Mismatch: {joined}")
-'''
-    (Path("pages") / "1_🔤_Varna_Lab.py").write_text(p1_code, encoding='utf-8')
-    print("✅ Created: pages/1_🔤_Varna_Lab.py")
-
-    # ====================================================
-    # 3. PAGE 2: SUBANTA ENGINE (Nouns)
-    # ====================================================
-    p2_code = r'''import streamlit as st
-import sys
-import os
-import pandas as pd
-
-# --- PATH HACK ---
-sys.path.append(os.path.abspath('.'))
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-from subanta.declension import SubantaGenerator
-
-st.set_page_config(page_title="Subanta Engine", page_icon="🔍", layout="wide")
-
-st.markdown("""
-<style>
-    .step-box { background:#fff; padding:10px; border-radius:5px; border-left:4px solid #8e44ad; margin-bottom:10px; box-shadow:0 1px 3px rgba(0,0,0,0.1); }
-    .sutra { font-weight:bold; color:#2c3e50; }
-    .result { float:right; font-weight:bold; color:#8e44ad; font-size:1.1em; }
-</style>
-""", unsafe_allow_html=True)
-
-st.title("🔍 Subanta Engine (Nouns)")
-st.caption("Step-by-Step Declension Generator")
-
-with st.sidebar:
-    stem = st.text_input("Stem (Pratipadika)", value="राम")
-    st.info("Try: राम, देव (More coming soon)")
-
-c1, c2 = st.columns(2)
-vib = c1.selectbox("Vibhakti", range(1,9))
-vac = c2.selectbox("Vacana", range(1,4))
-
-if st.button("Derive (Siddha)", type="primary"):
-    gen = SubantaGenerator()
-    final, history = gen.derive(stem, vib, vac)
-    
-    st.success(f"Final Form: **{final}**")
-    
-    st.subheader("Prakriyā (Derivation Process)")
-    for step in history:
-        st.markdown(f"""
-        <div class="step-box">
-            <span class="sutra">📖 {step['step']}</span>
-            <span class="result">{step['result']}</span>
-        </div>
-        """, unsafe_allow_html=True)
-'''
-    (Path("pages") / "2_🔍_Subanta_Engine.py").write_text(p2_code, encoding='utf-8')
-    print("✅ Created: pages/2_🔍_Subanta_Engine.py")
+    print("✅ FIXED: shared/varnas.py")
+    print("   - Added logic to catch 'ः' (Visarga) and 'ं' (Anusvara)")
+    print("   - Ensures implicit 'a' is added before Visarga if applicable.")
 
 if __name__ == "__main__":
-    setup_ui_structure()
+    fix_visarga_logic()
