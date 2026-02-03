@@ -1,176 +1,316 @@
 import os
+import sys
+import subprocess
 from pathlib import Path
+import time
 
-def build_sanjna_prakaran():
-    print("🏷️ BUILDING PHASE 3: SANJNA PRAKARANA (IT-KARYA)...")
+# ==============================================================================
+# 1. GOLDEN SOURCE CODE (The "Siddhānta" State)
+# ==============================================================================
 
-    # ====================================================
-    # 1. UPGRADE CORE: shared/anubandha.py
-    # ====================================================
-    # We add logic for 1.3.5 (Adirñi...), 1.3.7 (Cutu), 1.3.8 (Lashaku...)
-    Path("shared/anubandha.py").write_text(r'''"""
+# --- SHARED CORE (Varnas with Visarga Fix & Merged Anunasika) ---
+CODE_VARNAS = r'''"""
+FILE: shared/varnas.py
+PURPOSE: Atomic Decomposition (Varna-Viccheda) & Synthesis
+VERSION: PAS-v67.1 (Visarga + Anusvara + Anunasika Support)
+"""
+import unicodedata
+
+STHANA_MAP = {"कण्ठ": "अआकखगघङहः", "तालु": "इईचछजझञयश", "मूर्धा": "ऋॠटठडढणरष", "दन्त": "ऌतथदधनलस", "ओष्ठ": "उऊपफबभम", "नासिका": "ङञणनमंँ", "कण्ठतालु": "एऐ", "कण्ठोष्ठ": "ओऔ", "दन्तोष्ठ": "व"}
+VOWELS_MAP = {'ा': 'आ', 'ि': 'इ', 'ी': 'ई', 'ु': 'उ', 'ू': 'ऊ', 'ृ': 'ऋ', 'ॄ': 'ॠ', 'ॢ': 'ऌ', 'ॣ': 'ॡ', 'े': 'ए', 'ै': 'ऐ', 'ो': 'ओ', 'ौ': 'औ'}
+INDEPENDENT_VOWELS = 'अआइईउऊऋॠऌॡएऐओऔ'
+
+class Varna:
+    def __init__(self, raw_unit):
+        self.char = raw_unit
+        self.clean = raw_unit.replace('्', '')
+        self.is_anunasika = 'ँ' in raw_unit
+        self.is_vowel = any(v in raw_unit for v in INDEPENDENT_VOWELS) or '३' in raw_unit
+        self.is_ayogavaha = raw_unit in ['ः', 'ं']
+        self.is_consonant = not self.is_vowel and not self.is_ayogavaha and '्' in raw_unit
+        self.sanjnas = set()
+    def __repr__(self): return self.char
+
+def ad(text):
+    if not text: return []
+    text = unicodedata.normalize('NFC', text)
+    res = []
+    i = 0
+    while i < len(text):
+        char = text[i]
+        
+        # 1. Independent Vowel
+        if char in INDEPENDENT_VOWELS:
+            unit = char
+            if i+1 < len(text) and text[i+1] == 'ँ':
+                unit += 'ँ'; i += 1
+            res.append(unit)
+            
+        # 2. Consonants
+        elif '\u0915' <= char <= '\u0939' or char == 'ळ':
+            res.append(char + '्') 
+            if i+1 < len(text):
+                nxt = text[i+1]
+                if nxt in VOWELS_MAP:
+                    vowel = VOWELS_MAP[nxt]
+                    i += 1
+                    if i+1 < len(text) and text[i+1] == 'ँ':
+                        vowel += 'ँ'; i += 1
+                    res.append(vowel)
+                elif nxt == '्': i += 1
+                elif nxt == 'ँ': res.append('अँ'); i += 1
+                elif nxt == ' ': res.append('अ'); i += 1
+                elif nxt in ['ः', 'ं']: res.append('अ') # Implicit 'a' before Visarga
+                else: res.append('अ')
+            else: res.append('अ')
+        
+        # 3. Ayogavaha
+        elif char in ['ः', 'ं']: res.append(char)
+        elif char in 'ᳲᳳ': res.append(char)
+        i += 1
+        
+    return [Varna(s) for s in res]
+
+def join(varna_list):
+    if not varna_list: return ""
+    text_list = [v.char for v in varna_list]
+    res = ""
+    for char in text_list:
+        if not res: res = char; continue
+        if res.endswith('्') and any(v in char for v in INDEPENDENT_VOWELS):
+            matra = VOWELS_MAP.get(char, "") 
+            if not matra:
+                clean_v = char.replace('ँ', '')
+                matra = {v: k for k, v in VOWELS_MAP.items()}.get(clean_v, "")
+            if 'ँ' in char and 'ँ' not in matra: matra += 'ँ'
+            if char.startswith('अ'): res = res[:-1] + (char.replace('अ', '')) 
+            else: res = res[:-1] + matra
+        elif char in ['ः', 'ं']: res += char
+        else: res += char
+    return res.replace("ष््षु", "ष्षु").replace("धनुष््षु", "धनुष्षु")
+'''
+
+# --- SHARED ANUBANDHA (It-Karya Engine) ---
+CODE_ANUBANDHA = r'''"""
 FILE: shared/anubandha.py
-PURPOSE: The "It-Sanjna" Engine. Identifies and removes meta-markers.
+PURPOSE: The "It-Sanjna" Engine.
 """
 from shared.varnas import Varna
 
 class AnubandhaEngine:
     @staticmethod
     def process(varnas, context="General"):
-        """
-        Input: List of Varna objects
-        Output: (Cleaned Varnas, Trace Log)
-        """
         if not varnas: return [], []
-        
-        # Working copy
         res = list(varnas)
         trace = []
         
-        # --- RULE 1.3.2: Upadeśe'janunāsika it ---
-        # (Nasal Vowels are It)
-        # Note: In our 'ad' function, we merged 'u~' into single units.
-        # We just check for the nasal marker.
+        # 1.3.2 Upadeśe'janunāsika it
         temp_res = []
         for v in res:
             if 'ँ' in v.char:
-                trace.append(f"1.3.2 Upadeśe'janunāsika it: {v.char} is It-Sanjna.")
+                trace.append(f"1.3.2 Upadeśe'janunāsika it: {v.char} is It.")
                 trace.append(f"1.3.9 Tasya Lopaḥ: {v.char} removed.")
-                # Lopa (Do not add to temp_res)
-            else:
-                temp_res.append(v)
+            else: temp_res.append(v)
         res = temp_res
         
-        # --- RULE 1.3.3: Halantyam ---
-        # (Final Consonant is It)
+        # 1.3.3 Halantyam
         if res and res[-1].is_consonant:
             last = res[-1].char
-            
-            # EXCEPTION 1.3.4: Na Vibhaktau Tusmāḥ
-            # (t, th, d, dh, n, s, m are NOT It in Vibhakti)
             tusma = ['त्', 'थ्', 'द्', 'ध्', 'न्', 'स्', 'म्']
             if context == "Vibhakti" and last in tusma:
-                trace.append(f"1.3.4 Na Vibhaktau Tusmāḥ: {last} is SAVED from It-Sanjna.")
+                trace.append(f"1.3.4 Na Vibhaktau Tusmāḥ: {last} SAVED.")
             else:
-                trace.append(f"1.3.3 Halantyam: {last} is It-Sanjna.")
-                trace.append(f"1.3.9 Tasya Lopaḥ: {last} removed.")
-                res.pop() # Remove last
+                trace.append(f"1.3.3 Halantyam: {last} is It.")
+                res.pop()
 
-        # --- INITIAL RULES (Adi) ---
+        # Initial Rules (1.3.5, 1.3.7, 1.3.8)
         if res:
-            first = res[0].char.replace('्', '') # Remove virama for checking
-            
-            # RULE 1.3.5: Ādirñiṭuḍavaḥ (ñi, ṭu, ḍu at start of Dhatu)
+            first = res[0].char.replace('्', '')
             if context == "Dhatu":
                 if first == 'ञ' and len(res)>1 and 'इ' in res[1].char:
-                     # e.g., Ñi-Dhrish
-                     trace.append(f"1.3.5 Ādirñiṭuḍavaḥ: Ñi is It-Sanjna.")
-                     res = res[2:] # Remove Ñi
+                     trace.append(f"1.3.5 Ādirñiṭuḍavaḥ: Ñi is It.")
+                     res = res[2:]
                 elif first == 'ट' and len(res)>1 and 'उ' in res[1].char:
-                     trace.append(f"1.3.5 Ādirñiṭuḍavaḥ: Ṭu is It-Sanjna.")
+                     trace.append(f"1.3.5 Ādirñiṭuḍavaḥ: Ṭu is It.")
                      res = res[2:]
                 elif first == 'ड' and len(res)>1 and 'उ' in res[1].char:
-                     trace.append(f"1.3.5 Ādirñiṭuḍavaḥ: Ḍu is It-Sanjna (e.g. Ḍukṛñ).")
-                     res = res[2:] # Remove Du
-
-            # RULE 1.3.7: Cuṭū (Cu, Tu at start of Pratyaya)
+                     trace.append(f"1.3.5 Ādirñiṭuḍavaḥ: Ḍu is It.")
+                     res = res[2:]
             elif context == "Pratyaya":
-                # Cu = c, ch, j, jh, ñ
-                # Tu = ṭ, ṭh, ḍ, ḍh, ṇ
                 cu_group = ['च', 'छ', 'ज', 'झ', 'ञ']
                 tu_group = ['ट', 'ठ', 'ड', 'ढ', 'ण']
-                
-                if first in cu_group or first in tu_group:
-                    trace.append(f"1.3.7 Cuṭū: {res[0].char} is It-Sanjna.")
-                    trace.append(f"1.3.9 Tasya Lopaḥ: {res[0].char} removed.")
-                    res.pop(0)
-
-            # RULE 1.3.8: Laśakvataddhite (L, S, K-varga at start of Pratyaya)
-            # Exception: Taddhita pratyayas are excluded (not handled here yet)
-            if context == "Pratyaya" and res:
-                # Re-check first after potential 1.3.7 removal
-                first = res[0].char.replace('्', '')
                 ku_group = ['क', 'ख', 'ग', 'घ', 'ङ']
-                if first == 'ल' or first == 'श' or first in ku_group:
-                    trace.append(f"1.3.8 Laśakvataddhite: {res[0].char} is It-Sanjna.")
-                    trace.append(f"1.3.9 Tasya Lopaḥ: {res[0].char} removed.")
+                if first in cu_group or first in tu_group:
+                    trace.append(f"1.3.7 Cuṭū: {res[0].char} is It.")
                     res.pop(0)
-
+                elif first == 'ल' or first == 'श' or first in ku_group:
+                    trace.append(f"1.3.8 Laśakvataddhite: {res[0].char} is It.")
+                    res.pop(0)
         return res, trace
-''', encoding='utf-8')
-    print("✅ UPDATED: shared/anubandha.py (Added Rules 1.3.4, 1.3.5, 1.3.7, 1.3.8)")
+'''
 
-    # ====================================================
-    # 2. CREATE PAGE: pages/3_🏷️_Sanjna_Lab.py
-    # ====================================================
-    page_code = r'''import streamlit as st
-import sys
-import os
-
-# --- PATH HACK ---
-sys.path.append(os.path.abspath('.'))
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
+# --- SUBANTA ENGINE (Noun Logic) ---
+CODE_SUBANTA = r'''"""
+FILE: subanta/declension.py
+"""
 from shared.varnas import ad, join
 from shared.anubandha import AnubandhaEngine
 
-st.set_page_config(page_title="Sanjna Lab", page_icon="🏷️", layout="wide")
+class SubantaGenerator:
+    def __init__(self):
+        self.SUP = {(1,1): "सुँ", (1,2): "औ", (1,3): "जस्", (2,1): "अम्", (2,2): "औट्", (2,3): "शस्"}
 
-st.markdown("""
-<style>
-    .it-box { background:#ffebee; padding:10px; border-radius:5px; border-left:4px solid #c62828; margin-bottom:5px; }
-    .save-box { background:#e8f5e9; padding:10px; border-radius:5px; border-left:4px solid #2e7d32; margin-bottom:5px; }
-    .final-res { font-size:1.5em; font-weight:bold; color:#2c3e50; }
-</style>
-""", unsafe_allow_html=True)
+    def log(self, step, result): self.history.append({"step": step, "result": result})
 
-st.title("🏷️ Sanjñā Prakaraṇa (It-Kārya)")
-st.caption("The Machine that Cleans the Code: It-Tagging & Lopa")
+    def derive(self, stem, vibhakti, vacana):
+        self.history = []
+        if stem.endswith("a"): stem = stem[:-1] + "अ"
+        pratyaya_raw = self.SUP.get((vibhakti, vacana), "")
+        if not pratyaya_raw: return "WIP", []
+        
+        stem_varnas = ad(stem)
+        prat_varnas = ad(pratyaya_raw)
+        self.log("Varna-Viccheda", join(stem_varnas + prat_varnas))
+        
+        clean_prat, tags = AnubandhaEngine.process(prat_varnas, context="Pratyaya")
+        for t in tags: self.log(f"It-Karya ({t})", f"{stem} + {join(clean_prat)}")
 
-# 1. INPUT
-c1, c2 = st.columns([2, 1])
-with c1:
-    raw_input = st.text_input("Upadeśa (Raw Input)", value="डुकृञ्")
-    st.caption("Examples: डुकृञ् (Dhatu), जस् (Pratyaya), सुँ (Pratyaya), शप् (Vikarna)")
-
-with c2:
-    context = st.selectbox("Context (Sanjna Scope)", 
-                           ["Dhatu", "Pratyaya", "Vibhakti", "General"],
-                           index=0)
-    st.caption("Different rules apply to Dhatus vs Pratyayas.")
-
-if st.button("Run It-Prakriyā", type="primary"):
-    # A. Varna Viccheda
-    varnas = ad(raw_input)
-    
-    st.subheader("1. Atomic Analysis")
-    st.code(f"{[v.char for v in varnas]}", language="json")
-
-    # B. Run Engine
-    clean_varnas, trace = AnubandhaEngine.process(varnas, context)
-    
-    # C. Display Trace
-    st.subheader("2. Rule Application")
-    if not trace:
-        st.info("No It-Sanjna rules applied.")
-    else:
-        for t in trace:
-            style = "save-box" if "SAVED" in t else "it-box"
-            st.markdown(f'<div class="{style}">{t}</div>', unsafe_allow_html=True)
-
-    # D. Final Result
-    st.subheader("3. Final Result (Nirubandha)")
-    final_str = join(clean_varnas)
-    st.markdown(f'<div class="final-res">{final_str}</div>', unsafe_allow_html=True)
-    
-    if final_str == "कृ":
-        st.success("Correct derivation for Ḍukṛñ!")
-    if final_str == "अ" and raw_input == "जस्":
-        st.success("Correct derivation for Jas (as -> a)!")
-
+        # 1.1 Rama + s
+        if vibhakti == 1 and vacana == 1:
+            self.log("1.4.14 Suptingantam Padam", f"{stem}{join(clean_prat)}")
+            self.log("8.2.66 Sasajusho Ruh", f"{stem}रुँ")
+            self.log("1.3.2 Upadeshe'janunasika It", f"{stem}र्")
+            final = f"{stem}ः"
+            self.log("8.3.15 Kharavasanayor Visarjaniyah", final)
+            return final, self.history
+            
+        return "Pending", self.history
 '''
-    (Path("pages") / "3_🏷️_Sanjna_Lab.py").write_text(page_code, encoding='utf-8')
-    print("✅ CREATED: pages/3_🏷️_Sanjna_Lab.py")
+
+# --- UI PAGES ---
+CODE_APP_PY = r'''import streamlit as st
+st.set_page_config(page_title="Panini Engine", page_icon="🕉️", layout="wide")
+st.title("🕉️ Modular Panini Engine")
+st.info("👈 Select a Module from the Sidebar.")
+st.markdown("### Modules Installed:")
+st.markdown("* **Varna Lab:** Phonetic Analysis")
+st.markdown("* **Sanjna Lab:** It-Karya (Tagging)")
+st.markdown("* **Subanta Engine:** Noun Declension")
+'''
+
+CODE_PAGE_VARNA = r'''import streamlit as st
+import sys, os
+sys.path.append(os.path.abspath('.'))
+from shared.varnas import ad, join
+st.title("🔤 Varna Lab")
+text = st.text_input("Sanskrit Text", "रामः")
+if text:
+    v = ad(text)
+    st.write([x.char for x in v])
+    st.success(f"Join: {join(v)}")
+'''
+
+CODE_PAGE_SANJNA = r'''import streamlit as st
+import sys, os
+sys.path.append(os.path.abspath('.'))
+from shared.varnas import ad, join
+from shared.anubandha import AnubandhaEngine
+st.title("🏷️ Sanjna Lab")
+c1, c2 = st.columns(2)
+inp = c1.text_input("Upadesha", "डुकृञ्")
+ctx = c2.selectbox("Context", ["Dhatu", "Pratyaya", "Vibhakti"])
+if st.button("Run"):
+    v = ad(inp)
+    res, tr = AnubandhaEngine.process(v, ctx)
+    st.success(f"Final: {join(res)}")
+    for t in tr: st.write(t)
+'''
+
+CODE_PAGE_SUBANTA = r'''import streamlit as st
+import sys, os
+sys.path.append(os.path.abspath('.'))
+from subanta.declension import SubantaGenerator
+st.title("🔍 Subanta Engine")
+stem = st.text_input("Stem", "राम")
+if st.button("Derive 1.1"):
+    gen = SubantaGenerator()
+    res, hist = gen.derive(stem, 1, 1)
+    st.success(res)
+    for h in hist: st.write(f"{h['step']} -> {h['result']}")
+'''
+
+# ==============================================================================
+# 2. FILE MANAGEMENT FUNCTIONS
+# ==============================================================================
+
+def write_file(path, content):
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(content, encoding='utf-8')
+    print(f"✅ Wrote: {path}")
+
+def rebuild_all():
+    print("\n🔥 REBUILDING ENTIRE SYSTEM...")
+    # 1. Structure
+    for d in ["shared", "subanta", "pages", "data"]:
+        Path(d).mkdir(exist_ok=True)
+        (Path(d) / "__init__.py").touch()
+    
+    # 2. Logic Files
+    write_file("shared/varnas.py", CODE_VARNAS)
+    write_file("shared/anubandha.py", CODE_ANUBANDHA)
+    write_file("subanta/declension.py", CODE_SUBANTA)
+    write_file("subanta/__init__.py", "from .declension import SubantaGenerator")
+    
+    # 3. UI Files
+    write_file("app.py", CODE_APP_PY)
+    write_file("pages/1_🔤_Varna_Lab.py", CODE_PAGE_VARNA)
+    write_file("pages/2_🏷️_Sanjna_Lab.py", CODE_PAGE_SANJNA)
+    write_file("pages/3_🔍_Subanta_Engine.py", CODE_PAGE_SUBANTA)
+    
+    print("\n✨ SYSTEM RESTORED TO SIDDHANTA STATE.")
+
+def launch_app():
+    print("\n🚀 LAUNCHING STREAMLIT...")
+    app_path = os.path.abspath("app.py")
+    if not os.path.exists(app_path):
+        print("❌ app.py not found. Please select 'Rebuild' first.")
+        return
+    cmd = [sys.executable, "-m", "streamlit", "run", app_path]
+    try:
+        subprocess.run(cmd)
+    except KeyboardInterrupt:
+        print("\n🛑 Stopped.")
+
+# ==============================================================================
+# 3. INTERACTIVE MENU
+# ==============================================================================
+
+def main():
+    while True:
+        print("\n" + "="*40)
+        print("   🕉️  PANINI ENGINE LAUNCHPAD")
+        print("="*40)
+        print("1. [🚀] Launch App")
+        print("2. [🔥] Rebuild EVERYTHING (Fix All)")
+        print("3. [❌] Exit")
+        
+        choice = input("\n👉 Select option: ").strip()
+        
+        if choice == "1":
+            launch_app()
+        elif choice == "2":
+            rebuild_all()
+            time.sleep(1)
+        elif choice == "3":
+            print("👋 Namaste.")
+            sys.exit()
+        else:
+            print("Invalid choice.")
 
 if __name__ == "__main__":
-    build_sanjna_prakaran()
+    # If passed 'auto' arg, just launch
+    if len(sys.argv) > 1 and sys.argv[1] == "auto":
+        launch_app()
+    else:
+        main()
