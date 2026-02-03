@@ -1,3 +1,5 @@
-# panini_engine/logic/__init__.py
-from .anga_processor import AngaProcessor
+
+# logic package initialization
+from .subanta_processor import SubantaProcessor
 from .sandhi_processor import SandhiProcessor
+from .anga_processor import AngaProcessor

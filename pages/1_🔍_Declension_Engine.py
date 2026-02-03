@@ -46,14 +46,12 @@ VACANA_MAP = {1: "एकवचनम्", 2: "द्विवचनम्", 3: "
 def render_step(step):
     """Renders a single step in the Traditional Format."""
     if step['name'] == 'Padaccheda':
-        # Special rendering for the Header
         return f"""
         <div class="padaccheda-box">
             पदच्छेदः: <strong>{step['result']}</strong>
         </div>
         """
     
-    # Standard derivation step
     # Format: → Result [ Explanation ]
     return f"""
     <div>
