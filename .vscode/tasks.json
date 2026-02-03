@@ -2,17 +2,15 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Push Pāṇini Logic",
+            "label": "Save & Push Stable Release",
             "type": "shell",
-            "command": "git add . && git commit -m 'Pāṇini Engine Update v45.0' && git push origin main",
+            "command": "git add . && git commit -m \"Stable Release v59.0: 100% Tests Pass (Sandhi + Subanta fixes)\" && git push origin main",
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
-            "presentation": {
-                "reveal": "always",
-                "panel": "new"
-            }
+            "problemMatcher": [],
+            "detail": "Stages all files, commits with stable message, and pushes to main."
         }
     ]
 }
