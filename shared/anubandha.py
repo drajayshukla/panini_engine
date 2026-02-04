@@ -113,10 +113,10 @@ class AnubandhaEngine:
                     
                 # 1.3.8 Laśakvataddhite (L, S, K-varga)
                 # Note: Technically applies to non-Taddhita, but general logic applies here.
-                elif first_char == 'ल' or first_char == 'श' or first_char in ['क', 'ख', 'ग', 'घ', 'ङ']:
-                     add_tag(first_char, "1.3.8")
-                     trace.append(f"1.3.8 Laśakvataddhite: {first_char} is It.")
-                     trace.append(f"1.3.9 Tasya Lopaḥ: {first_char} disappears.")
-                     res.pop(0)
+                elif first_char in ['ल', 'श', 'क', 'ख', 'ग', 'घ', 'ङ']:
+                        if not getattr(varnas, 'is_taddhita', False):
+                            t_name = add_tag(first_char, "1.3.8")
+                            trace.append(f"1.3.8 Laśakvataddhite: {first_char} is {t_name}.")
+            res.pop(0)
 
         return res, trace, tags
