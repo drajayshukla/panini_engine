@@ -1,94 +1,108 @@
 import os
 from pathlib import Path
 
-def upgrade_halantyam():
-    print("🧹 UPGRADING CORE: 1.3.3 Halantyam (The Universal Cleaner)...")
+def update_sanjna_ui():
+    print("🎨 UPDATING UI: Page 3 Sanjna Lab...")
 
-    new_code = r'''"""
-FILE: shared/anubandha.py
-PURPOSE: The "It-Sanjna" Engine.
-"""
-from shared.varnas import Varna
+    code = r'''import streamlit as st
+import sys
+import os
 
-class AnubandhaEngine:
-    @staticmethod
-    def process(varnas, context="General"):
-        """
-        Input: List of Varna objects
-        Context: "Dhatu", "Pratyaya", "Vibhakti", "General"
-        Output: (Cleaned Varnas, Trace Log)
-        """
-        if not varnas: return [], []
-        res = list(varnas)
-        trace = []
+sys.path.append(os.path.abspath('.'))
+from shared.varnas import ad, join
+from shared.anubandha import AnubandhaEngine
+
+st.set_page_config(page_title="Sanjna Lab", page_icon="🏷️", layout="wide")
+
+st.markdown("""
+<style>
+    .result-box { font-size: 2em; font-weight: bold; color: #2c3e50; }
+    .tag-badge { 
+        background-color: #e74c3c; 
+        color: white; 
+        padding: 5px 10px; 
+        border-radius: 15px; 
+        font-size: 0.9em; 
+        margin-right: 5px; 
+        font-weight: bold;
+        display: inline-block;
+    }
+    .karya-box {
+        background-color: #ecf0f1;
+        padding: 10px;
+        border-radius: 5px;
+        border-left: 5px solid #3498db;
+        margin-top: 10px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+st.title("🏷️ Sanjñā Lab (The Invisible Tags)")
+st.markdown("### 1.3.9 Tasya Lopaḥ: The Body dies, the Soul (Tag) remains.")
+
+# INPUT
+c1, c2 = st.columns([2, 1])
+with c1:
+    raw_input = st.text_input("Upadeśa (Input)", value="ष्वुन्")
+with c2:
+    context = st.selectbox("Context", ["Pratyaya", "Dhatu", "Vibhakti"])
+
+if st.button("Analyze Upadeśa"):
+    # 1. PROCESS
+    varnas = ad(raw_input)
+    clean, trace, tags = AnubandhaEngine.process(varnas, context)
+    final_form = join(clean)
+
+    # 2. DISPLAY RESULTS
+    col_res1, col_res2 = st.columns(2)
+    
+    with col_res1:
+        st.subheader("Physical Result (Drishya)")
+        st.markdown(f'<div class="result-box">{final_form}</div>', unsafe_allow_html=True)
+        st.caption("(What remains after Lopa)")
+
+    with col_res2:
+        st.subheader("Metaphysical Tags (Adrishya)")
+        if tags:
+            tag_html = ""
+            for t in tags:
+                tag_html += f'<span class="tag-badge">{t}</span>'
+            st.markdown(tag_html, unsafe_allow_html=True)
+        else:
+            st.info("No Tags generated.")
+            
+    # 3. KARYA (Why do these tags matter?)
+    st.subheader("🚀 Function of these Tags (Kārya)")
+    
+    # Knowledge Base of Effects
+    karya_map = {
+        "Kit": "1.1.5 Kkniti ca: Blocks Guna/Vriddhi.",
+        "Nit": "7.2.115 Aco'ñniti: Causes Vriddhi of initial vowel.",
+        "Ñit": "7.2.115 Aco'ñniti: Causes Vriddhi of initial vowel.",
+        "Ṣit": "4.1.41 Ṣidgaurādibhyaśca: Adds feminine suffix Ṅīṣ (e.g. Nartakī).",
+        "Pit": "3.1.4 Anudāttau suppitau: Suffix has Anudatta accent.",
+        "Lit": "6.1.193 Liti: Accent on the stem-final.",
+        "Cit": "6.1.163 Citaḥ: Accent on the suffix-final.",
+        "Idit": "7.1.58 Idito num dhātoḥ: Inserts 'Num' (n) infix.",
+    }
+    
+    found_karya = False
+    for t in tags:
+        clean_t = t.replace("it", "it") # normalize
+        if t in karya_map:
+            st.markdown(f'<div class="karya-box"><b>{t}:</b> {karya_map[t]}</div>', unsafe_allow_html=True)
+            found_karya = True
+            
+    if not found_karya and tags:
+        st.caption("No specific Karya hardcoded for these tags yet.")
         
-        # ---------------------------------------------------------
-        # 1.3.2 Upadeśe'janunāsika it (Nasal Vowels)
-        # ---------------------------------------------------------
-        temp_res = []
-        for v in res:
-            if 'ँ' in v.char:
-                trace.append(f"1.3.2 Upadeśe'janunāsika it: {v.char} is It.")
-                trace.append(f"1.3.9 Tasya Lopaḥ: {v.char} removed.")
-            else: temp_res.append(v)
-        res = temp_res
-        
-        # ---------------------------------------------------------
-        # 1.3.3 Halantyam (Final Consonant)
-        # ---------------------------------------------------------
-        if res and res[-1].is_consonant:
-            last_char = res[-1].char
-            
-            # EXCEPTION 1.3.4: Na Vibhaktau Tusmāḥ
-            # Applies ONLY if context is Vibhakti (Sup/Tin endings)
-            tusma = ['त्', 'थ्', 'द्', 'ध्', 'न्', 'स्', 'म्']
-            
-            if context == "Vibhakti" and last_char in tusma:
-                trace.append(f"1.3.4 Na Vibhaktau Tusmāḥ: {last_char} is SAVED from It-Sanjna.")
-            else:
-                trace.append(f"1.3.3 Halantyam: {last_char} is It-Sanjna.")
-                trace.append(f"1.3.9 Tasya Lopaḥ: {last_char} removed.")
-                res.pop() # Lopa
-
-        # ---------------------------------------------------------
-        # INITIAL RULES (Adi)
-        # ---------------------------------------------------------
-        if res:
-            first_char = res[0].char.replace('्', '')
-            
-            # Context: DHATU
-            if context == "Dhatu":
-                if first_char == 'ञ' and len(res)>1 and 'इ' in res[1].char:
-                     trace.append(f"1.3.5 Ādirñiṭuḍavaḥ: Ñi is It.")
-                     res = res[2:]
-                elif first_char == 'ट' and len(res)>1 and 'उ' in res[1].char:
-                     trace.append(f"1.3.5 Ādirñiṭuḍavaḥ: Ṭu is It.")
-                     res = res[2:]
-                elif first_char == 'ड' and len(res)>1 and 'उ' in res[1].char:
-                     trace.append(f"1.3.5 Ādirñiṭuḍavaḥ: Ḍu is It.")
-                     res = res[2:]
-
-            # Context: PRATYAYA
-            elif context == "Pratyaya":
-                # 1.3.6 Ṣaḥ Pratyayasya
-                if first_char == 'ष':
-                    trace.append(f"1.3.6 Ṣaḥ Pratyayasya: Initial Ṣa ({res[0].char}) is It.")
-                    trace.append(f"1.3.9 Tasya Lopaḥ: {res[0].char} removed.")
-                    res.pop(0)
-
-                # 1.3.7 Cuṭū
-                elif first_char in ['च', 'छ', 'ज', 'झ', 'ञ', 'ट', 'ठ', 'ड', 'ढ', 'ण']:
-                    trace.append(f"1.3.7 Cuṭū: {res[0].char} is It.")
-                    res.pop(0)
-                    
-                # 1.3.8 Laśakvataddhite
-                elif first_char == 'ल' or first_char == 'श' or first_char in ['क', 'ख', 'ग', 'घ', 'ङ']:
-                     trace.append(f"1.3.8 Laśakvataddhite: {res[0].char} is It.")
-                     res.pop(0)
-
-        return res, trace
+    # 4. TRACE
+    with st.expander("View Derivation Trace"):
+        for t in trace:
+            st.write(t)
 '''
-    Path("shared/anubandha.py").write_text(new_code, encoding='utf-8')
-    print("✅ UPDATED: shared/anubandha.py with robust Halantyam logic.")
+    (Path("pages") / "3_🏷️_Sanjna_Lab.py").write_text(code, encoding='utf-8')
+    print("✅ UPDATED: pages/3_🏷️_Sanjna_Lab.py")
 
 if __name__ == "__main__":
+    update_sanjna_ui()
