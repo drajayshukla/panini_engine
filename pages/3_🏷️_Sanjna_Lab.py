@@ -1,3 +1,7 @@
+"""
+FILE: pages/3_🏷️_Sanjna_Lab.py
+PURPOSE: Interactive Sanjna Lab with Integrated Siddhānta Knowledge Base.
+"""
 import streamlit as st
 import sys
 import os
@@ -6,9 +10,11 @@ import os
 sys.path.append(os.path.abspath('.'))
 from shared.varnas import ad, join
 from shared.anubandha import AnubandhaEngine
+from shared.knowledge_base import PaniniKnowledgeBase
 
 st.set_page_config(page_title="Sanjna Lab", page_icon="🏷️", layout="wide")
 
+# --- CUSTOM CSS ---
 st.markdown("""
 <style>
     .result-box { font-size: 2em; font-weight: bold; color: #2c3e50; }
@@ -17,7 +23,7 @@ st.markdown("""
         color: white; 
         padding: 5px 12px; 
         border-radius: 20px; 
-        font-size: 1em; 
+        font-size: 1.1em; 
         margin-right: 8px; 
         font-weight: bold;
         display: inline-block;
@@ -33,33 +39,13 @@ st.markdown("""
     }
     .karya-title { font-weight: bold; color: #2c3e50; font-size: 1.1em; }
     .karya-sutra { color: #7f8c8d; font-size: 0.9em; font-family: monospace; }
+    .sanskrit-text { font-family: 'Sanskrit 2003', 'Noto Sans Devanagari', sans-serif; line-height: 1.6; font-size: 1.05em; }
+    .dev-label { color: #f1c40f; margin-right: 5px; }
 </style>
 """, unsafe_allow_html=True)
 
 st.title("🏷️ Sanjñā Lab (The Invisible Tags)")
 st.markdown("### 1.3.9 Tasya Lopaḥ: The Body dies, the Soul (Tag) remains.")
-st.caption("Enter an Upadeśa to see its Tags and their grammatical power.")
-
-# --- KNOWLEDGE BASE: THE FUNCTION OF TAGS ---
-KARYA_DB = {
-    # Consonant Tags
-    "Kit": ("1.1.5 Gkniti ca", "🚫 Blocks Guna & Vriddhi."),
-    "Ghit": ("1.1.5 Gkniti ca", "🚫 Blocks Guna & Vriddhi (specifically for Kutva)."),
-    "Ñit": ("1.3.12 / 7.2.115", "🔄 Atmanepada (if Dhatu) OR Vriddhi of initial vowel (if Taddhita)."),
-    "Nit": ("7.2.115 Aco'ñniti", "📈 Causes Vriddhi of the initial vowel."),
-    "Ṣit": ("4.1.41 Ṣidgaurādibhyaśca", "👩 Adds Feminine suffix Ṅīṣ (e.g., Nartakī)."),
-    "Pit": ("3.1.4 Anudāttau suppitau", "📉 Suffix has Anudatta (Low) accent."),
-    "Cit": ("6.1.163 Citaḥ", "🔝 Final syllable gets Udatta (High) accent."),
-    "Tit": ("6.1.185 Titaḥ", "〰️ Svarita accent on the tag itself."),
-    "Mit": ("1.1.47 Midaco'ntyātparaḥ", "👉 Inserts itself after the last vowel (e.g. Num, Snam)."),
-    
-    # Vowel Tags
-    "Udit": ("7.2.56 Uditō vā", "⚡ Optional It-Agama in Ktva pratyaya."),
-    "Idit": ("7.1.58 Idito num dhātoḥ", "➕ Inserts 'Num' (n) infix into the root (e.g. Vand)."),
-    "Īdit": ("7.2.14 Śvīdito niṣṭhāyām", "🚫 Prohibits It-Agama in Niṣṭhā (Kta/Ktavatu)."),
-    "Ṛdit": ("7.4.2 Nāglopiśāsvṛditām", "📏 Prevents shortening of penultimate vowel in Chang Aorist."),
-    "Lṛdit": ("3.1.55 Puṣādyudyutā...", "🔁 Selects 'Aṅ' Vikarana instead of 'Cli' in Aorist."),
-}
 
 # --- INPUT SECTION ---
 c1, c2, c3 = st.columns([2, 1, 1])
@@ -92,44 +78,53 @@ if run_btn:
         if tags:
             tag_html = ""
             for t in tags:
-                tag_html += f'<span class="tag-badge">{t}</span>'
+                # Get Devanagari Label from Knowledge Base
+                dev_label, _, _ = PaniniKnowledgeBase.get_karya(t)
+                tag_html += f'<span class="tag-badge"><span class="dev-label">{dev_label}</span>{t}</span>'
             st.markdown(tag_html, unsafe_allow_html=True)
         else:
             st.warning("No It-Tags found.")
 
-    # 3. KARYA MAPPING
+    # 3. KARYA MAPPING (From Engine)
     st.subheader("🚀 Kārya (Grammatical Effects)")
     if tags:
         found = False
         for tag in tags:
-            # Normalize tag lookup (handle Ñit/Nit variants)
-            lookup_tag = tag
-            if tag not in KARYA_DB:
-                # Fallback for simple single-letter tags like 'kit' -> 'Kit'
-                if tag.title() in KARYA_DB: lookup_tag = tag.title()
+            # RETRIEVE DATA FROM ENGINE LAYER
+            dev_label, sutra, desc = PaniniKnowledgeBase.get_karya(tag)
             
-            if lookup_tag in KARYA_DB:
+            if sutra != "Unknown":
                 found = True
-                sutra, desc = KARYA_DB[lookup_tag]
                 st.markdown(f"""
                 <div class="karya-card">
-                    <span class="tag-badge" style="font-size:0.8em;">{tag}</span>
+                    <span class="tag-badge" style="font-size:0.8em;">{dev_label} ({tag})</span>
                     <span class="karya-title">{desc}</span><br>
                     <span class="karya-sutra">📖 {sutra}</span>
                 </div>
                 """, unsafe_allow_html=True)
         
         if not found:
-            st.caption("Tags detected, but no specific effect hardcoded in this demo DB.")
+            st.caption("Tags detected, but no specific effect hardcoded in Engine DB.")
     else:
         st.caption("No tags = No special grammatical triggers.")
 
     # 4. TRACE LOG
     with st.expander("📜 View Derivation Logic (Prakriyā)"):
         for step in trace:
-            if "SAVED" in step:
-                st.success(step)
-            elif "disappears" in step:
-                st.error(step)
-            else:
-                st.write(step)
+            if "SAVED" in step: st.success(step)
+            elif "disappears" in step: st.error(step)
+            else: st.write(step)
+
+# --- SHASTRA REFERENCE (FROM ENGINE) ---
+st.markdown("---")
+with st.expander("📚 Siddhānta Knowledge Base (Theory & Rules)", expanded=False):
+    st.markdown("### 📖 शास्त्र-विवरणम् (Theory)")
+    
+    # Dynamic Tabs based on Engine Content
+    t1, t2, t3, t4, t5 = st.tabs(["1.3.2 Anunāsika", "1.3.3 Halantyam", "1.3.5 Ādi Rules", "1.3.6 Ṣaḥ Pratyayasya", "1.4.104 Vibhakti"])
+    
+    with t1: st.markdown(PaniniKnowledgeBase.SIDDHANTA_TEXTS["1.3.2"], unsafe_allow_html=True)
+    with t2: st.markdown(PaniniKnowledgeBase.SIDDHANTA_TEXTS["1.3.3"], unsafe_allow_html=True)
+    with t3: st.markdown(PaniniKnowledgeBase.SIDDHANTA_TEXTS["1.3.5"], unsafe_allow_html=True)
+    with t4: st.markdown(PaniniKnowledgeBase.SIDDHANTA_TEXTS["1.3.6"], unsafe_allow_html=True)
+    with t5: st.markdown(PaniniKnowledgeBase.SIDDHANTA_TEXTS["1.4.104"], unsafe_allow_html=True)
