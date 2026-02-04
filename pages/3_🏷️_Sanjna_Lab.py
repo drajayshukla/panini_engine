@@ -116,15 +116,43 @@ if run_btn:
             else: st.write(step)
 
 # --- SHASTRA REFERENCE (FROM ENGINE) ---
+# --- SHASTRA REFERENCE (FROM ENGINE) ---
 st.markdown("---")
 with st.expander("📚 Siddhānta Knowledge Base (Theory & Rules)", expanded=False):
     st.markdown("### 📖 शास्त्र-विवरणम् (Theory)")
     
-    # Dynamic Tabs based on Engine Content
-    t1, t2, t3, t4, t5 = st.tabs(["1.3.2 Anunāsika", "1.3.3 Halantyam", "1.3.5 Ādi Rules", "1.3.6 Ṣaḥ Pratyayasya", "1.4.104 Vibhakti"])
+    # Updated Dynamic Tabs to include 1.3.7 (Cuṭū) and 1.3.8 (Laśakvataddhite)
+    tabs = st.tabs([
+        "1.3.2 Anunāsika", 
+        "1.3.3 Halantyam", 
+        "1.3.5 Ādi Rules", 
+        "1.3.6 Ṣaḥ Pratyayasya", 
+        "1.3.7 Cuṭū", 
+        "1.3.8 Laśakvataddhite",
+        "1.4.104 Vibhakti"
+    ])
+
+    # Mapping engine-level text to the UI tabs
+    # We use .get() to prevent crashes if a key is missing in shared/knowledge_base.py
+    with tabs[0]: 
+        st.markdown(PaniniKnowledgeBase.SIDDHANTA_TEXTS.get("1.3.2", "Data Missing"), unsafe_allow_html=True)
     
-    with t1: st.markdown(PaniniKnowledgeBase.SIDDHANTA_TEXTS["1.3.2"], unsafe_allow_html=True)
-    with t2: st.markdown(PaniniKnowledgeBase.SIDDHANTA_TEXTS["1.3.3"], unsafe_allow_html=True)
-    with t3: st.markdown(PaniniKnowledgeBase.SIDDHANTA_TEXTS["1.3.5"], unsafe_allow_html=True)
-    with t4: st.markdown(PaniniKnowledgeBase.SIDDHANTA_TEXTS["1.3.6"], unsafe_allow_html=True)
-    with t5: st.markdown(PaniniKnowledgeBase.SIDDHANTA_TEXTS["1.4.104"], unsafe_allow_html=True)
+    with tabs[1]: 
+        st.markdown(PaniniKnowledgeBase.SIDDHANTA_TEXTS.get("1.3.3", "Data Missing"), unsafe_allow_html=True)
+    
+    with tabs[2]: 
+        st.markdown(PaniniKnowledgeBase.SIDDHANTA_TEXTS.get("1.3.5", "Data Missing"), unsafe_allow_html=True)
+    
+    with tabs[3]: 
+        st.markdown(PaniniKnowledgeBase.SIDDHANTA_TEXTS.get("1.3.6", "Data Missing"), unsafe_allow_html=True)
+    
+    with tabs[4]: 
+        st.markdown(PaniniKnowledgeBase.SIDDHANTA_TEXTS.get("1.3.7", "Data Missing"), unsafe_allow_html=True)
+    
+    with tabs[5]: 
+        st.markdown(PaniniKnowledgeBase.SIDDHANTA_TEXTS.get("1.3.8", "Data Missing"), unsafe_allow_html=True)
+    
+    with tabs[6]: 
+        st.markdown(PaniniKnowledgeBase.SIDDHANTA_TEXTS.get("1.4.104", "Data Missing"), unsafe_allow_html=True)
+
+st.caption("Architecture Note: All text content is managed via shared/knowledge_base.py")
